@@ -14,6 +14,8 @@ const NEEDS: Array[String] = ["hunger", "energy", "social", "fun"]
 const DECAY := {"hunger": 0.1, "energy": 0.0667, "social": 0.0833, "fun": 0.0667}
 const SLEEP_RECOVERY := 0.2
 const CHAT_RANGE := 4.0
+const PLAYER := "player"           ## grievances against the Administrator use this as the target
+const WISH_PATIENCE := 28          ## days before an ignored wish turns into a grievance
 const SAME_PLACE := 1.6
 
 
@@ -36,6 +38,9 @@ var grievances: Array = []         ## {owner, target, reason, weight, day}
 var secrets: Dictionary = {}
 var home_scores: Dictionary = {}   ## house id -> average home score (0 to 100), for mood
 var events: Array = []             ## recent notable things, newest last: {day, minute, who, text}
+var wishes: Dictionary = {}        ## id -> {owner, household, text, since (day, or -1 while homeless), met (day or -1), nagged}
+var collected: int = 0             ## rent paid to the town and not yet banked by the host
+var trust_change: int = 0          ## Town Trust earned or lost and not yet banked by the host
 
 
 func _init(p_seed: int = 0) -> void:
@@ -79,6 +84,13 @@ func setup(p_town: SimTown, p_data: Dictionary, homes: Dictionary, start_day: in
 	for g: Dictionary in data.get("grievances", []):
 		grievances.append(g.duplicate())
 	secrets = (data.get("secrets", {}) as Dictionary).duplicate(true)
+	for w: Dictionary in data.get("wishes", []):
+		var owner := str(w["owner"])
+		if not residents.has(owner):
+			continue
+		var hid := str(residents[owner]["household"])
+		wishes[str(w["id"])] = {"owner": owner, "household": hid, "text": str(w["text"]),
+			"since": day if str(households[hid].get("home", "")) != "" else -1, "met": -1, "nagged": false}
 
 
 ## Puts a resident at home if their household has one; otherwise they're away.
@@ -184,7 +196,8 @@ func _decay(r: Dictionary) -> void:
 		avg += float(needs[n2])
 	avg /= NEEDS.size()
 	var home_s := float(home_scores.get(home_of(r["id"]), 60.0))
-	r["mood"] = q(lerpf(float(r["mood"]), avg * 0.75 + home_s * 0.25, 0.02))
+	var boost := 20.0 if int(r.get("boost_until", -1)) > day else 0.0
+	r["mood"] = q(lerpf(float(r["mood"]), minf(100.0, avg * 0.75 + home_s * 0.25 + boost), 0.02))
 
 
 ## One minute of a resident: walk on, carry on with the action, or choose the next thing to do.
@@ -452,7 +465,8 @@ func _grievance_weight(owner: String, target: String) -> float:
 
 func add_grievance(owner: String, target: String, reason: String, weight: float) -> void:
 	grievances.append({"owner": owner, "target": target, "reason": reason, "weight": clampf(weight, 0.0, 100.0), "day": day})
-	log_event(owner, "%s has a grievance against %s: %s." % [(residents[owner] as Dictionary)["first"], (residents[target] as Dictionary)["first"], reason])
+	var who := "the Administrator" if target == PLAYER else str((residents[target] as Dictionary)["first"])
+	log_event(owner, "%s has a grievance against %s: %s." % [(residents[owner] as Dictionary)["first"], who, reason])
 
 
 ## Midnight: grievances fade (2 a day), wages and household costs on Mondays.
@@ -482,8 +496,74 @@ func weekly_economy() -> void:
 			if str(r["household"]) == hid and r["status"] == "living":
 				members += 1
 				income += float(_job(r).get("wage", 0))
-		h["money"] = q(float(h["money"]) + income - 3.0 - members * 1.5)
-		h["last_week"] = {"income": income, "costs": 3.0 + members * 1.5}
+		var rent_w := int(h.get("rent", 0))
+		collected += rent_w
+		h["money"] = q(float(h["money"]) + income - 3.0 - members * 1.5 - rent_w)
+		h["last_week"] = {"income": income, "costs": 3.0 + members * 1.5 + rent_w, "rent": rent_w}
+
+
+# --- Homes -----------------------------------------------------------------------------------------
+
+## Who lives in a household (living here now).
+func members(hid: String) -> Array[String]:
+	var out: Array[String] = []
+	var ids := residents.keys()
+	ids.sort()
+	for rid: String in ids:
+		if str(residents[rid]["household"]) == hid:
+			out.append(rid)
+	return out
+
+
+## A household moves into a house, with how they took it (HomeLife.reaction): mood, rent, the log.
+func move_household(hid: String, house: String, reaction: Dictionary) -> void:
+	var h: Dictionary = households[hid]
+	h["home"] = house
+	h["rent"] = int(reaction.get("rent", 0))
+	var verdict := str(reaction.get("verdict", "content"))
+	var v: Dictionary = HomeLife.VERDICTS.get(verdict, HomeLife.VERDICTS["content"])
+	var ids := members(hid)
+	for rid in ids:
+		var r: Dictionary = residents[rid]
+		move_in(rid)
+		r["mood"] = q(clampf(float(r["mood"]) + float(v["mood"]), 0.0, 100.0))
+	for wid: String in wishes:
+		var w: Dictionary = wishes[wid]
+		if str(w["household"]) == hid and int(w["since"]) < 0:
+			w["since"] = day
+	if not ids.is_empty():
+		log_event(ids[0], "The %ss moved in. %s" % [h["name"], v["say"]])
+		if verdict == "disappointed":
+			var cons: Array = reaction.get("cons", [])
+			add_grievance(ids[0], PLAYER, str(cons[0]).to_lower() if not cons.is_empty() else "the house", 15.0)
+	if reaction.has("scores"):
+		home_scores[house] = q(HomeLife.average(reaction["scores"]))
+
+
+## The host's daily look at each home: {house: {score (average), wishes_met: [wish ids]}}.
+## Met wishes lift the owner's mood for a week and earn Town Trust; ignored ones turn sour.
+func review_homes(report: Dictionary) -> void:
+	var hkeys := report.keys()
+	hkeys.sort()
+	for house: String in hkeys:
+		home_scores[house] = q(float((report[house] as Dictionary).get("score", 60.0)))
+	var wkeys := wishes.keys()
+	wkeys.sort()
+	for wid: String in wkeys:
+		var w: Dictionary = wishes[wid]
+		var home := str(households[w["household"]].get("home", ""))
+		if home == "" or int(w["met"]) >= 0 or int(w["since"]) < 0:
+			continue
+		var met: Array = (report.get(home, {}) as Dictionary).get("wishes_met", [])
+		var owner: Dictionary = residents[w["owner"]]
+		if met.has(wid):
+			w["met"] = day
+			owner["boost_until"] = day + 7
+			trust_change += 1
+			log_event(str(w["owner"]), "%s's wish came true: %s." % [owner["first"], str(w["text"]).to_lower()])
+		elif not w["nagged"] and day - int(w["since"]) >= WISH_PATIENCE:
+			w["nagged"] = true
+			add_grievance(str(w["owner"]), PLAYER, "still waiting for %s" % str(w["text"]).to_lower(), 10.0)
 
 
 # --- Snapshot ------------------------------------------------------------------------------------
@@ -491,7 +571,8 @@ func weekly_economy() -> void:
 func snapshot() -> Dictionary:
 	return {"seed": seed_value, "ticks": ticks, "rng": rng.snapshot(), "day": day, "minute": minute,
 		"residents": residents.duplicate(true), "households": households.duplicate(true), "relationships": relationships.duplicate(true),
-		"grievances": grievances.duplicate(true), "secrets": secrets.duplicate(true), "events": events.duplicate(true), "home_scores": home_scores.duplicate()}
+		"grievances": grievances.duplicate(true), "secrets": secrets.duplicate(true), "events": events.duplicate(true), "home_scores": home_scores.duplicate(),
+		"wishes": wishes.duplicate(true), "collected": collected, "trust_change": trust_change}
 
 
 func restore(d: Dictionary) -> void:
@@ -507,3 +588,6 @@ func restore(d: Dictionary) -> void:
 	secrets = (d.get("secrets", {}) as Dictionary).duplicate(true)
 	events = (d.get("events", []) as Array).duplicate(true)
 	home_scores = (d.get("home_scores", {}) as Dictionary).duplicate()
+	wishes = (d.get("wishes", {}) as Dictionary).duplicate(true)
+	collected = int(d.get("collected", 0))
+	trust_change = int(d.get("trust_change", 0))

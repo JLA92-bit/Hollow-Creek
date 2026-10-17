@@ -13,9 +13,9 @@
   },
   "households": {
     "h_doyle": {"name": "Doyle", "home": "lm_agnes_cottage", "money": 40, "weekly": 2, "status": "resident"},
-    "h_hayward": {"name": "Hayward", "home": "", "money": 120, "weekly": 0, "status": "founding"},
-    "h_pike": {"name": "Pike", "home": "", "money": 15, "weekly": 0, "status": "founding"},
-    "h_kowalski": {"name": "Kowalski", "home": "", "money": 25, "weekly": 0, "status": "founding"}
+    "h_hayward": {"name": "Hayward", "home": "", "money": 120, "weekly": 0, "status": "founding", "brief": {"text": "Living quarters behind the shop: two bedrooms, a kitchen and a good front room. We can manage £3 a week.", "bedrooms": 2, "rooms": ["kitchen", "living"], "rent": 3, "wants": ["settee", "wireless_set"]}},
+    "h_pike": {"name": "Pike", "home": "", "money": 15, "weekly": 0, "status": "founding", "brief": {"text": "Two bedrooms and a kitchen, handy to the mill. Two quid a week and not a penny more.", "bedrooms": 2, "rooms": ["kitchen"], "rent": 2, "wants": ["vegie_bed", "woodshed"]}},
+    "h_kowalski": {"name": "Kowalski", "home": "", "money": 25, "weekly": 0, "status": "founding", "brief": {"text": "Two bedrooms, a kitchen, and good light for Halina's sewing. £2 a week.", "bedrooms": 2, "rooms": ["kitchen"], "rent": 2, "wants": ["laminex_table", "chook_pen"]}}
   },
   "residents": {
     "r_agnes": {"first": "Agnes", "last": "Doyle", "age": 67, "sex": "f", "household": "h_doyle", "job": "retired", "traits": ["observant", "lonely", "loyal"],
