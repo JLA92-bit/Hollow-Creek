@@ -7,7 +7,7 @@ extends Node
 signal changed
 signal message(text: String, kind: String)
 
-const TOOLS: Array[String] = ["room", "wall", "select", "door", "window", "arch", "floor", "paint", "stairs", "post", "demolish"]
+const TOOLS: Array[String] = ["room", "wall", "select", "door", "window", "arch", "floor", "paint", "roof", "stairs", "post", "demolish"]
 const HINTS := {
 	"room": "Drag to draw a room. Hold Shift (or tap Add to room) to extend the room you start in.",
 	"wall": "Drag along the grid to draw a wall. Drag at 45 degrees for a diagonal.",
@@ -17,6 +17,7 @@ const HINTS := {
 	"arch": "Point at a wall and click to open an archway.",
 	"floor": "Drag over tiles to lay floor. Quarter mode paints triangles.",
 	"paint": "Click a wall to paint that side. Shift paints the whole room, Ctrl the whole house. I picks up a finish.",
+	"roof": "Click the house to roof it. Draw adds a piece; Change lets you drag a roof's pitch or its edges. Chimney goes on a wall.",
 	"stairs": "Click to place stairs. Turn them with , and . (they rise the way the arrow points).",
 	"post": "Click a grid corner to stand a post.",
 	"demolish": "Click a door, window, post or stairs to remove it. Drag along walls, or click a room to clear it.",
@@ -38,6 +39,7 @@ var options: Dictionary = {
 	"paint_kind": "paint", "paint_colour": "cream", "wallpaper": "floral", "colourway": "cream_rose",
 	"cladding": "weatherboard", "lining": "wall_tiles", "paint_part": "finish", "dado_h": 1.0,
 	"paint_scope": "face", "eyedropper": false,
+	"roof_mode": "auto", "roof_shape": "hip", "roof_pitch": 28.0, "roof_overhang": 0.45, "roof_material": "corrugated_iron",
 }
 var house: HouseView = null  ## the house being edited
 var selection: Dictionary = {}  ## {type: run|room|opening|stairs, ...}
@@ -52,6 +54,7 @@ var _bad: StandardMaterial3D
 var _touches: Dictionary = {}
 var _hover_world := Vector3.ZERO
 var _house_counter := 1
+var _walls_before := ""
 
 
 func _ready() -> void:
@@ -115,6 +118,15 @@ func exit() -> void:
 
 func set_tool(t: String) -> void:
 	_cancel()
+	if t == "roof" and tool != "roof":
+		_walls_before = str(world.get("walls_mode"))
+		world.call("set_walls_mode", HouseView.WALLS_UP)
+		if house != null:
+			level = house.data.levels()[-1]
+			_apply_view()
+	elif t != "roof" and tool == "roof" and _walls_before != "":
+		world.call("set_walls_mode", _walls_before)
+		_walls_before = ""
 	tool = t
 	selection.clear()
 	sfx.play("click")
@@ -124,6 +136,13 @@ func set_tool(t: String) -> void:
 
 func set_option(key: String, value: Variant) -> void:
 	options[key] = value
+	if tool == "roof" and key.begins_with("roof_") and key != "roof_mode":
+		if selection.get("type", "") == "roof":
+			var map := {"roof_shape": "shape", "roof_pitch": "pitch", "roof_overhang": "overhang", "roof_material": "material"}
+			set_roof_prop(map[key], value)
+			return
+		if options["roof_mode"] == "auto" and house != null and bool(house.data.roof.get("follow", false)):
+			roof_house()
 	if selection.get("type", "") == "opening" and key in ["latch_night", "curtains_dusk", "lock_night"]:
 		var night_key: String = {"latch_night": "latch", "curtains_dusk": "curtains", "lock_night": "lock"}[key]
 		var o := house.data.opening_by_id(str(selection["id"]))
@@ -273,7 +292,7 @@ func _key(k: InputEventKey) -> void:
 			set_option("eyedropper", not bool(options["eyedropper"]))
 			get_viewport().set_input_as_handled()
 			return
-		var keys := {KEY_R: "room", KEY_W: "", KEY_T: "wall", KEY_V: "select", KEY_D: "door", KEY_N: "window", KEY_F: "floor", KEY_P: "paint", KEY_G: "stairs", KEY_X: "demolish"}
+		var keys := {KEY_R: "room", KEY_W: "", KEY_T: "wall", KEY_V: "select", KEY_D: "door", KEY_N: "window", KEY_F: "floor", KEY_P: "paint", KEY_O: "roof", KEY_G: "stairs", KEY_X: "demolish"}
 		if keys.has(k.keycode) and str(keys[k.keycode]) != "" and not k.ctrl_pressed:
 			set_tool(str(keys[k.keycode]))
 			return
@@ -309,6 +328,8 @@ func _press(screen: Vector2, shift: bool, alt: bool) -> void:
 			_select_press(p)
 		"door", "window", "arch":
 			_drag["opening"] = _opening_at_pointer(p, alt or options["free"])
+		"roof":
+			_roof_press(screen)
 		_:
 			pass
 	_move(screen, alt)
@@ -319,6 +340,8 @@ func _move(screen: Vector2, alt: bool = false) -> void:
 	_hover_world = p
 	if not _drag.is_empty() and (screen - (_drag["screen"] as Vector2)).length() > 6.0:
 		_drag["moved"] = true
+	if not _drag.is_empty():
+		_drag["last_screen"] = screen
 	match tool:
 		"room":
 			_room_preview(p)
@@ -332,6 +355,8 @@ func _move(screen: Vector2, alt: bool = false) -> void:
 			_floor_preview(p)
 		"paint":
 			_paint_preview(p)
+		"roof":
+			_roof_preview(screen, p)
 		"stairs":
 			_stairs_preview(p)
 		"post":
@@ -343,6 +368,7 @@ func _move(screen: Vector2, alt: bool = false) -> void:
 func _release(screen: Vector2) -> void:
 	if _drag.is_empty():
 		return
+	_drag["last_screen"] = screen
 	var p := pick(screen)
 	var action := _action_for(p)
 	if action.is_empty():
@@ -404,7 +430,7 @@ func _commit(label: String, fn: Callable, new_house: bool = false, origin: Vecto
 		h.id = _new_house_id()
 		h.name = "House %d" % _house_counter
 		h.origin = origin
-		h.roof = {"type": "hip", "pitch": 28, "overhang": 0.45, "material": "corrugated_iron"}
+		h.roof = {"follow": true, "auto": roof_settings()}
 	else:
 		if house == null:
 			_say("Draw a room first.", "warn")
@@ -854,6 +880,15 @@ func delete_selection() -> void:
 			var t: Vector2i = selection["tile"]
 			var lv := level
 			_commit("Clear room", func(h: HouseData) -> Dictionary: return BuildOps.remove_room(h, lv, t))
+		"roof":
+			var at: Vector2 = selection["at"]
+			var lvr := int(selection["level"])
+			_commit("Remove roof piece", func(h: HouseData) -> Dictionary:
+				var pc := _roof_piece_at(h, lvr, at)
+				return BuildOps.remove_roof_piece(h, str(pc.get("id", ""))) if not pc.is_empty() else BuildOps.fail("That roof piece has gone."))
+		"chimney":
+			var ci := int(selection["index"])
+			_commit("Remove chimney", func(h: HouseData) -> Dictionary: return BuildOps.remove_chimney(h, ci))
 		"run":
 			var run: Array = selection["run"]
 			var lv2 := level
@@ -1253,6 +1288,10 @@ func _demolish_action(p: Vector3) -> Dictionary:
 	if not op.is_empty():
 		var oid := str(op["id"])
 		return {"label": "Remove %s" % op["kind"], "fn": func(h: HouseData) -> Dictionary: return BuildOps.remove_opening(h, oid)}
+	var lp := to_local_2d(p)
+	var ci := BuildOps.chimney_at(house.data, lp.x, lp.y)
+	if ci >= 0:
+		return {"label": "Remove chimney", "fn": func(h: HouseData) -> Dictionary: return BuildOps.remove_chimney(h, ci)}
 	var c := _corner(p)
 	for col: Dictionary in house.data.storey(lv).get("columns", []):
 		if Vector2i(int(col["x"]), int(col["y"])) == c and to_local_2d(p).distance_to(Vector2(c)) < 0.3:
@@ -1273,6 +1312,307 @@ func _demolish_action(p: Vector3) -> Dictionary:
 	return {}
 
 
+# --- Roofs ---------------------------------------------------------------------------------------------
+
+func roof_settings() -> Dictionary:
+	return {"shape": options["roof_shape"], "pitch": float(options["roof_pitch"]), "overhang": float(options["roof_overhang"]),
+		"material": options["roof_material"]}
+
+
+## Roofs the whole edited house from the plan with the current settings.
+func roof_house() -> void:
+	var s := roof_settings()
+	_commit("Roof the house", func(h: HouseData) -> Dictionary: return BuildOps.auto_roof(h, s))
+
+
+func take_roof_off() -> void:
+	selection.clear()
+	_commit("Take the roof off", func(h: HouseData) -> Dictionary: return BuildOps.remove_roof(h))
+
+
+## The piece of h on a storey covering a plan point (topmost if pieces overlap).
+func _roof_piece_at(h: HouseData, lv: int, at: Vector2) -> Dictionary:
+	var best: Dictionary = {}
+	var best_y := -INF
+	for pc: Dictionary in Roofs.pieces(h):
+		if int(pc.get("level", 0)) != lv:
+			continue
+		var y := Roofs.surface_y(pc, Roofs.eave_y(h, pc), at.x, at.y)
+		if not is_nan(y) and y > best_y:
+			best_y = y
+			best = pc
+	return best
+
+
+## The selected roof piece, or {}.
+func selected_roof() -> Dictionary:
+	if house == null or selection.get("type", "") != "roof":
+		return {}
+	return _roof_piece_at(house.data, int(selection["level"]), selection["at"])
+
+
+## The roof under the pointer: {hv, piece, point (house-local)} by marching the camera ray.
+func _roof_hit(screen: Vector2) -> Dictionary:
+	var cam := rig.camera
+	var o := cam.project_ray_origin(screen)
+	var d := cam.project_ray_normal(screen)
+	var best: Dictionary = {}
+	for hv: HouseView in world.get("houses") as Array:
+		var pcs := Roofs.pieces(hv.data)
+		if pcs.is_empty() or hv.data.locked:
+			continue
+		var eaves: Array[float] = []
+		var top := -INF
+		var bottom := INF
+		for pc: Dictionary in pcs:
+			var ey := Roofs.eave_y(hv.data, pc)
+			eaves.append(ey)
+			top = maxf(top, Roofs.ridge_y(pc, ey) + 0.1)
+			bottom = minf(bottom, ey - 1.0)
+		var lo := o - hv.position
+		if absf(d.y) < 0.0001:
+			continue
+		var t0 := maxf(0.0, (top - lo.y) / d.y)
+		var t1 := (bottom - lo.y) / d.y
+		if t1 < t0:
+			continue
+		var t := t0
+		while t <= t1:
+			var q := lo + d * t
+			for i in pcs.size():
+				var y := Roofs.surface_y(pcs[i], eaves[i], q.x, q.z)
+				if not is_nan(y) and q.y <= y:
+					if best.is_empty() or t < float(best["t"]):
+						best = {"hv": hv, "piece": pcs[i], "point": Vector3(q.x, y, q.z), "t": t}
+					t = t1 + 1.0
+					break
+			t += 0.12
+	return best
+
+
+func _roof_press(screen: Vector2) -> void:
+	if str(options["roof_mode"]) != "edit":
+		return
+	var hit := _roof_hit(screen)
+	if hit.is_empty():
+		var p := pick(screen)
+		var hv := _house_at(p)
+		if hv != null:
+			var ci := BuildOps.chimney_at(hv.data, to_local_2d(p, hv).x, to_local_2d(p, hv).y)
+			if ci >= 0:
+				house = hv
+				selection = {"type": "chimney", "index": ci}
+				changed.emit()
+				return
+		selection.clear()
+		changed.emit()
+		return
+	house = hit["hv"]
+	var pc: Dictionary = hit["piece"]
+	var pt: Vector3 = hit["point"]
+	selection = {"type": "roof", "at": Vector2(pt.x, pt.z), "level": int(pc.get("level", 0))}
+	_drag["roof"] = pc.duplicate(true)
+	_drag["roof_y"] = pt.y
+	# Near an edge: resize that side. Elsewhere: drag up and down to change the pitch.
+	var r := Roofs.rect_of(pc)
+	var l := Vector2(pt.x, pt.z)
+	var dists := {"W": absf(l.x - r.position.x), "E": absf(l.x - r.end.x), "N": absf(l.y - r.position.y), "S": absf(l.y - r.end.y)}
+	var side := ""
+	var near := 0.7
+	for sd: String in dists:
+		if float(dists[sd]) < near:
+			near = dists[sd]
+			side = sd
+	_drag["roof_side"] = side
+	changed.emit()
+
+
+## A plan point on the horizontal plane at height y (house-local), under the pointer.
+func _pick_at_height(screen: Vector2, y: float) -> Vector2:
+	var cam := rig.camera
+	var o := cam.project_ray_origin(screen) - house.position
+	var d := cam.project_ray_normal(screen)
+	if absf(d.y) < 0.0001:
+		return Vector2(o.x, o.z)
+	var q := o + d * ((y - o.y) / d.y)
+	return Vector2(q.x, q.z)
+
+
+## The piece being drawn or dragged, as it would be on release.
+func _roof_candidate(screen: Vector2, p: Vector3) -> Dictionary:
+	match str(options["roof_mode"]):
+		"draw":
+			if _drag.is_empty() or house == null:
+				return {}
+			var a := to_local_2d(_drag["start"])
+			var b := to_local_2d(p)
+			var lo := Vector2(snappedf(minf(a.x, b.x), 0.5), snappedf(minf(a.y, b.y), 0.5))
+			var hi := Vector2(snappedf(maxf(a.x, b.x), 0.5), snappedf(maxf(a.y, b.y), 0.5))
+			var r := Rect2(lo, hi - lo)
+			var pc := roof_settings()
+			pc["level"] = level
+			pc["rect"] = [r.position.x, r.position.y, r.size.x, r.size.y]
+			pc["axis"] = "x" if r.size.x >= r.size.y else "z"
+			pc["high"] = "N" if r.size.x >= r.size.y else "W"
+			pc["joins"] = []
+			return pc
+		"edit":
+			if not _drag.has("roof"):
+				return {}
+			var pc2: Dictionary = (_drag["roof"] as Dictionary).duplicate(true)
+			var side := str(_drag["roof_side"])
+			var sy := (_drag["screen"] as Vector2).y
+			if side == "":
+				var steps := roundi((sy - screen.y) / 12.0)
+				pc2["pitch"] = Roofs.clamp_pitch(str(pc2["shape"]), float(pc2["pitch"]) + steps * 1.0)
+			else:
+				var ey := Roofs.eave_y(house.data, pc2)
+				var l := _pick_at_height(screen, ey)
+				var r2 := Roofs.rect_of(pc2)
+				match side:
+					"W":
+						var x0 := minf(snappedf(l.x, 0.5), r2.end.x - 1.0)
+						r2 = Rect2(x0, r2.position.y, r2.end.x - x0, r2.size.y)
+					"E":
+						r2.size.x = maxf(snappedf(l.x, 0.5) - r2.position.x, 1.0)
+					"N":
+						var z0 := minf(snappedf(l.y, 0.5), r2.end.y - 1.0)
+						r2 = Rect2(r2.position.x, z0, r2.size.x, r2.end.y - z0)
+					"S":
+						r2.size.y = maxf(snappedf(l.y, 0.5) - r2.position.y, 1.0)
+				pc2["rect"] = [r2.position.x, r2.position.y, r2.size.x, r2.size.y]
+			return pc2
+	return {}
+
+
+func _roof_ghost(kit: MeshKit, pc: Dictionary) -> void:
+	var g := Roofs.geometry(pc, Roofs.eave_y(house.data, pc))
+	for f: Dictionary in g["roof"]:
+		var pts: Array = f["pts"]
+		for i in range(1, pts.size() - 1):
+			kit.tri("g", pts[0], pts[i], pts[i + 1], Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
+	for f2: Dictionary in g["gable"]:
+		var pts2: Array = f2["pts"]
+		for i2 in range(1, pts2.size() - 1):
+			kit.tri("g", pts2[0], pts2[i2], pts2[i2 + 1], Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
+
+
+func _roof_preview(screen: Vector2, p: Vector3) -> void:
+	var mode := str(options["roof_mode"])
+	if mode == "chimney":
+		var k := _near_edge(p, house, level, 0.5)
+		if k == "" or HouseData.is_diagonal(k):
+			_clear_preview()
+			return
+		var kit0 := MeshKit.new()
+		var pts := HouseData.edge_points(k)
+		var y0 := _plane_y()
+		var mid := Vector2(pts[0] + pts[1]) * 0.5
+		var along := Vector2(pts[1] - pts[0]).normalized()
+		_ghost_box(kit0, mid - along * 0.6, mid + along * 0.6, y0, y0 + house.data.storey_height(level) + 1.6, 0.6)
+		_set_preview(kit0, true)
+		_show_label(_v3(mid, y0 + 3.2), "Brick chimney · £%d" % Pieces.cost("chimney"), true)
+		return
+	if mode == "auto":
+		var hv := _house_at(p)
+		if hv == null:
+			_clear_preview()
+			return
+		_label.visible = false
+		_preview.mesh = null
+		_show_label(_pv(p) + Vector3(0, 1.0, 0), "Click to roof the house · %s" % Roofs.SHAPE_NAMES[options["roof_shape"]], true)
+		return
+	var pc := _roof_candidate(screen, p)
+	if pc.is_empty():
+		if mode == "edit" and _drag.is_empty():
+			var hit := _roof_hit(screen)
+			if not hit.is_empty() and hit["hv"] == house:
+				var kit1 := MeshKit.new()
+				_roof_ghost(kit1, hit["piece"])
+				_set_preview(kit1, true)
+				var hp: Vector3 = hit["point"]
+				_show_label(hp + Vector3(0, 0.8, 0), "Drag up or down for pitch · drag an edge to resize", true)
+				return
+		_clear_preview()
+		return
+	var kit := MeshKit.new()
+	_roof_ghost(kit, pc)
+	_set_preview(kit, true)
+	var r := Roofs.rect_of(pc)
+	var top := Roofs.ridge_y(pc, Roofs.eave_y(house.data, pc))
+	var text := "%s · %.0f° · %.1f × %.1f m · £%d" % [Roofs.SHAPE_NAMES.get(pc["shape"], pc["shape"]), float(pc["pitch"]), r.size.x, r.size.y, Roofs.cost(pc)]
+	_show_label(Vector3(r.get_center().x, top + 0.8, r.get_center().y), text, true)
+
+
+func _roof_action(p: Vector3) -> Dictionary:
+	var mode := str(options["roof_mode"])
+	match mode:
+		"auto":
+			var hv := _house_at(p)
+			if hv == null:
+				return {}
+			house = hv
+			var s := roof_settings()
+			return {"label": "Roof the house", "fn": func(h: HouseData) -> Dictionary: return BuildOps.auto_roof(h, s)}
+		"chimney":
+			var k := _near_edge(p, house, level, 0.5)
+			if k == "":
+				_say("Point at a wall for the chimney.", "warn")
+				return {}
+			var lv := level
+			return {"label": "Add chimney", "fn": func(h: HouseData) -> Dictionary: return BuildOps.add_chimney(h, lv, k)}
+		"draw":
+			var pc := _roof_candidate(_drag.get("last_screen", Vector2.ZERO), p)
+			if pc.is_empty() or not _drag.get("moved", false):
+				return {}
+			var r := Roofs.rect_of(pc)
+			var lv2 := level
+			var opts := roof_settings()
+			return {"label": "Add roof piece", "confirm": true, "fn": func(h: HouseData) -> Dictionary: return BuildOps.add_roof_piece(h, lv2, r, opts)}
+		"edit":
+			if not _drag.has("roof") or not _drag.get("moved", false):
+				return {}
+			var pc2 := _roof_candidate(_drag.get("last_screen", Vector2.ZERO), p)
+			var orig: Dictionary = _drag["roof"]
+			var at: Vector2 = selection["at"]
+			var lv3 := int(orig.get("level", 0))
+			var changes := {"pitch": pc2["pitch"], "rect": pc2["rect"]}
+			var label := "Change roof pitch" if str(_drag["roof_side"]) == "" else "Resize roof"
+			var r3 := Roofs.rect_of(pc2)
+			selection["at"] = r3.get_center() if not r3.has_point(at) else at
+			return {"label": label, "fn": func(h: HouseData) -> Dictionary:
+				var cur := _roof_piece_at(h, lv3, at)
+				if cur.is_empty():
+					return BuildOps.fail("That roof piece has gone.")
+				return BuildOps.update_roof_piece(h, str(cur["id"]), changes)}
+	return {}
+
+
+## Changes to the selected roof piece from the options panel (shape, pitch, overhang, material,
+## turn = swap the ridge or move the high side round).
+func set_roof_prop(key: String, value: Variant) -> void:
+	var pc := selected_roof()
+	if pc.is_empty():
+		return
+	var at: Vector2 = selection["at"]
+	var lv := int(selection["level"])
+	var changes: Dictionary = {}
+	if key == "turn":
+		if Roofs.is_mono(pc):
+			var order := ["N", "E", "S", "W"]
+			changes["high"] = order[(order.find(str(pc.get("high", "N"))) + 1) % 4]
+		else:
+			changes["axis"] = "z" if str(pc.get("axis", "x")) == "x" else "x"
+	else:
+		changes[key] = value
+	_commit("Change roof", func(h: HouseData) -> Dictionary:
+		var cur := _roof_piece_at(h, lv, at)
+		if cur.is_empty():
+			return BuildOps.fail("That roof piece has gone.")
+		return BuildOps.update_roof_piece(h, str(cur["id"]), changes))
+	changed.emit()
+
+
 # --- Actions ------------------------------------------------------------------------------------------
 
 ## What releasing the pointer here would do, as {label, fn, confirm} or a live edit to finish.
@@ -1288,6 +1628,8 @@ func _action_for(p: Vector3) -> Dictionary:
 			return _floor_action(p)
 		"paint":
 			return _paint_action(p)
+		"roof":
+			return _roof_action(p)
 		"stairs":
 			if house == null:
 				_say("Draw a room first.", "warn")

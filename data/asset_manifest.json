@@ -140,6 +140,28 @@
         "array": "ground",
         "slot": 3,
         "use": "Mud by the creek"
+      },
+      {
+        "id": "clay_roof_tiles_02",
+        "as": "roof_terracotta",
+        "res": "1k",
+        "size_m": 2.5,
+        "use": "Terracotta Marseille tile roofs"
+      },
+      {
+        "id": "roof_slates_03",
+        "as": "roof_slate",
+        "res": "1k",
+        "size_m": 3.0,
+        "use": "Slate roofs on the church and older houses"
+      },
+      {
+        "id": "roof_slates_02",
+        "as": "roof_shingles",
+        "res": "1k",
+        "size_m": 3.0,
+        "neutral": 0.8,
+        "use": "Timber shingles (tinted)"
       }
     ],
     "hdris": [

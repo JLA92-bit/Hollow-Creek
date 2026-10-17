@@ -11,7 +11,7 @@ const SKY := Color("#4BC9F5")
 const AMBER := Color("#FBAD45")
 const SECONDARY := Color("#3D5670")
 const TOOL_LABELS := {"room": "Room", "wall": "Wall", "select": "Select", "door": "Door", "window": "Window",
-	"arch": "Arch", "floor": "Floor", "paint": "Paint", "stairs": "Stairs", "post": "Post", "demolish": "Demolish"}
+	"arch": "Arch", "floor": "Floor", "paint": "Paint", "roof": "Roof", "stairs": "Stairs", "post": "Post", "demolish": "Demolish"}
 const PAINTS: Array[String] = ["cream", "ivory", "white", "butter", "apricot", "rose", "mint", "duck_egg", "sky", "sage"]
 const OPTIONS_W := 320.0
 const FLOORS: Array[String] = ["floor_boards", "pine_boards", "lino_checks", "decking", "concrete", "quarry_tiles"]
@@ -164,7 +164,7 @@ func _palette() -> void:
 		b.pressed.connect(func() -> void: build.set_tool(t))
 		grid.add_child(b)
 		_tools[t] = b
-	for t2: String in ["Roof", "Verandah", "Furnish"]:
+	for t2: String in ["Verandah", "Furnish"]:
 		var b2 := Button.new()
 		b2.text = t2
 		b2.disabled = true
@@ -362,6 +362,8 @@ func _fill_options() -> void:
 			_options.add_child(r3)
 		"paint":
 			_paint_options(o)
+		"roof":
+			_roof_options(o)
 		"stairs":
 			_heading("Stairs")
 			var f2 := _flow()
@@ -508,6 +510,70 @@ func _paints(current: String, cb: Callable) -> void:
 	for p in PAINTS:
 		f.add_child(_swatch(p, p == current, func() -> void: cb.call(p)))
 	_options.add_child(f)
+
+
+func _roof_options(o: Dictionary) -> void:
+	var pc := build.selected_roof()
+	if build.selection.get("type", "") == "chimney":
+		_heading("Chimney")
+		_options.add_child(_text("Its stack clears the roof by 0.6 m wherever the roof goes.", 13, SECONDARY))
+		_options.add_child(_button("Remove chimney", func() -> void: build.delete_selection()))
+		return
+	var editing := not pc.is_empty()
+	_heading("Roof piece" if editing else "Roof")
+	if not editing:
+		var modes := _flow()
+		for md: String in ["auto", "draw", "edit", "chimney"]:
+			modes.add_child(_toggle({"auto": "Whole house", "draw": "Draw a piece", "edit": "Change a piece", "chimney": "Chimney"}[md],
+				o["roof_mode"] == md, func() -> void: build.set_option("roof_mode", md), 136))
+		_options.add_child(modes)
+	var cur_shape := str(pc.get("shape", o["roof_shape"]))
+	var cur_pitch := float(pc.get("pitch", o["roof_pitch"]))
+	var cur_over := float(pc.get("overhang", o["roof_overhang"]))
+	var cur_mat := str(pc.get("material", o["roof_material"]))
+	_caps_add("Shape")
+	var f := _flow()
+	for sh: String in Roofs.SHAPES:
+		f.add_child(_card(Roofs.SHAPE_NAMES[sh], {"hip": "Four slopes", "gable": "Two slopes, gable ends", "half_hip": "Gable, hipped top",
+			"dutch": "Hip with a gablet", "skillion": "One slope", "flat": "Just enough fall"}[sh], cur_shape == sh,
+			func() -> void: build.set_option("roof_shape", sh)))
+	_options.add_child(f)
+	if cur_shape != "flat":
+		_caps_add("Pitch")
+		var r := _row()
+		r.add_child(_button("Flatter", func() -> void: build.set_option("roof_pitch", Roofs.clamp_pitch(cur_shape, cur_pitch - 5.0)), 90))
+		var pl := _text("%.0f°" % cur_pitch, 16)
+		pl.custom_minimum_size = Vector2(56, 0)
+		pl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		r.add_child(pl)
+		r.add_child(_button("Steeper", func() -> void: build.set_option("roof_pitch", Roofs.clamp_pitch(cur_shape, cur_pitch + 5.0)), 90))
+		_options.add_child(r)
+	_caps_add("Eaves")
+	var r2 := _row()
+	for ov: float in [0.3, 0.45, 0.6, 0.9]:
+		r2.add_child(_toggle("%.2f m" % ov, is_equal_approx(cur_over, ov), func() -> void: build.set_option("roof_overhang", ov), 64))
+	_options.add_child(r2)
+	_caps_add("Roofing")
+	var f2 := _flow()
+	for mat: String in Roofs.MATERIALS:
+		var piece := Pieces.get_piece(mat)
+		f2.add_child(_card(str(piece.get("name", mat)), "£%d per 2 m²" % int(piece.get("cost", 1)), cur_mat == mat, func() -> void: build.set_option("roof_material", mat)))
+	_options.add_child(f2)
+	if editing:
+		var r3 := _row()
+		r3.add_child(_button("Turn the ridge" if not Roofs.is_mono(pc) else "Turn the slope", func() -> void: build.set_roof_prop("turn", true), 140))
+		r3.add_child(_button("Remove piece", func() -> void: build.delete_selection(), 120))
+		_options.add_child(r3)
+		_options.add_child(_text("Drag the roof up or down to change its pitch, or drag near an edge to stretch it.", 13, SECONDARY))
+	elif build.house != null and not build.house.data.roof.is_empty():
+		var r4 := _row()
+		r4.add_child(_button("Roof the whole house", func() -> void: build.roof_house(), 160, true))
+		r4.add_child(_button("Take it off", func() -> void: build.take_roof_off(), 110))
+		_options.add_child(r4)
+		if bool(build.house.data.roof.get("follow", false)):
+			_options.add_child(_text("The roof follows the plan as you build. Change a piece to set it by hand.", 13, SECONDARY))
+	elif build.house != null:
+		_options.add_child(_button("Roof the whole house", func() -> void: build.roof_house(), 0, true))
 
 
 const LININGS := {"wall_tiles": "Wall tiles", "vj_panelling": "VJ panelling"}

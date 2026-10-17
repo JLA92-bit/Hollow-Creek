@@ -39,6 +39,16 @@
     "kind": "texture",
     "used_as": "Mud by the creek"
   },
+  "polyhaven:clay_roof_tiles_02": {
+    "name": "Clay Roof Tiles 02",
+    "authors": [
+      "Amal Kumar"
+    ],
+    "source": "https://polyhaven.com/a/clay_roof_tiles_02",
+    "licence": "CC0",
+    "kind": "texture",
+    "used_as": "Terracotta Marseille tile roofs"
+  },
   "polyhaven:corrugated_iron": {
     "name": "Corrugated Iron",
     "authors": [
@@ -244,6 +254,26 @@
     "licence": "CC0",
     "kind": "texture",
     "used_as": "Gravel"
+  },
+  "polyhaven:roof_slates_02": {
+    "name": "Roof Slates 02",
+    "authors": [
+      "Rob Tuytel"
+    ],
+    "source": "https://polyhaven.com/a/roof_slates_02",
+    "licence": "CC0",
+    "kind": "texture",
+    "used_as": "Timber shingles (tinted)"
+  },
+  "polyhaven:roof_slates_03": {
+    "name": "Roof Slates 03",
+    "authors": [
+      "Rob Tuytel"
+    ],
+    "source": "https://polyhaven.com/a/roof_slates_03",
+    "licence": "CC0",
+    "kind": "texture",
+    "used_as": "Slate roofs on the church and older houses"
   },
   "polyhaven:rough_linen": {
     "name": "Rough Linen",

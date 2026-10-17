@@ -115,6 +115,40 @@
       "normal_scale": 1.6,
       "tier": 2
     },
+    "roof_paint_green": {
+      "category": "roof",
+      "tex": "corrugated_iron",
+      "size_m": 1.12,
+      "tint": "#3E5A44",
+      "roughness": 0.55,
+      "metallic": 0.1,
+      "normal_scale": 1.6,
+      "tier": 2
+    },
+    "roof_terracotta": {
+      "category": "roof",
+      "tex": "roof_terracotta",
+      "size_m": 2.5,
+      "tint": "#FFFFFF",
+      "roughness": 0.8,
+      "tier": 2
+    },
+    "roof_slate": {
+      "category": "roof",
+      "tex": "roof_slate",
+      "size_m": 3.0,
+      "tint": "#FFFFFF",
+      "roughness": 0.7,
+      "tier": 3
+    },
+    "roof_shingles": {
+      "category": "roof",
+      "tex": "roof_shingles",
+      "size_m": 3.0,
+      "tint": "#8A6A4E",
+      "roughness": 0.85,
+      "tier": 2
+    },
     "brick_red": {
       "category": "masonry",
       "tex": "brick_red",
