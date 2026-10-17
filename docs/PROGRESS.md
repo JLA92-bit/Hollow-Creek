@@ -2,6 +2,67 @@
 
 Newest milestone first. Build sizes are raw bytes, with gzip -9 in brackets.
 
+## M5 - Residents (done)
+
+**What works**
+- **Simulation (`scripts/sim/`):** deterministic, plain classes, all randomness from `SimRng`.
+  - `SimTown` is one walk graph over the valley floor and every storey of every house (stairs included; walls without doors block). Ground costs follow `docs/SIMULATION.md`.
+  - Places advertise what they satisfy: beds, stoves, ice chests, the wireless, good chairs, vegie patches, the shop, the exchange, the mill and the creek bank.
+  - `Sim` ticks once a game minute: needs (hunger, energy, social, fun) and mood, traits, jobs and schedules, sleep, utility choices among the top three, visits to friends, chatting, relationships (friend, close friend, sweethearts, enemy), grievances that fade 2 a day, wages and household costs on Mondays.
+  - Snapshots are exact: numbers are kept to 1/1024 and positions to 1/64 m, so a restored town carries on identically.
+- **Founding residents (`data/residents.json`):** the ten residents from `docs/RESIDENTS.md` with jobs, households, relationships, grievances, secrets, wishes and the Chapter 1 applicants (not arriving yet).
+- **People in the valley:**
+  - Placeholder mannequins (`tools/characters/make_mannequins.py`): dress and trouser builds with idle, walk and sit, coloured per resident from their appearance line ("grey hair in a bun, cardigan and apron").
+  - **Agnes through the MPFB pipeline** (`tools/characters/make_agnes.py`): a 67-year-old woman built from MPFB's CC0 base mesh, its tights and skirt helpers as her cardigan, stockings and skirt, and the game-engine rig. 9,000 triangles at LOD0, 2,800 at LOD1 (Low quality), same animations.
+  - Figures walk their routes smoothly between ticks, stand at the front of the stove or ice chest, sit in chairs, lie in bed, and stand on floors indoors and the ground outside.
+- **Families and their homes (`HomeLife`):**
+  - The three founding families wait at the siding with a brief ("Two bedrooms and a kitchen, handy to the mill. Two quid a week and not a penny more.").
+  - The **Residents** list (P, or Residents on the toolbar) offers each family any finished, empty house and says beforehand how they'd take it. They move in delighted, content or disappointed, against bedrooms, beds, rooms, the rent they can manage, and things they hoped for. Disappointment becomes a grievance against the Administrator.
+  - **Wishes** are checked against the house as built every night: a table in a room with an east window, a sleep-out with a bed, a shed, 4 m² of vegie patch, an armchair by the fire. A met wish lifts the owner's mood for a week and earns Town Trust; one ignored for four weeks turns into a grievance.
+  - **Rent** (£1 to £4 a week, from the home scores) comes in on Mondays. Home scores feed mood.
+  - **History card:** each home records when it was built and who moved in.
+- **Resident card** (click anyone, layout from the town mockup): name, age and job, traits, needs and mood bars, what they're doing ("Off to work at the mill", "Visiting Marge"), home, rent and wishes, the people who matter to them, recent news, and Follow.
+
+**Tests:** 146 GUT tests, all passing.
+- The same seed gives identical 7-day snapshots twice; a snapshot restored mid-week carries on identically.
+- Routines: mill hands at the mill and the shopkeeper in the shop at 10 am, everyone asleep at 3 am, the night owls up at 11 pm. Nobody starves; friends visit; grievances fade.
+- Wishes against real houses (sewing light, sleep-out, vegie area, shed, warm sitting room), move-in reactions, rent, the history card, wish moods, Town Trust and grievances, and residents' looks.
+
+**Acceptance demo** (`scenes/resident_ui/residents_demo.gd`; `?scene=residents_demo`). In a new story game:
+- Agnes lives alone at first, drawn with her MPFB model (8,999 triangles) and animated, on Medium.
+- Three houses go up and the Haywards, Pikes and Kowalskis are offered them. The Haywards are delighted; the Pikes and Kowalskis are content (a lovely home, but £3 a week is more than they hoped).
+- Two vegie beds are dug for Marge: her wish comes true overnight and Town Trust rises.
+- Tuesday: somebody is out walking at 6:40 am; Len and Tomasz are at the mill and Frank and Edna at the store at 10; everyone is in bed at 3 am.
+- Monday's rent (£9) is banked, and a save and load leaves the town exactly as it was.
+- **Result:** 20 of 20 checks pass.
+
+**Screenshots:** `docs/screens/m5/`:
+- `m5_01`: Agnes in her kitchen, with her card
+- `m5_02`: the Residents list with the families' briefs and offers
+- `m5_03`: walking to work
+- `m5_04`: Edna at the exchange
+- `m5_05`: evening at home
+- `m5_06`: 3 am
+- `m5_07`: Marge cooking, with her wish met
+
+**Build sizes**
+
+| File | Raw | gzip -9 |
+|---|---|---|
+| index.wasm | 39,514,754 | 10,084,297 |
+| index.pck | 34,616,200 | 28,066,461 |
+| **First download** | | **about 38.2 MB** (budget 40 MB) |
+
+BROWSER_RESULT
+
+**Performance** (headless desktop): a game hour of all ten residents (60 ticks) takes about 0.2 to 0.3 ms per tick batch; building the town's walk graph takes a fraction of a second. Agnes adds one skinned mesh of 9,000 triangles at Medium.
+
+**Known issues** (more in `docs/BACKLOG.md`)
+- Agnes has painted-on feet and hair, and no facial shapes; the other residents are still mannequins.
+- Frank's wish (a shop sign and a bigger counter) can't be met until those pieces are in the catalogue.
+- Walking is fast at 1x (1.2 m/s of game time is about 5 m/s on screen), so the walk animation runs quickly.
+- Families can't yet move out or between houses.
+
 ## M4 - Buy mode and construction (done)
 
 **What works**

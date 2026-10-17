@@ -56,7 +56,7 @@ func _triangles(n: Node) -> int:
 
 func _perf(label: String) -> void:
 	await _frames(20)
-	print("HC_PERF %s fps=%d draw_calls=%d triangles=%d sim_ms=%.2f" % [label, Engine.get_frames_per_second(),
+	print("HC_DEMO perf %s fps=%d draw_calls=%d triangles=%d sim_ms=%.2f" % [label, Engine.get_frames_per_second(),
 		Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME), Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME), SimHost.tick_ms])
 
 

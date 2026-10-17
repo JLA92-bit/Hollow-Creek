@@ -35,3 +35,12 @@ Work deliberately deferred to keep milestones tight. Each item notes where it ca
 | Electricity for the town | M4 | Electric lights and the wireless work anywhere for now. A story flag should hold them back until the power comes, with kerosene before |
 | Wall frames with openings | M4 | Studs run straight across where doors and windows will go. Trimmers and lintels would read better |
 | Construction for gardens and furniture deliveries | M4 | Garden work is one stage at the end, and furniture arrives with joinery. A separate delivery cart and gardener visits would be nicer |
+| Frank's shop sign and counter | M5 | His wish needs `shop_sign` and `shop_counter` catalogue pieces that don't exist yet. Add them with the hotel and church pieces |
+| Agnes's shoes, hair and face | M5 | The MPFB test character has painted feet, hair painted on the scalp with a bun, and no facial shapes. Model shoes and hair cards, and add the six expressions, before the other residents go through the pipeline |
+| MPFB for every resident | M5 | Only Agnes uses the pipeline; the other nine are placeholder mannequins coloured from their appearance lines |
+| Chapter 1 applicants | M5 | The founding families apply at the start. Bert, Father Reilly, Arthur, Clara and the Russos come when the town reaches six households (story chapters, M7) |
+| Life changes and envy | M5 | Marriages, births, lodgers and children growing up making new wishes, and Proud or Jealous residents envying a neighbour's Style, are designed but not simulated yet |
+| Residents lighting lamps | M5 | Houses are dark inside on summer evenings unless lamps are placed and the day/night system lights them. Residents should light and blow out their own lamps (feeds sightlines in M6) |
+| Walking speed versus clock speed | M5 | People walk at 1.2 m/s of game time, so at 1x a 60 m trip takes under a second of real time and the walk animation runs fast. Fine for a town sim; a slower "follow" speed could help when watching one person |
+| Bed orientation | M5 | Sleepers lie along the bed's own direction, but the head end isn't checked against pillows on every model |
+| Moving a family out | M5 | Families can move in but not out or between houses, and demolishing a lived-in house isn't blocked yet |

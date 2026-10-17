@@ -42,13 +42,17 @@ node tools/look_test.mjs --scene sandbox_demo --out docs/screens/m3        # sam
 tools/bin/godot --headless --path . res://scenes/build_ui/construction_demo.tscn  # M4 story demo: furnish, scores, building stages
 HC_SHOT_DIR=/tmp/shots xvfb-run -a tools/bin/godot --path . --rendering-driver opengl3 --resolution 1280x720 res://scenes/build_ui/construction_demo.tscn   # quick desktop shots of any demo
 bash tools/props/setup_blender.sh && tools/cache/blender-venv/bin/python tools/props/make_props.py   # model the 1950s props in headless Blender
+tools/cache/blender-venv/bin/python tools/characters/make_mannequins.py      # placeholder resident mannequins (idle, walk, sit)
+bash tools/characters/setup_mpfb.sh && tools/cache/blender-venv/bin/python tools/characters/make_agnes.py   # Agnes through the MPFB pipeline
+tools/bin/godot --headless --path . res://scenes/resident_ui/residents_demo.tscn   # M5 residents demo: move-ins, routines, wishes, rent
+xvfb-run -a tools/bin/godot --path . --rendering-driver opengl3 -s tools/previews/people_preview.gd -- out.png   # every resident's look side by side
 xvfb-run -a tools/bin/godot --path . --rendering-driver opengl3 -s tools/previews/roof_preview.gd -- out.png   # quick desktop render of roof shapes (also exterior_preview, garden_preview)
 python3 tools/textures/make_wallpapers.py; python3 tools/textures/make_lace.py; python3 tools/textures/make_garden.py   # wallpaper masks, lace and lattice, plant cards
 node tools/look_test.mjs --scene build_demo --out docs/screens/m2           # same demo in the browser, with screenshots
 python3 -I tools/audio/make_ui_sfx.py              # regenerate the build-mode UI sounds
 ```
 
-URL hooks for previews and tests: `?scene=world` opens the valley directly, `?scene=look_test` runs the look test (options in `scenes/world/look_test.gd`), `?scene=build_demo` runs the M2 build demo, `?scene=sandbox_demo` the M3 sandbox demo, `?scene=construction_demo` the M4 story demo.
+URL hooks for previews and tests: `?scene=world` opens the valley directly, `?scene=look_test` runs the look test (options in `scenes/world/look_test.gd`), `?scene=build_demo` runs the M2 build demo, `?scene=sandbox_demo` the M3 sandbox demo, `?scene=construction_demo` the M4 story demo, `?scene=residents_demo` the M5 residents demo.
 
 `tools/bin/`, `tools/cache/` and `build/` are git-ignored. Run `--import` before tests or exports in a fresh checkout. The engine is about 9.6 MB gzipped on its own (`index.wasm`, 4.7.2).
 

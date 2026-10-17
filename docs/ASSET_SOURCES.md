@@ -55,6 +55,8 @@ MPFB (MakeHuman for Blender) generates realistic human bodies from sliders. The 
 4. Add facial blend shapes for neutral, happy, sad, angry, nervous and surprised.
 5. Rig to a standard humanoid skeleton, retarget animations, decimate to the triangle budget (`docs/ART_DIRECTION.md`), and export glTF with LOD0 and LOD1.
 
+**Where it stands (M5):** `bash tools/characters/setup_mpfb.sh` clones MPFB 2 from GitHub (its release page and the MakeHuman asset servers are blocked from the cloud session) and packages it as a Blender extension; `tools/characters/make_agnes.py` installs it into headless Blender and builds Agnes. No clothing packs are reachable, so her clothes are MPFB's own CC0 helper geometry: the tights helper (smoothed over the torso) is her cardigan and stockings, the skirt helper her skirt, and the body shows only at the head, neck, hands and feet. Material slots (skin, hair, top, bottom, legs, shoes) are split by bone and coloured in game by `ResidentLook`, like the placeholder mannequins. She's normalised to the mannequins' 1.76 m so one height scale works for everyone, decimated to 9,000 triangles (LOD0) and 2,800 (LOD1), and given the same idle, walk and sit animations, keyed as world-space swings so the A-pose rest doesn't matter. Still to do per `docs/BACKLOG.md`: shoes, hair meshes, facial shapes and the other residents.
+
 **Character customisation:** because MPFB is slider-based, the same pipeline can later power an in-game "make a resident" screen for applicant families, with sliders baked into blend shapes.
 
 ## Animations
