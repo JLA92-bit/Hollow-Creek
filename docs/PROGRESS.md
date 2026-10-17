@@ -45,7 +45,7 @@ The four 1k HDR skies make up 11 MB of the pack. Halving them is the first lever
 **Performance**
 - Desktop profile, Medium, 1280 x 720 at a device pixel ratio of 1.5, midday exterior: 255 draw calls and about 487k triangles a frame. That counts every shadow-cascade pass; the cottage's view without the backdrop is about 340k. Sim and lighting update time is 0.4 ms.
 - Frame time in headless Chromium is about 5.4 s a frame. That's SwiftShader (WebGL 2 rendered on the CPU), so it says nothing about a real GPU. It's recorded in `perf_desktop_medium.json`.
-- Mid-range phone profile (915 x 412, CPU throttled 4x, Medium): PHONE_RESULT
+- Mid-range phone profile (915 x 412, CPU throttled 4x, Medium): median 2,588 ms a frame (p95 2,741 ms), 255 draw calls, 462k triangles, sim 0.3 ms. The game renders at 1599 x 720 because the stretch mode expands to fill the width. This is SwiftShader again, so it only shows the CPU side isn't the bottleneck (sim 0.3 ms). `perf_phone_medium.json`
 - **A real phone is needed** to confirm 30 fps on Medium. The debug panel (F3, or the Debug chip) shows live FPS, frame time, draw calls and triangles.
 
 **Known issues**
