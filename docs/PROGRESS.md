@@ -2,6 +2,68 @@
 
 Newest milestone first. Build sizes are raw bytes, with gzip -9 in brackets.
 
+## M4 - Buy mode and construction (done)
+
+**What works**
+- **Catalogue (`data/catalogue.json`, `Catalogue`):** 31 pieces.
+  - 15 are Poly Haven models.
+  - 16 are 1950s props modelled with headless Blender (`tools/props/make_props.py`; `bash tools/props/setup_blender.sh` installs `bpy`): wood stove, ice chest, wireless set, wall telephone, laminex table, chrome kitchen chair, iron bedstead, wardrobe, chest of drawers, washstand, clawfoot bath, settee, sink and drainer, pendant light, standard lamp and candle.
+  - Rooms (living, bedroom, kitchen, bathroom, outdoor) and functions (seating, surfaces, storage, beds, appliances, lighting, decor, plumbing). Search, room and function filters, price and period notes.
+- **Placement (Furnish tool, U, or Furnish on the toolbar):**
+  - Floor pieces stay inside rooms and out of each other's way. Wall pieces hang on the nearest inside wall facing into the room, and can be raised and lowered. Ceiling pieces hang at ceiling height.
+  - Surface pieces stand on tables, cabinets and the ice chest and ride along when those move. Anything can be stacked with Stack, such as fruit crates.
+  - Snap to 0.5 m, 0.25 m or free (Alt). Turn in 45 degree steps (15 with Shift).
+  - Live labels show price and the change to the home scores ("+4 Comfort, +3 Style").
+  - Select by clicking; Ctrl-click to add to the selection. Drag to move; arrows nudge (Shift for fine); , and . turn a piece or a whole group about its centre; Delete removes a piece and whatever stands on it.
+- **Design tool:**
+  - Every piece has named material slots: our props have "timber", "enamel", "chrome", "fabric", "laminex" and so on, and Poly Haven pieces their own material, which can be tinted.
+  - Choose any library material in the slot's family (four timbers, enamel, chrome, nickel, brass, cast iron, laminex, vinyl, bakelite, marble, china, mirror, linen, gingham, leather, velvet, chenille) and any colour, including a mixed colour.
+  - Save a piece's look as a named style and apply it to anything with the same slots.
+- **Lighting:** lamps, candles and lights give real light in their colour temperature (Flame 1900 K, Warm 2700 K, Neutral 3500 K, Daylight 5000 K), with brightness per lamp. Kerosene and candle light flickers.
+- **Home scores (`HomeScores`):** Comfort, Style, Warmth, Light, Space, Privacy and Security, each 0 to 100.
+  - Built from furniture, kitchen completeness, beds per sleeper, colour pairs from the palette, wallpaper and lace, garden and fences, stove and fireplace coverage, the roof, brick walls, window area per room, morning sun in the kitchen, curtains, locks, latches and gates.
+  - Shown as bars in the Furnish panel and previewed on every placement.
+- **Construction in the story (`Construction`):**
+  - Whatever you design is the plan. The house as it stands lags behind it.
+  - Materials ordered today arrive at the siding at 7 am tomorrow; until then the new work shows as sky-blue blueprints.
+  - Two crews then work 8 am to 4 pm, Monday to Saturday, at 5 units a day each (5 m of wall or 5 m² of floor). They go through demolition, stumps, floor frame, floors, wall frames, roof frame (rafters), roofing, cladding and lining (raw boards and unpainted linings), doors and windows, and paint and garden.
+  - Each stage is drawn as it stands, with a toast as it starts.
+  - Rain slows outdoor stages to 30%. Rough, Standard and Fine work change cost (0.8x, 1x, 1.3x), time (faster, normal, slower) and Style (-6, 0, +6).
+  - New furniture is carried in once the doors and windows are in.
+  - The house panel shows the stage, percentage and days left. Undo and redo are building work too. Sandbox still builds instantly.
+
+**Tests:** 131 GUT tests, all passing.
+- Catalogue search and filters, and every item's model and slots.
+- Floor, wall, ceiling and surface placement, riders, stacking, group moves, design slots, styles and lamps.
+- Home scores for a bare shell and a furnished cottage, and score inputs and previews.
+- Construction work, stage drawing, demolition order, days to build, rain, Sundays and quality tiers.
+
+**Acceptance demo** (`scenes/build_ui/construction_demo.gd`; `?scene=construction_demo`). In a story game:
+- **Design:** a three-room cottage drawn with the real tools goes on the build queue as blueprints.
+- **Furnishing:** 15 pieces are bought with the Furnish tool. The wireless lands on the table, the bed gets a rose chenille spread, and the table top turns blue.
+- **Scores:** Comfort 94, Style 49, Warmth 71, Light 83, Space 100, Privacy 85, Security 40.
+- **Building:** the clock is run and the crews build it over 16 in-game days, stage by stage. The finished house matches the design exactly.
+- **Result:** 13 of 13 checks pass.
+
+**Screenshots:** `docs/screens/m4/`:
+- `m4_01`: blueprints
+- `m4_02`: floor frame
+- `m4_03`: wall frames
+- `m4_04`: roof frame and roofing
+- `m4_05`: cladding
+- `m4_06`: finished
+- `m4_07`: furnished, at dusk
+
+**Build sizes**
+
+SIZES_TABLE
+
+**Known issues** (more in `docs/BACKLOG.md`)
+- Handy residents doing renovations and building furniture wait for residents in M5.
+- No dressed groups saved to the library yet; groups move and turn together.
+- Electric lights work everywhere for now; the town's electricity arrives with a later chapter.
+- Wall frames ignore door and window openings until joinery (the studs run straight across).
+
 ## M3 - Build detail (done)
 
 **What works**

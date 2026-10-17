@@ -30,3 +30,8 @@ Work deliberately deferred to keep milestones tight. Each item notes where it ca
 | Terrain beyond a house's lot | M3 | Landscaping belongs to a house and reaches 12 m from it. Town-wide earthworks (roads, drains) come with the Roads tool |
 | Trees on raised or lowered ground | M3 | Trees and shrubs keep the height they were planted at. Building clears them from the yard, so it only shows if terrain is edited right at the bush edge |
 | Story construction for M3 pieces | M3 | Roofs, verandahs and gardens cost money now. Build stages, materials at the siding and crews come in M4 |
+| Handy residents and furniture-making | M4 | Residents (Tomasz the cabinetmaker) doing renovations or making furniture for less, building friendship. Needs residents (M5) |
+| Dressed groups in the library | M4 | Multi-select moves and turns groups; saving a dressed dining table as a library set is still to come |
+| Electricity for the town | M4 | Electric lights and the wireless work anywhere for now. A story flag should hold them back until the power comes, with kerosene before |
+| Wall frames with openings | M4 | Studs run straight across where doors and windows will go. Trimmers and lintels would read better |
+| Construction for gardens and furniture deliveries | M4 | Garden work is one stage at the end, and furniture arrives with joinery. A separate delivery cart and gardener visits would be nicer |

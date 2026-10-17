@@ -39,13 +39,16 @@ tools/bin/godot --headless --path . -s tools/map_preview.gd   # top-down PNG of 
 tools/bin/godot --headless --path . res://scenes/build_ui/build_demo.tscn   # M2 build demo through the real tools (exit code = pass/fail)
 tools/bin/godot --headless --path . res://scenes/build_ui/sandbox_demo.tscn # M3 sandbox demo: finished home and garden, share code round trip
 node tools/look_test.mjs --scene sandbox_demo --out docs/screens/m3        # same in the browser, with screenshots
+tools/bin/godot --headless --path . res://scenes/build_ui/construction_demo.tscn  # M4 story demo: furnish, scores, building stages
+HC_SHOT_DIR=/tmp/shots xvfb-run -a tools/bin/godot --path . --rendering-driver opengl3 --resolution 1280x720 res://scenes/build_ui/construction_demo.tscn   # quick desktop shots of any demo
+bash tools/props/setup_blender.sh && tools/cache/blender-venv/bin/python tools/props/make_props.py   # model the 1950s props in headless Blender
 xvfb-run -a tools/bin/godot --path . --rendering-driver opengl3 -s tools/previews/roof_preview.gd -- out.png   # quick desktop render of roof shapes (also exterior_preview, garden_preview)
 python3 tools/textures/make_wallpapers.py; python3 tools/textures/make_lace.py; python3 tools/textures/make_garden.py   # wallpaper masks, lace and lattice, plant cards
 node tools/look_test.mjs --scene build_demo --out docs/screens/m2           # same demo in the browser, with screenshots
 python3 -I tools/audio/make_ui_sfx.py              # regenerate the build-mode UI sounds
 ```
 
-URL hooks for previews and tests: `?scene=world` opens the valley directly, `?scene=look_test` runs the look test (options in `scenes/world/look_test.gd`), `?scene=build_demo` runs the M2 build demo, `?scene=sandbox_demo` the M3 sandbox demo.
+URL hooks for previews and tests: `?scene=world` opens the valley directly, `?scene=look_test` runs the look test (options in `scenes/world/look_test.gd`), `?scene=build_demo` runs the M2 build demo, `?scene=sandbox_demo` the M3 sandbox demo, `?scene=construction_demo` the M4 story demo.
 
 `tools/bin/`, `tools/cache/` and `build/` are git-ignored. Run `--import` before tests or exports in a fresh checkout. The engine is about 9.6 MB gzipped on its own (`index.wasm`, 4.7.2).
 
