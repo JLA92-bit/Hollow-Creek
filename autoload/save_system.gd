@@ -41,7 +41,8 @@ func save_slot(slot: String) -> Error:
 	var f := FileAccess.open("%s/%s.json" % [DIR, slot], FileAccess.WRITE)
 	if f == null:
 		return FileAccess.get_open_error()
-	f.store_string(JSON.stringify(build_save()))
+	# Full precision so the simulation carries on exactly as it would have.
+	f.store_string(JSON.stringify(build_save(), "", false, true))
 	f.close()
 	EventBus.save_completed.emit(slot)
 	return OK

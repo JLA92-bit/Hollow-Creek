@@ -1,11 +1,41 @@
 class_name Sim
 extends RefCounted
-## The resident simulation. Plain class, no scene dependencies. One tick is one game minute.
-## Residents, needs and actions arrive in M5; for now it owns the RNG and the tick count.
+## The resident simulation (docs/SIMULATION.md). Plain class, no scene dependencies, deterministic:
+## one tick is one game minute, residents are visited in id order, and every random choice comes
+## from the one SimRng. snapshot() and restore() round-trip exactly.
+##
+## Residents have needs (hunger, energy, social, fun: 100 is satisfied) that fall over time. When
+## idle they pick an action by utility, from the top three with weighted randomness; work, sleep
+## and the like override needs on schedule. They walk real routes through the town graph
+## (SimTown), chat with whoever is near, and build or lose friendship, romance and respect.
+
+const NEEDS: Array[String] = ["hunger", "energy", "social", "fun"]
+## Decay per minute (docs/SIMULATION.md lists per hour: hunger 6, energy 4, social 5, fun 4).
+const DECAY := {"hunger": 0.1, "energy": 0.0667, "social": 0.0833, "fun": 0.0667}
+const SLEEP_RECOVERY := 0.2
+const CHAT_RANGE := 4.0
+const SAME_PLACE := 1.6
+
+
+## Keeps simulation numbers on a binary grid (multiples of 1/1024), so snapshots written as JSON read
+## back bit for bit and a restored town carries on exactly as the original would have.
+static func q(x: float) -> float:
+	return roundf(x * 1024.0) / 1024.0
 
 var rng: SimRng
 var ticks: int = 0
 var seed_value: int = 0
+var day: int = 0
+var minute: int = 0
+var town: SimTown
+var data: Dictionary = {}          ## data/residents.json
+var residents: Dictionary = {}     ## id -> resident state
+var households: Dictionary = {}    ## id -> {name, home, money, weekly}
+var relationships: Dictionary = {} ## "a>b" -> {friendship, romance, respect}
+var grievances: Array = []         ## {owner, target, reason, weight, day}
+var secrets: Dictionary = {}
+var home_scores: Dictionary = {}   ## house id -> average home score (0 to 100), for mood
+var events: Array = []             ## recent notable things, newest last: {day, minute, who, text}
 
 
 func _init(p_seed: int = 0) -> void:
@@ -13,8 +43,119 @@ func _init(p_seed: int = 0) -> void:
 	rng = SimRng.new(p_seed)
 
 
+static func load_data() -> Dictionary:
+	return JSON.parse_string(FileAccess.get_file_as_string("res://data/residents.json")) as Dictionary
+
+
+## Sets up the town and its people. homes: household id -> house id for households living here;
+## households without a home stay away (not simulated) until they move in.
+func setup(p_town: SimTown, p_data: Dictionary, homes: Dictionary, start_day: int = 0, start_minute: int = 360) -> void:
+	town = p_town
+	data = p_data
+	day = start_day
+	minute = start_minute
+	var hh: Dictionary = data["households"]
+	var hkeys := hh.keys()
+	hkeys.sort()
+	for hid: String in hkeys:
+		var h: Dictionary = (hh[hid] as Dictionary).duplicate(true)
+		h["home"] = str(homes.get(hid, ""))
+		households[hid] = h
+	var rs: Dictionary = data["residents"]
+	var rkeys := rs.keys()
+	rkeys.sort()
+	for rid: String in rkeys:
+		var d: Dictionary = rs[rid]
+		var r := {"id": rid, "first": d["first"], "last": d["last"], "age": int(d["age"]), "sex": d["sex"], "household": d["household"],
+			"job": d["job"], "traits": (d["traits"] as Array).duplicate(), "needs": {}, "mood": 70.0, "pos": [], "house": "",
+			"action": {"kind": "idle"}, "route": [], "walk_start": 0, "status": "away", "memories": []}
+		for n in NEEDS:
+			r["needs"][n] = q(60.0 + rng.randf_range(0.0, 30.0))
+		residents[rid] = r
+		move_in(rid)
+	for rel: Dictionary in data.get("relationships", []):
+		var k := "%s>%s" % [rel["a"], rel["b"]]
+		relationships[k] = {"friendship": float(rel.get("friendship", 0)), "romance": float(rel.get("romance", 0)), "respect": float(rel.get("respect", 0))}
+	for g: Dictionary in data.get("grievances", []):
+		grievances.append(g.duplicate())
+	secrets = (data.get("secrets", {}) as Dictionary).duplicate(true)
+
+
+## Puts a resident at home if their household has one; otherwise they're away.
+func move_in(rid: String) -> void:
+	var r: Dictionary = residents[rid]
+	var home := str((households[r["household"]] as Dictionary).get("home", ""))
+	if home == "" or not town.homes.has(home):
+		r["status"] = "away"
+		return
+	r["status"] = "living"
+	var spot: Array = (town.homes[home] as Dictionary).get("living", [])
+	if spot.is_empty():
+		r["status"] = "away"
+		return
+	r["pos"] = spot.duplicate()
+	r["house"] = home
+	r["action"] = {"kind": "idle"}
+
+
+func home_of(rid: String) -> String:
+	return str((households[(residents[rid] as Dictionary)["household"]] as Dictionary).get("home", ""))
+
+
+func has_trait(rid: String, t: String) -> bool:
+	return ((residents[rid] as Dictionary)["traits"] as Array).has(t)
+
+
+func rel(a: String, b: String) -> Dictionary:
+	var k := "%s>%s" % [a, b]
+	if not relationships.has(k):
+		relationships[k] = {"friendship": 0.0, "romance": 0.0, "respect": 0.0}
+	return relationships[k]
+
+
+## The label the UI shows for how a feels about b.
+func rel_label(a: String, b: String) -> String:
+	var r := rel(a, b)
+	if float(r["romance"]) >= 50.0:
+		return "Sweethearts"
+	var f := float(r["friendship"])
+	if f >= 60.0:
+		return "Close friend"
+	if f >= 30.0:
+		return "Friend"
+	if f <= -60.0:
+		return "Enemy"
+	if f <= -30.0:
+		return "Wary"
+	return "Neutral"
+
+
+func log_event(who: String, text: String) -> void:
+	events.append({"day": day, "minute": minute, "who": who, "text": text})
+	if events.size() > 200:
+		events.pop_front()
+
+
+# --- Tick ----------------------------------------------------------------------------------------
+
 func tick() -> void:
 	ticks += 1
+	minute += 1
+	if minute >= 1440:
+		minute = 0
+		day += 1
+		_new_day()
+	if town == null:
+		return
+	var ids := residents.keys()
+	ids.sort()
+	for rid: String in ids:
+		var r: Dictionary = residents[rid]
+		if r["status"] != "living":
+			continue
+		_decay(r)
+		_step(r)
+	_socialise(ids)
 
 
 func run_ticks(n: int) -> void:
@@ -22,11 +163,347 @@ func run_ticks(n: int) -> void:
 		tick()
 
 
+func _decay(r: Dictionary) -> void:
+	var needs: Dictionary = r["needs"]
+	var asleep: bool = str((r["action"] as Dictionary).get("kind", "")) == "sleep" and (r["route"] as Array).is_empty()
+	for n in NEEDS:
+		var d := float(DECAY[n])
+		if n == "social":
+			if (r["traits"] as Array).has("lonely"):
+				d *= 1.5
+			if (r["traits"] as Array).has("shy"):
+				d *= 0.7
+		if n == "energy" and asleep:
+			needs[n] = q(minf(100.0, float(needs[n]) + SLEEP_RECOVERY))
+			continue
+		if asleep and n != "hunger":
+			continue
+		needs[n] = q(maxf(0.0, float(needs[n]) - d * (0.5 if asleep else 1.0)))
+	var avg := 0.0
+	for n2 in NEEDS:
+		avg += float(needs[n2])
+	avg /= NEEDS.size()
+	var home_s := float(home_scores.get(home_of(r["id"]), 60.0))
+	r["mood"] = q(lerpf(float(r["mood"]), avg * 0.75 + home_s * 0.25, 0.02))
+
+
+## One minute of a resident: walk on, carry on with the action, or choose the next thing to do.
+func _step(r: Dictionary) -> void:
+	var act: Dictionary = r["action"]
+	if not r["route"].is_empty():
+		var walked := float(ticks - int(r["walk_start"])) * SimTown.WALK_M_PER_MIN
+		var length := SimTown.route_length(r["route"])
+		if walked >= length:
+			r["pos"] = (r["route"][r["route"].size() - 1] as Array).duplicate()
+			r["route"] = []
+			act["until"] = ticks + int(act.get("minutes", 30))
+		else:
+			r["pos"] = SimTown.along(r["route"], walked)
+			return
+	var kind := str(act.get("kind", "idle"))
+	if kind != "idle":
+		_satisfy(r, act)
+		if ticks < int(act.get("until", 0)) and not _interrupted(r, act):
+			return
+		act["kind"] = "idle"
+	_choose(r)
+
+
+func _satisfy(r: Dictionary, act: Dictionary) -> void:
+	var needs0: Dictionary = r["needs"]
+	if str(act["kind"]) == "work":
+		# Crib at midday, and the people you deal with at work.
+		if minute >= 12 * 60 and minute < 12 * 60 + 30:
+			needs0["hunger"] = q(minf(100.0, float(needs0["hunger"]) + 1.5))
+		needs0["social"] = q(minf(100.0, float(needs0["social"]) + 0.05))
+	var adv: Dictionary = act.get("advert", {})
+	var mins := maxf(1.0, float(act.get("minutes", 30)))
+	for n: String in adv:
+		if n == "energy" and str(act["kind"]) == "sleep":
+			continue
+		var needs: Dictionary = r["needs"]
+		needs[n] = q(minf(100.0, float(needs[n]) + float(adv[n]) / mins))
+
+
+## Work and sleep end on the clock; other things stop when something urgent comes up.
+func _interrupted(r: Dictionary, act: Dictionary) -> bool:
+	var kind := str(act["kind"])
+	if kind == "sleep":
+		return minute == _wake(r)
+	if kind == "work":
+		return false
+	return _should_sleep(r) or _work_now(r) and kind != "work"
+
+
+# --- Choosing ------------------------------------------------------------------------------------
+
+func _bed_time(r: Dictionary) -> int:
+	if (r["traits"] as Array).has("night_owl"):
+		return 0
+	if (r["traits"] as Array).has("early_riser"):
+		return 21 * 60
+	return 22 * 60
+
+
+func _wake(r: Dictionary) -> int:
+	if (r["traits"] as Array).has("night_owl"):
+		return 7 * 60 + 30
+	if (r["traits"] as Array).has("early_riser"):
+		return 5 * 60
+	return 6 * 60 + 30
+
+
+func _should_sleep(r: Dictionary) -> bool:
+	var bed := _bed_time(r)
+	var wake := _wake(r)
+	if bed == 0:
+		return minute < wake
+	return minute >= bed or minute < wake
+
+
+func _job(r: Dictionary) -> Dictionary:
+	return (data["jobs"] as Dictionary).get(str(r["job"]), {})
+
+
+func _work_now(r: Dictionary) -> bool:
+	var j := _job(r)
+	if j.is_empty() or (j.get("days", []) as Array).is_empty():
+		return false
+	var today := posmod(day, 7)
+	var works := false
+	for d: Variant in j["days"]:
+		if int(d) == today:
+			works = true
+	if not works:
+		return false
+	return minute >= int(j["start"]) - 20 and minute < int(j["end"])
+
+
+func _work_place(r: Dictionary) -> Dictionary:
+	var j := _job(r)
+	var where := str(j.get("place", ""))
+	if where == "home":
+		var living: Array = (town.homes.get(home_of(r["id"]), {}) as Dictionary).get("living", [])
+		return {"id": "home", "at": living, "house": home_of(r["id"])} if not living.is_empty() else {}
+	if where.begins_with("lm_"):
+		return town.place(where)
+	for p in town.places:
+		if str(p.get("work", "")) == where:
+			return p
+	return {}
+
+
+func _choose(r: Dictionary) -> void:
+	var rid: String = r["id"]
+	if _should_sleep(r):
+		var beds: Array = (town.homes.get(home_of(rid), {}) as Dictionary).get("beds", [])
+		var bed: Dictionary = town.place(beds[0]) if not beds.is_empty() else {}
+		if bed.is_empty():
+			var living: Array = (town.homes.get(home_of(rid), {}) as Dictionary).get("living", r["pos"])
+			bed = {"id": "floor", "at": living, "house": home_of(rid)}
+		_go(r, {"kind": "sleep", "place": bed["id"], "minutes": _minutes_until(_wake(r))}, bed["at"], str(bed.get("house", "")))
+		return
+	if _work_now(r):
+		var wp := _work_place(r)
+		if not wp.is_empty():
+			var j := _job(r)
+			_go(r, {"kind": "work", "place": wp["id"], "minutes": maxi(10, int(j["end"]) - minute)}, wp["at"], str(wp.get("house", "")))
+			return
+	# Utility: what the places on offer would do for this resident's needs, nearer is better.
+	var cands: Array = []
+	var home := home_of(rid)
+	for p in town.places:
+		var kind := str(p["kind"])
+		if kind in ["bed", "work", "exchange"]:
+			continue
+		if str(p.get("house", "")) != "" and str(p["house"]) != home and kind != "shop":
+			continue
+		if kind == "fish" and not (has_trait(rid, "night_owl") or has_trait(rid, "early_riser") or minute >= 15 * 60):
+			continue
+		var s := _score(r, p["advert"])
+		if s <= 0.0:
+			continue
+		if kind == "shop" and float((households[r["household"]] as Dictionary).get("money", 0)) <= 0.0:
+			continue
+		var dist := Vector2(float(p["at"][1]), float(p["at"][2])).distance_to(Vector2(float(r["pos"][1]), float(r["pos"][2])))
+		cands.append({"score": s / (1.0 + dist / 60.0), "kind": kind, "place": p})
+	# Visiting a friend who's at home.
+	var social_need := 100.0 - float(r["needs"]["social"])
+	if social_need > 25.0 and minute >= 8 * 60 and minute < 20 * 60:
+		var others := residents.keys()
+		others.sort()
+		for oid: String in others:
+			if oid == rid or (residents[oid] as Dictionary)["status"] != "living":
+				continue
+			var f := float(rel(rid, oid)["friendship"])
+			var oh := home_of(oid)
+			if f < 30.0 or oh == home or str((residents[oid] as Dictionary)["house"]) != oh:
+				continue
+			var m := 1.0
+			if has_trait(rid, "kind"):
+				m *= 1.2
+			if has_trait(rid, "gossip") or has_trait(rid, "nosy"):
+				m *= 1.3
+			if has_trait(rid, "shy"):
+				m *= 0.5
+			var living: Array = (town.homes.get(oh, {}) as Dictionary).get("living", [])
+			if living.is_empty():
+				continue
+			var dist2 := Vector2(float(living[1]), float(living[2])).distance_to(Vector2(float(r["pos"][1]), float(r["pos"][2])))
+			cands.append({"score": social_need / 100.0 * 40.0 * m * (f / 60.0) / (1.0 + dist2 / 60.0), "kind": "visit",
+				"place": {"id": "visit:" + oid, "at": living, "house": oh, "advert": {"social": 40.0}, "minutes": 60}, "friend": oid})
+	cands.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return float(a["score"]) > float(b["score"]) or (float(a["score"]) == float(b["score"]) and str(a["place"]["id"]) < str(b["place"]["id"])))
+	if cands.is_empty() or float(cands[0]["score"]) < 3.0:
+		# Pottering about at home.
+		var living2: Array = (town.homes.get(home, {}) as Dictionary).get("living", r["pos"])
+		_go(r, {"kind": "potter", "place": "home", "minutes": 20 + rng.randi_range(0, 25)}, living2, home)
+		return
+	var top: Array = cands.slice(0, 3)
+	var weights: Array[float] = []
+	for c in top:
+		weights.append(float(c["score"]))
+	var pick: Dictionary = top[maxi(0, rng.weighted_index(weights))]
+	var pl: Dictionary = pick["place"]
+	var act := {"kind": pick["kind"], "place": pl["id"], "minutes": int(pl.get("minutes", 30)), "advert": pl["advert"]}
+	if pick.has("friend"):
+		act["friend"] = pick["friend"]
+		log_event(rid, "%s went to visit %s." % [r["first"], (residents[pick["friend"]] as Dictionary)["first"]])
+	if str(pick["kind"]) == "shop":
+		var hh: Dictionary = households[r["household"]]
+		hh["money"] = float(hh["money"]) - 1.0
+	_go(r, act, pl["at"], str(pl.get("house", "")))
+
+
+func _score(r: Dictionary, advert: Dictionary) -> float:
+	var s := 0.0
+	for n: String in advert:
+		var deficit := 100.0 - float((r["needs"] as Dictionary).get(n, 100.0))
+		var m := 1.0
+		if n == "social" and (r["traits"] as Array).has("lonely"):
+			m = 1.5
+		s += deficit / 100.0 * float(advert[n]) * m
+	return s
+
+
+func _minutes_until(target: int) -> int:
+	return posmod(target - minute, 1440)
+
+
+## Sets off for a place: a route through the town, then the action once there.
+func _go(r: Dictionary, act: Dictionary, at: Array, house: String) -> void:
+	if at.is_empty():
+		act["until"] = ticks + 15
+		r["action"] = act
+		return
+	var route := town.route(r["pos"], at, str(r["house"]), house)
+	r["action"] = act
+	r["house"] = house
+	if route.size() <= 1:
+		r["pos"] = at.duplicate() if route.is_empty() else (route[0] as Array).duplicate()
+		r["route"] = []
+		act["until"] = ticks + int(act.get("minutes", 30))
+		return
+	r["route"] = route
+	r["walk_start"] = ticks
+
+
+# --- People together -----------------------------------------------------------------------------
+
+## Residents near each other chat: social rises, friendship grows (faster for the Kind), sweethearts
+## grow fonder. Only people on the same storey and within a few metres, awake and not walking.
+func _socialise(ids: Array) -> void:
+	var here: Array = []
+	for rid: String in ids:
+		var r: Dictionary = residents[rid]
+		if r["status"] != "living" or not r["route"].is_empty() or str(r["action"].get("kind", "")) == "sleep" or r["pos"].is_empty():
+			continue
+		here.append(r)
+	for i in here.size():
+		var a: Dictionary = here[i]
+		for j in range(i + 1, here.size()):
+			var b: Dictionary = here[j]
+			if int(a["pos"][0]) != int(b["pos"][0]):
+				continue
+			if Vector2(float(a["pos"][1]), float(a["pos"][2])).distance_to(Vector2(float(b["pos"][1]), float(b["pos"][2]))) > CHAT_RANGE:
+				continue
+			_chat(a, b)
+			_chat(b, a)
+
+
+func _chat(a: Dictionary, b: Dictionary) -> void:
+	var needs: Dictionary = a["needs"]
+	needs["social"] = q(minf(100.0, float(needs["social"]) + 0.25))
+	var r := rel(a["id"], b["id"])
+	var gain := 0.02 * (1.5 if (a["traits"] as Array).has("kind") else 1.0)
+	if _grievance_weight(a["id"], b["id"]) > 20.0:
+		gain = -0.01
+	r["friendship"] = q(clampf(float(r["friendship"]) + gain, -100.0, 100.0))
+	if float(r["romance"]) >= 30.0:
+		r["romance"] = q(clampf(float(r["romance"]) + 0.01, 0.0, 100.0))
+
+
+func _grievance_weight(owner: String, target: String) -> float:
+	var w := 0.0
+	for g: Dictionary in grievances:
+		if str(g["owner"]) == owner and str(g["target"]) == target:
+			w += float(g["weight"])
+	return w
+
+
+func add_grievance(owner: String, target: String, reason: String, weight: float) -> void:
+	grievances.append({"owner": owner, "target": target, "reason": reason, "weight": clampf(weight, 0.0, 100.0), "day": day})
+	log_event(owner, "%s has a grievance against %s: %s." % [(residents[owner] as Dictionary)["first"], (residents[target] as Dictionary)["first"], reason])
+
+
+## Midnight: grievances fade (2 a day), wages and household costs on Mondays.
+func _new_day() -> void:
+	var keep: Array = []
+	for g: Dictionary in grievances:
+		g["weight"] = float(g["weight"]) - (4.0 if g.get("amends", false) else 2.0)
+		if float(g["weight"]) > 0.0:
+			keep.append(g)
+	grievances = keep
+	if posmod(day, 7) == 0:
+		weekly_economy()
+
+
+## Wages in, rent and groceries out, for every household living here.
+func weekly_economy() -> void:
+	var hids := households.keys()
+	hids.sort()
+	for hid: String in hids:
+		var h: Dictionary = households[hid]
+		if str(h.get("home", "")) == "":
+			continue
+		var income := float(h.get("weekly", 0))
+		var members := 0
+		for rid: String in residents:
+			var r: Dictionary = residents[rid]
+			if str(r["household"]) == hid and r["status"] == "living":
+				members += 1
+				income += float(_job(r).get("wage", 0))
+		h["money"] = q(float(h["money"]) + income - 3.0 - members * 1.5)
+		h["last_week"] = {"income": income, "costs": 3.0 + members * 1.5}
+
+
+# --- Snapshot ------------------------------------------------------------------------------------
+
 func snapshot() -> Dictionary:
-	return {"seed": seed_value, "ticks": ticks, "rng": rng.snapshot()}
+	return {"seed": seed_value, "ticks": ticks, "rng": rng.snapshot(), "day": day, "minute": minute,
+		"residents": residents.duplicate(true), "households": households.duplicate(true), "relationships": relationships.duplicate(true),
+		"grievances": grievances.duplicate(true), "secrets": secrets.duplicate(true), "events": events.duplicate(true), "home_scores": home_scores.duplicate()}
 
 
-func restore(data: Dictionary) -> void:
-	seed_value = int(data.get("seed", 0))
-	ticks = int(data.get("ticks", 0))
-	rng.restore(data.get("rng", {}))
+func restore(d: Dictionary) -> void:
+	seed_value = int(d.get("seed", 0))
+	ticks = int(d.get("ticks", 0))
+	rng.restore(d.get("rng", {}))
+	day = int(d.get("day", 0))
+	minute = int(d.get("minute", 0))
+	residents = (d.get("residents", {}) as Dictionary).duplicate(true)
+	households = (d.get("households", {}) as Dictionary).duplicate(true)
+	relationships = (d.get("relationships", {}) as Dictionary).duplicate(true)
+	grievances = (d.get("grievances", []) as Array).duplicate(true)
+	secrets = (d.get("secrets", {}) as Dictionary).duplicate(true)
+	events = (d.get("events", []) as Array).duplicate(true)
+	home_scores = (d.get("home_scores", {}) as Dictionary).duplicate()
