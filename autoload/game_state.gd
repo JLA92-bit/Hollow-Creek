@@ -8,6 +8,8 @@ var mode: String = MODE_STORY
 var money: int = 1500
 var town_trust: int = 50
 var seed_value: int = 1952
+## Houses the player has built: id -> HouseData.to_dict(). Landmarks come from the map, not here.
+var houses: Dictionary = {}
 
 
 static func version() -> String:
@@ -15,7 +17,7 @@ static func version() -> String:
 
 
 func to_dict() -> Dictionary:
-	return {"mode": mode, "money": money, "town_trust": town_trust, "seed": seed_value}
+	return {"mode": mode, "money": money, "town_trust": town_trust, "seed": seed_value, "houses": houses.duplicate(true)}
 
 
 func from_dict(d: Dictionary) -> void:
@@ -23,3 +25,11 @@ func from_dict(d: Dictionary) -> void:
 	money = int(d.get("money", 1500))
 	town_trust = int(d.get("town_trust", 50))
 	seed_value = int(d.get("seed", 1952))
+	houses = (d.get("houses", {}) as Dictionary).duplicate(true)
+
+
+func reset() -> void:
+	mode = MODE_STORY
+	money = 1500
+	town_trust = 50
+	houses.clear()

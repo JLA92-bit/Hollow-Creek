@@ -28,7 +28,7 @@ Claude Code uses the default for anything not marked "needs Josh". For "needs Jo
 Write answers here and Claude Code will pick them up.
 
 - Poly Haven and ambientCG reachable from Claude Code (yes or no):
-- Look approved after M1 (yes, or what to change):
+- Look approved after M1 (yes, or what to change): "All good, continue with build for now" (17 October 2026). Open to tweaks later.
 - Mixamo animations downloaded:
 - Site address and hosting option:
 - Tester access:

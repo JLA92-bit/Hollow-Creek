@@ -9,6 +9,8 @@
     "pine_boards":    {"category": "floor", "tex": "decking", "size_m": 2.0, "tint": "#F2D4AA", "roughness": 0.65, "tier": 1},
     "decking":        {"category": "floor", "tex": "decking", "size_m": 2.0, "tint": "#C9B39A", "roughness": 0.8, "tier": 1},
     "lino_checks":    {"category": "floor", "tex": "lino_checks", "size_m": 3.5, "tint": "#FFFFFF", "roughness": 0.35, "tier": 1},
+    "concrete":       {"category": "floor", "tex": "plaster", "size_m": 3.0, "tint": "#B9B5AC", "roughness": 0.9, "normal_scale": 0.6, "tier": 1},
+    "quarry_tiles":   {"category": "floor", "tex": "lino_checks", "size_m": 2.4, "tint": "#C2734F", "roughness": 0.55, "tier": 2},
     "corrugated_iron": {"category": "roof", "tex": "corrugated_iron", "size_m": 1.12, "tint": "#DDE3E6", "roughness": 0.5, "metallic": 0.6, "normal_scale": 1.6, "tier": 1},
     "corrugated_iron_old": {"category": "roof", "tex": "corrugated_iron_old", "size_m": 1.12, "tint": "#FFFFFF", "roughness": 0.6, "metallic": 0.4, "normal_scale": 1.6, "tier": 0},
     "roof_paint_red": {"category": "roof", "tex": "corrugated_iron", "size_m": 1.12, "tint": "#8E3B2F", "roughness": 0.55, "metallic": 0.1, "normal_scale": 1.6, "tier": 2},

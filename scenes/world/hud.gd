@@ -18,6 +18,9 @@ var _debug_label: Label
 var _toast: PanelContainer
 var _toast_label: Label
 var _toast_t := 0.0
+var _toolbar_panel: PanelContainer
+var _build_panel: BuildPanel
+var _money_label: Label
 
 
 func _ready() -> void:
@@ -86,7 +89,9 @@ func _top_bar(root: Control) -> void:
 		b.pressed.connect(func() -> void: Clock.set_speed(s))
 		row.add_child(b)
 		_speed_buttons.append(b)
-	row.add_child(_chip_label("£%s" % _money(GameState.money)))
+	var money_chip := _chip_label("£%s" % _money(GameState.money))
+	_money_label = money_chip.get_child(0) as Label
+	row.add_child(money_chip)
 	row.add_child(_chip_label("1 resident"))
 	var trust := HBoxContainer.new()
 	trust.add_theme_constant_override("separation", 8)
@@ -196,15 +201,20 @@ func _refresh_view_chips() -> void:
 
 func _toolbar(root: Control) -> void:
 	var p := _panel(root)
+	_toolbar_panel = p
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
 	p.add_child(row)
 	for t in ["Roads", "Build", "Furnish", "Lights", "Residents", "Case file"]:
 		var b := Button.new()
 		b.text = t
-		b.disabled = true
+		b.disabled = t != "Build"
 		b.custom_minimum_size = Vector2(80, 48)
 		b.add_theme_font_size_override("font_size", 15)
+		if t == "Build":
+			b.theme_type_variation = &"PrimaryButton"
+			b.tooltip_text = "Build (B)"
+			b.pressed.connect(func() -> void: world.call("enter_build_mode"))
 		row.add_child(b)
 	_anchor.call_deferred(p, Control.PRESET_CENTER_BOTTOM, 16)
 
@@ -217,6 +227,18 @@ func _debug_panel(root: Control) -> void:
 	_debug.add_child(_debug_label)
 	_debug.visible = false
 	_anchor.call_deferred(_debug, Control.PRESET_BOTTOM_LEFT, 16)
+
+
+func set_build_mode(on: bool) -> void:
+	_toolbar_panel.visible = not on
+	if on and _build_panel == null:
+		_build_panel = BuildPanel.new()
+		_build_panel.build = world.get("build")
+		_build_panel.world = world
+		get_child(0).add_child(_build_panel)
+	if _build_panel:
+		_build_panel.visible = on
+	_refresh_view_chips()
 
 
 func toggle_debug() -> void:
@@ -251,6 +273,8 @@ func _refresh_speed() -> void:
 
 
 func _process(delta: float) -> void:
+	if _money_label:
+		_money_label.text = "£%s" % _money(GameState.money)
 	if _toast.visible:
 		_toast_t -= delta
 		if _toast_t <= 0.0:

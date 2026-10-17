@@ -1,7 +1,7 @@
 // Runs the M1 look test in headless Chromium: loads build/web with ?scene=look_test, saves a
 // screenshot each time the game prints "HC_SHOT <name>", acknowledges it through window.hcAck, and
 // records the "HC_PERF {...}" line. Fails on console errors.
-// Usage: node tools/look_test.mjs [--out docs/screens/m1] [--viewport 1280x720] [--dpr 1.5]
+// Usage: node tools/look_test.mjs [--scene look_test|build_demo] [--out docs/screens/m1] [--viewport 1280x720] [--dpr 1.5]
 //        [--query "qualities=medium&times=midday"] [--throttle 4] [--perf-name perf_desktop]
 import http from "node:http";
 import fs from "node:fs";
@@ -19,6 +19,7 @@ const dpr = Number(opt("--dpr", "1.5"));
 const query = opt("--query", "");
 const throttle = Number(opt("--throttle", "1"));
 const perfName = opt("--perf-name", "perf");
+const scene = opt("--scene", "look_test");
 const timeoutMs = Number(opt("--timeout", String(60 * 60 * 1000)));
 const root = path.resolve("build/web");
 fs.mkdirSync(outDir, { recursive: true });
@@ -83,6 +84,9 @@ page.on("console", (m) => {
     perf.renderer = "Chromium headless, SwiftShader (CPU WebGL 2)";
     fs.writeFileSync(path.join(outDir, `${perfName}.json`), JSON.stringify(perf, null, 2) + "\n");
     console.log("Perf:", JSON.stringify(perf));
+  } else if (text.startsWith("HC_DEMO")) {
+    console.log(text);
+    if (text.includes(" FAIL")) errors.push(text);
   } else if (text.startsWith("HC_DONE")) {
     queue.then(() => done());
   } else if (text.startsWith("HC_")) {
@@ -90,7 +94,7 @@ page.on("console", (m) => {
   }
 });
 
-await page.goto(`http://localhost:${port}/?scene=look_test${query ? "&" + query : ""}`);
+await page.goto(`http://localhost:${port}/?scene=${scene}${query ? "&" + query : ""}`);
 const timer = setTimeout(() => { errors.push(`Timed out after ${timeoutMs / 1000}s`); done(); }, timeoutMs);
 await finished;
 clearTimeout(timer);

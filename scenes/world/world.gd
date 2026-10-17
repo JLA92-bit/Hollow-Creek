@@ -23,6 +23,10 @@ var hud: Hud
 var quality := "medium"
 var quality_preset: Dictionary = {}
 var walls_mode := HouseView.WALLS_UP
+var build: BuildMode
+var building := false
+var _speed_before_build := 0
+var _autosave_t := -1.0
 
 var _bench_frames: Array[float] = []
 var _benchmarking := false
@@ -72,10 +76,17 @@ func _ready() -> void:
 	var c := cottage_centre()
 	rig.set_view(c, 212.0, 26.0, 30.0)
 	rig.view_changed.connect(_on_view_changed)
+	for id: String in GameState.houses:
+		add_house(HouseData.from_dict(GameState.houses[id]), false)
 	rain = Rain.new()
 	rain.name = "Rain"
 	add_child(rain)
 	day.lamps_changed.connect(func(_l: float) -> void: _update_house_lighting())
+	build = BuildMode.new()
+	build.name = "BuildMode"
+	build.world = self
+	build.rig = rig
+	add_child(build)
 	if not look_test:
 		hud = Hud.new()
 		hud.world = self
@@ -98,6 +109,8 @@ func _build_houses() -> void:
 			continue
 		var h := HouseData.load_file(str(l["house"]))
 		var origin: Array = l["origin"]
+		h.origin = Vector2i(int(origin[0]), int(origin[1]))
+		h.locked = true
 		var ox := float(origin[0])
 		var oz := float(origin[1])
 		var fp := h.footprint()
@@ -109,6 +122,95 @@ func _build_houses() -> void:
 		var grid := slice.grid
 		view.setup(h, func(x: float, z: float) -> float: return grid.height_at(ox + x, oz + z) - base)
 		houses.append(view)
+
+
+## Adds a player's house to the town and returns its view.
+func add_house(h: HouseData, save: bool = true) -> HouseView:
+	var view := HouseView.new()
+	view.name = h.id
+	var grid := slice.grid
+	var ox := float(h.origin.x)
+	var oz := float(h.origin.y)
+	if is_nan(h.base_y):
+		# Stand the house on the highest corner of its footprint; stumps take up the slope.
+		var b := h.bounds()
+		var top := -INF
+		for y in range(b.position.y, b.end.y + 1):
+			for x in range(b.position.x, b.end.x + 1):
+				top = maxf(top, grid.height_at(ox + x, oz + y))
+		h.base_y = top
+	var base: float = h.base_y
+	view.position = Vector3(ox, base, oz)
+	add_child(view)
+	view.setup(h, func(x: float, z: float) -> float: return grid.height_at(ox + x, oz + z) - base)
+	view.set_view(walls_mode, rig.forward_xz() if rig else Vector3(0, 0, -1))
+	houses.append(view)
+	if not h.locked:
+		_clear_site(h)
+	_update_house_lighting()
+	if save:
+		house_changed(h)
+	return view
+
+
+func remove_house(id: String) -> void:
+	for hv in houses:
+		if hv.data.id == id:
+			houses.erase(hv)
+			hv.queue_free()
+			break
+	GameState.houses.erase(id)
+	request_autosave()
+
+
+## Called after every edit: remember the house and save soon.
+func house_changed(h: HouseData) -> void:
+	if not h.locked:
+		GameState.houses[h.id] = h.to_dict()
+		_clear_site(h)
+	request_autosave()
+	_update_house_lighting()
+
+
+func _clear_site(h: HouseData) -> void:
+	var b := h.bounds()
+	if b.size == Vector2i.ZERO:
+		return
+	var r := Rect2(Vector2(b.position + h.origin), Vector2(b.size)).grow(0.5)
+	for v in h.verandahs:
+		r = r.grow(float(v.get("depth", 2.0)))
+	vegetation.clear_rect(r)
+
+
+func request_autosave() -> void:
+	_autosave_t = 1.0
+
+
+func enter_build_mode() -> void:
+	if building:
+		return
+	building = true
+	_speed_before_build = Clock.speed
+	if not Settings.get_value("build_while_time_runs"):
+		Clock.set_speed(0)
+	rig.one_finger_pan = false
+	if walls_mode == HouseView.WALLS_UP:
+		set_walls_mode(HouseView.WALLS_CUTAWAY)
+	build.enter()
+	if hud:
+		hud.set_build_mode(true)
+
+
+func exit_build_mode() -> void:
+	if not building:
+		return
+	building = false
+	build.exit()
+	rig.one_finger_pan = true
+	Clock.set_speed(_speed_before_build)
+	if hud:
+		hud.set_build_mode(false)
+	request_autosave()
 
 
 func cottage_centre() -> Vector3:
@@ -165,6 +267,10 @@ func _process(delta: float) -> void:
 	terrain.set_rain_wetness(rain.wetness)
 	creek.set_rain(rain.intensity)
 	_sim_ms = (Time.get_ticks_usec() - t0) / 1000.0
+	if _autosave_t > 0.0:
+		_autosave_t -= delta
+		if _autosave_t <= 0.0:
+			SaveSystem.save_slot("autosave")
 	if _benchmarking:
 		_bench_time += delta
 		if _bench_time > 0.5:
@@ -178,9 +284,18 @@ func _unhandled_key_input(event: InputEvent) -> void:
 	if k == null or not k.pressed or k.echo:
 		return
 	match k.keycode:
+		KEY_B:
+			if building:
+				exit_build_mode()
+			else:
+				enter_build_mode()
 		KEY_PAGEUP:
+			if k.shift_pressed:
+				return
 			set_walls_mode(HouseView.WALLS_UP if walls_mode == HouseView.WALLS_CUTAWAY else HouseView.WALLS_CUTAWAY)
 		KEY_PAGEDOWN:
+			if k.shift_pressed:
+				return
 			set_walls_mode(HouseView.WALLS_DOWN if walls_mode == HouseView.WALLS_CUTAWAY else HouseView.WALLS_CUTAWAY)
 		KEY_SPACE:
 			Clock.set_speed(0 if Clock.speed > 0 else 1)

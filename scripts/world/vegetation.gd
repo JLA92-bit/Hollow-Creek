@@ -7,6 +7,8 @@ const VARIANTS := 4
 var _tufts: MultiMeshInstance3D
 ## Trees that hide when they stand between the camera and what it looks at: [{mm, i, xf, p}].
 var _trees: Array[Dictionary] = []
+## Shrubs and tufts, so building can clear them: [{mm, i, xf, p}].
+var _cover: Array[Dictionary] = []
 
 
 func setup(slice: MapSlice, skirt_height: Callable = Callable()) -> void:
@@ -65,7 +67,9 @@ func setup(slice: MapSlice, skirt_height: Callable = Callable()) -> void:
 		var px := float(s2["x"])
 		var pz := float(s2["y"])
 		sx.append(Transform3D(Basis(Vector3.UP, float(s2["rot"])).scaled(Vector3.ONE * float(s2["scale"])), Vector3(px, grid.height_at(px, pz) - 0.05, pz)))
-	_add_multimesh("Shrubs", shrub_mesh, sx, GeometryInstance3D.SHADOW_CASTING_SETTING_ON)
+	var shrubs_mmi := _add_multimesh("Shrubs", shrub_mesh, sx, GeometryInstance3D.SHADOW_CASTING_SETTING_ON)
+	for i in sx.size():
+		_cover.append({"mm": shrubs_mmi.multimesh, "i": i, "xf": sx[i], "p": Vector2(sx[i].origin.x, sx[i].origin.z)})
 	# Grass tufts.
 	var tuft_mesh := _card_cluster_mesh("res://assets/models/foliage/grass_tuft.png", 2, 0.7, 0.5, 0.0, true)
 	var tx: Array[Transform3D] = []
@@ -75,6 +79,8 @@ func setup(slice: MapSlice, skirt_height: Callable = Callable()) -> void:
 		tx.append(Transform3D(Basis(Vector3.UP, float(t["rot"])).scaled(Vector3.ONE * float(t["scale"])), Vector3(qx, grid.height_at(qx, qz) - 0.02, qz)))
 	_tufts = _add_multimesh("Tufts", tuft_mesh, tx, GeometryInstance3D.SHADOW_CASTING_SETTING_OFF)
 	_tufts.visibility_range_end = 60.0
+	for j in tx.size():
+		_cover.append({"mm": _tufts.multimesh, "i": j, "xf": tx[j], "p": Vector2(tx[j].origin.x, tx[j].origin.z)})
 
 
 func _add_multimesh(n: String, mesh: Mesh, xforms: Array[Transform3D], shadows: GeometryInstance3D.ShadowCastingSetting) -> MultiMeshInstance3D:
@@ -134,8 +140,24 @@ func update_occlusion(cam: Vector3, focus: Vector3) -> void:
 		var p: Vector2 = t["p"]
 		var q := Geometry2D.get_closest_point_to_segment(p, a, b)
 		var along := a.distance_to(q) / maxf(a.distance_to(b), 0.001)
+		if t.get("cleared", false):
+			continue
 		var hide := p.distance_to(q) < 3.2 and along < 0.92 and cam.y < (t["xf"] as Transform3D).origin.y + 16.0
 		if hide != t["hidden"]:
 			t["hidden"] = hide
 			var xf: Transform3D = t["xf"]
 			(t["mm"] as MultiMesh).set_instance_transform(int(t["i"]), xf.scaled_local(Vector3.ONE * 0.0001) if hide else xf)
+
+
+## Clears trees, shrubs and grass from a world rectangle (a building going up). Permanent.
+func clear_rect(r: Rect2) -> void:
+	var tree_r := r.grow(1.0)
+	for t in _trees:
+		if not t.get("cleared", false) and tree_r.has_point(t["p"]):
+			t["cleared"] = true
+			t["hidden"] = true
+			(t["mm"] as MultiMesh).set_instance_transform(int(t["i"]), (t["xf"] as Transform3D).scaled_local(Vector3.ONE * 0.0001))
+	for c in _cover:
+		if not c.get("cleared", false) and r.grow(0.3).has_point(c["p"]):
+			c["cleared"] = true
+			(c["mm"] as MultiMesh).set_instance_transform(int(c["i"]), (c["xf"] as Transform3D).scaled_local(Vector3.ONE * 0.0001))

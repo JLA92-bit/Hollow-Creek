@@ -18,6 +18,8 @@ var pitch := 38.0    ## degrees above the horizon
 var distance := 40.0
 var bounds := Rect2(0, 0, 144, 96)
 var height_fn: Callable
+## In build mode one finger draws, so only two fingers move the camera.
+var one_finger_pan := true
 
 var _t_focus := Vector3.ZERO
 var _t_yaw := 35.0
@@ -146,10 +148,14 @@ func _unhandled_input(event: InputEvent) -> void:
 			_touches[sd.index] = sd.position
 		var prev: Dictionary = _touches.duplicate()
 		_touches[sd.index] = sd.position
-		if _touches.size() == 1:
+		if _touches.size() == 1 and one_finger_pan:
 			_pan(-sd.relative * distance * 0.0018)
 		elif _touches.size() == 2:
 			_two_finger(prev, _touches)
+			var mid_prev := ((prev.values()[0] as Vector2) + (prev.values()[1] as Vector2)) * 0.5
+			var mid_now := ((_touches.values()[0] as Vector2) + (_touches.values()[1] as Vector2)) * 0.5
+			if not one_finger_pan:
+				_pan(-(mid_now - mid_prev) * distance * 0.0018)
 	elif event is InputEventMagnifyGesture:
 		_zoom(1.0 / (event as InputEventMagnifyGesture).factor)
 	elif event is InputEventPanGesture:
