@@ -42,6 +42,9 @@ jobs:
       - name: Sandbox demo (M3 finished home, garden and share code)
         run: timeout 900 tools/bin/godot --headless --path . res://scenes/build_ui/sandbox_demo.tscn
 
+      - name: Construction demo (M4 furnishing, scores and building stages)
+        run: timeout 1200 tools/bin/godot --headless --path . res://scenes/build_ui/construction_demo.tscn
+
       - name: Export web build
         run: |
           mkdir -p build/web

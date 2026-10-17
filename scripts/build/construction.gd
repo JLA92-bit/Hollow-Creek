@@ -142,7 +142,7 @@ static func days_left(w: Array[float], done: float, crews: int, tier: String) ->
 
 ## The house as it stands: after, with each change not yet built shown as blueprint, frame, raw or
 ## not there yet. stage is the current stage index (-1 while the materials are on their way).
-## delivered: whether the furniture has arrived.
+## delivered: whether the materials and furniture have arrived.
 static func display(before: HouseData, after: HouseData, stage: int, delivered: bool) -> HouseData:
 	var d := after.duplicate_house()
 	if stage >= STAGES.size():
@@ -219,7 +219,8 @@ static func display(before: HouseData, after: HouseData, stage: int, delivered: 
 		d.exterior = before.exterior.duplicate(true)
 		if stage < 8:
 			d.fences = before.fences.duplicate(true)
-	if not delivered:
+	if not delivered or stage < STAGE_INDEX["joinery"]:
+		# New furniture is carried in once the doors and windows are in.
 		d.objects = before.objects.duplicate(true)
 	d.stage = {"index": stage, "new_tiles": new_tiles}
 	d.touch()

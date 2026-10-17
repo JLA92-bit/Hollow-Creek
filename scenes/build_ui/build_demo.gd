@@ -139,6 +139,11 @@ func shot(name: String) -> void:
 		await get_tree().process_frame
 	print("HC_SHOT ", name)
 	if not OS.has_feature("web"):
+		# Desktop runs (xvfb-run, opengl3) can save quick check shots: HC_SHOT_DIR=path.
+		var dir := OS.get_environment("HC_SHOT_DIR")
+		if dir != "" and DisplayServer.get_name() != "headless":
+			await RenderingServer.frame_post_draw
+			get_viewport().get_texture().get_image().save_png("%s/%s.png" % [dir, name])
 		await _frames(2)
 		return
 	var t0 := Time.get_ticks_msec()
