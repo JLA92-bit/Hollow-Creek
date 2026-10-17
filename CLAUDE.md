@@ -36,9 +36,12 @@ python3 -I tools/assets/fetch_polyhaven.py && python3 -I tools/assets/write_cred
 python3 -I tools/textures/make_foliage.py          # regenerate leaf, grass, noise and water textures
 node tools/look_test.mjs --out docs/screens/m1      # M1 look test: 26 screenshots + perf JSON (about 40 min on SwiftShader)
 tools/bin/godot --headless --path . -s tools/map_preview.gd   # top-down PNG of data/map_slice.json
+tools/bin/godot --headless --path . res://scenes/build_ui/build_demo.tscn   # M2 build demo through the real tools (exit code = pass/fail)
+node tools/look_test.mjs --scene build_demo --out docs/screens/m2           # same demo in the browser, with screenshots
+python3 -I tools/audio/make_ui_sfx.py              # regenerate the build-mode UI sounds
 ```
 
-URL hooks for previews and tests: `?scene=world` opens the valley directly, `?scene=look_test` runs the look test (options in `scenes/world/look_test.gd`).
+URL hooks for previews and tests: `?scene=world` opens the valley directly, `?scene=look_test` runs the look test (options in `scenes/world/look_test.gd`), `?scene=build_demo` runs the M2 build demo.
 
 `tools/bin/`, `tools/cache/` and `build/` are git-ignored. Run `--import` before tests or exports in a fresh checkout. The engine is about 9.6 MB gzipped on its own (`index.wasm`, 4.7.2).
 

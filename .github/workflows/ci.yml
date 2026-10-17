@@ -36,6 +36,9 @@ jobs:
             -gdir=res://tests -ginclude_subdirs -gexit 2>&1 | tee gut.log
           grep -q "All tests passed" gut.log
 
+      - name: Build demo (M2 tools, scripted)
+        run: timeout 600 tools/bin/godot --headless --path . res://scenes/build_ui/build_demo.tscn
+
       - name: Export web build
         run: |
           mkdir -p build/web
