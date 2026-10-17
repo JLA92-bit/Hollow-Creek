@@ -2,6 +2,75 @@
 
 Newest milestone first. Build sizes are raw bytes, with gzip -9 in brackets.
 
+## M2 - Build core (done)
+
+**What works**
+- **House model (`HouseData`):**
+  - Walls are first-class pieces on grid edges: full, half (1.0 m) and low (0.6 m), straight or at 45 degrees. Each has its own height and a separate surface on each face.
+  - Rooms are detected by flood fill over quarter-tile triangles bounded by full walls, so diagonal walls split rooms and half walls don't.
+  - Floors are painted per tile or per quarter-tile triangle, with board direction.
+  - Openings sit along walls at any position, with sill height and stacking. Doors have swing, hinge side, a lock, key holders, and a lock-at-night setting; windows have latch-at-night and curtains-at-dusk.
+  - Up to three storeys plus a cellar, with straight, L, U and ladder stairs that cut the floor above. Posts, stumps or slab.
+  - M1's room-style template (Agnes's cottage) converts automatically.
+- **Edits (`BuildOps`):**
+  - Room tool, plus extending a room into an L-shape. Walls of each kind.
+  - Push and pull a wall run: side walls stretch, floors grow or shrink, and faces, doors, windows and furniture travel with it.
+  - Move and rotate rooms; shared walls stay with the neighbour.
+  - Room names, paint and wall heights. Openings with overlap and height checks. Floors, storeys, stairs (checked for walls across them and for landing on a floor), posts, foundations, and demolishing walls, openings, stairs, posts, floors or whole rooms.
+- **Undo and redo:** unlimited (`UndoStack`). Each step stores the house before and after plus the cost, so undo refunds and redo charges.
+- **Pathfinding (`HousePathing`):** walkable tiles across storeys. Doors, doorways and arches let people through, stairs join storeys, and stairwells aren't walkable.
+- **Validation hints in plain words:** "The bedroom has no way in.", "The bedroom has no window.", "A staircase doesn't arrive on a floor.", "A window isn't sitting on a wall."
+- **Mesh builder:**
+  - Walls are built per 1 m edge, with corners filled, free ends capped, and openings cut with reveals. Sashes, panel and ledge doors, fanlights and architraves come from M1. Skirting and picture rails go on inside faces.
+  - Floors are quarter-aware, with an upper-floor band of cladding, ceilings that face down (invisible from above), stairs with treads, risers, stringers and handrails, ladders, balustrades round stairwells, and posts and piers.
+  - Walls are grouped into 8 m chunks. Edits that don't change the room layout rebuild only the chunks they touched; layout changes rebuild that storey.
+- **Floor view and cutaway:** storeys above the one you're editing hide, and the cutaway applies to that storey.
+- **Build mode (B, or the Build button):**
+  - Tools: Room, Wall, Select (push and pull, move and turn rooms, pick doors and windows), Door, Window, Arch, Floor, Stairs, Post, Demolish.
+  - Blueprint previews with snapping guides, plus floating labels with dimensions, area and live cost, which turn red with the reason when something isn't allowed.
+  - Doors and windows snap to 0.25 m (hold Alt for free placement). Arrow keys nudge and raise; `,` and `.` turn stairs and rooms.
+  - Ctrl+Z and Ctrl+Y undo and redo; Delete removes; Esc cancels; Shift+Page Up and Page Down change storey.
+  - Time pauses while you build.
+- **Panels (layout from the house-builder mockup):**
+  - Tool palette.
+  - Options per tool: catalogue cards with prices, paint swatches, wall heights, floors, night behaviour.
+  - Options for a selection: a room's name, paint, height, turning or clearing it; a window's sill, sliding it, latch and curtains; a door's swing, hinge, lock, key holders and lock at night; removing anything.
+  - House panel: storey up and down, add a storey, dig a cellar, stump height or slab, validation hints.
+  - Undo, redo, Done, and on touch a Build or Cancel confirm.
+- **Touch:** one finger draws, two fingers move the camera, and placements wait for the Build button.
+- **Town:**
+  - Drawing a room on open ground starts a new house. It stands on the highest corner of its block, with stumps down the slope, and refuses water, mud, landmarks, blocks next to other houses, and slopes too steep for 1.8 m stumps.
+  - Building clears trees and grass from the block. Agnes's cottage is heritage-locked.
+  - Houses are saved in `GameState`, with autosave a second after each edit and a Continue button on the title menu.
+- **Sounds:** UI sounds synthesised in Python (`tools/audio/make_ui_sfx.py`): click, tick, place, remove, error, undo, storey.
+- **Tests:** 75 GUT tests (697 asserts), all passing. They cover the room tool, L-shapes, push and pull growing and shrinking rooms, faces and openings surviving push, pull and undo, moving and rotating rooms, diagonal and half walls, opening rules and stacking, room heights, quarter floors, storey limits, and stairs (cutting the floor above, connecting pathing, shapes, rejection). Also chunked meshes, the upper storey, the stairwell floor, validation, undo order, and a full acceptance build with every step undone.
+
+**Acceptance demo** (`scenes/build_ui/build_demo.gd`; `?scene=build_demo`; it runs in CI headless). It drives the real tools with mouse events.
+- **The general store:** shop, storeroom and exchange room; front door with fanlight, shop windows, inner and back doors; a first floor with living room, two bedrooms and a kitchen; and stairs up from the shop.
+- **A cottage on 0.9 m stumps:** an L-shaped living room and kitchen, a bedroom wall pushed out a metre, doors, windows and a quarry-tile floor.
+- **Result:** 39 steps, then every one undone back to an empty valley with every pound refunded, then all redone. **15 of 15 checks pass.**
+
+**Screenshots:** `docs/screens/m2/` (`m2_01` to `m2_06`): the shop's ground floor, the residence above, the cottage in cutaway, both houses outside, everything undone, and redone.
+
+**Build sizes**
+
+| File | Raw | gzip -9 |
+|---|---|---|
+| index.wasm | 39,514,754 | 10,084,297 |
+| index.pck | 31,251,452 | 24,763,982 |
+| **First download** | | **about 34.8 MB** (budget 40 MB) |
+
+**Performance** (headless desktop, Godot 4.7.2; the browser runs these several times slower)
+- A full two-storey shop (6 rooms, about 80 wall edges) builds in 426 ms.
+- Adding a door rebuilds 2 chunks in 30 ms.
+- Pushing a wall out (which changes rooms) rebuilds the storey in 60 ms.
+- Drag previews apply the edit to a copy and rebuild live on each 1 m step.
+
+**Known issues** (more in `docs/BACKLOG.md`)
+- Diagonal walls take no openings and can't be pushed yet.
+- One hip roof covers the top storey only; proper roofs come with the M3 roof tools.
+- Key holders are labels until residents arrive in M5.
+
 ## M1 - The valley and the rendering pipeline (done, awaiting Josh's look approval)
 
 **What works**

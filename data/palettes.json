@@ -1,0 +1,30 @@
+{
+  "_comment": "The 1950s paint chart, wallpaper patterns and colourways, and harmonious pairs used by the Style score (M4).",
+  "paint_chart": {
+    "cream": "#EFE6CC", "ivory": "#F6F0DF", "white": "#F7F5EF", "butter": "#F2E2A6", "apricot": "#F2C7A0",
+    "rose": "#E9C3C0", "mint": "#CFE3CF", "duck_egg": "#C9DCD8", "sky": "#C7DCEB", "sage": "#B9C7A5",
+    "brunswick_green": "#2F4A35", "maroon": "#6E1F1F", "mission_brown": "#5A4032", "indian_red": "#8E3B2F",
+    "manor_red": "#7A2E26", "deep_buff": "#C9A66B", "light_stone": "#D9CDB4", "french_grey": "#A9AFA8"
+  },
+  "paint_groups": {
+    "walls": ["cream", "ivory", "white", "butter", "apricot", "rose", "mint", "duck_egg", "sky", "sage", "light_stone", "french_grey"],
+    "trims": ["white", "cream", "brunswick_green", "maroon", "mission_brown", "indian_red", "manor_red", "deep_buff"]
+  },
+  "wallpapers": {
+    "floral": {"name": "Cabbage roses", "repeat_m": 0.53, "colourways": {
+      "cream_rose": ["#EFE4C8", "#B04650", "#6E8C64"], "duck_egg_rose": ["#D7E3DD", "#C25A5E", "#6D8C70"], "butter_sage": ["#F2E6B8", "#C77A52", "#7C9A6A"]}},
+    "stripe": {"name": "Regency stripe", "repeat_m": 0.53, "colourways": {
+      "sage_cream": ["#EBE1BE", "#97AB8C", "#7A5A46"], "rose_ivory": ["#F4ECDC", "#D6A6A2", "#8E5A50"], "blue_white": ["#F2F0E8", "#9FB8C8", "#5C6E80"]}},
+    "sprig": {"name": "Sprig print", "repeat_m": 0.4, "colourways": {
+      "red_cream": ["#F6F0E0", "#C8504A", "#5A7850"], "blue_white": ["#F4F4EE", "#5070A0", "#5A7850"]}},
+    "plaid": {"name": "Tartan plaid", "repeat_m": 0.53, "colourways": {
+      "red_tan": ["#E6D7BE", "#8C3C3C", "#3C5070"], "green_cream": ["#EDE6CF", "#5C7A5A", "#7A5034"]}},
+    "trellis": {"name": "Garden trellis", "repeat_m": 0.53, "colourways": {
+      "green_cream": ["#EEE8D6", "#BE785A", "#789678"], "blue_ivory": ["#F3EFE3", "#C46A6A", "#6E8AA6"]}}
+  },
+  "harmonious_pairs": [
+    ["cream", "brunswick_green"], ["cream", "maroon"], ["white", "brunswick_green"], ["ivory", "indian_red"],
+    ["butter", "mission_brown"], ["mint", "white"], ["duck_egg", "white"], ["sage", "cream"], ["rose", "ivory"],
+    ["apricot", "white"], ["light_stone", "manor_red"], ["sky", "white"]
+  ]
+}

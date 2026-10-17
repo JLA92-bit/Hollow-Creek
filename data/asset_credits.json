@@ -266,6 +266,16 @@
     "kind": "model",
     "used_as": "Side table"
   },
+  "polyhaven:square_tiles": {
+    "name": "Square Tiles",
+    "authors": [
+      "Charlotte Baglioni"
+    ],
+    "source": "https://polyhaven.com/a/square_tiles",
+    "licence": "CC0",
+    "kind": "texture",
+    "used_as": "Kitchen and wash-house wall tiles"
+  },
   "polyhaven:throw_pillows_01": {
     "name": "Throw Pillows 01",
     "authors": [
@@ -295,6 +305,16 @@
     "licence": "CC0",
     "kind": "model",
     "used_as": "Kerosene lamp"
+  },
+  "polyhaven:white_rough_plaster": {
+    "name": "White Rough Plaster",
+    "authors": [
+      "Rob Tuytel"
+    ],
+    "source": "https://polyhaven.com/a/white_rough_plaster",
+    "licence": "CC0",
+    "kind": "texture",
+    "used_as": "Rendered walls"
   },
   "polyhaven:withered_grass": {
     "name": "Withered Grass",

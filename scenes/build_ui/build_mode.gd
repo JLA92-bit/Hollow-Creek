@@ -7,7 +7,7 @@ extends Node
 signal changed
 signal message(text: String, kind: String)
 
-const TOOLS: Array[String] = ["room", "wall", "select", "door", "window", "arch", "floor", "stairs", "post", "demolish"]
+const TOOLS: Array[String] = ["room", "wall", "select", "door", "window", "arch", "floor", "paint", "stairs", "post", "demolish"]
 const HINTS := {
 	"room": "Drag to draw a room. Hold Shift (or tap Add to room) to extend the room you start in.",
 	"wall": "Drag along the grid to draw a wall. Drag at 45 degrees for a diagonal.",
@@ -16,6 +16,7 @@ const HINTS := {
 	"window": "Point at a wall and click to place a window. Arrow keys nudge and raise a selected window.",
 	"arch": "Point at a wall and click to open an archway.",
 	"floor": "Drag over tiles to lay floor. Quarter mode paints triangles.",
+	"paint": "Click a wall to paint that side. Shift paints the whole room, Ctrl the whole house. I picks up a finish.",
 	"stairs": "Click to place stairs. Turn them with , and . (they rise the way the arrow points).",
 	"post": "Click a grid corner to stand a post.",
 	"demolish": "Click a door, window, post or stairs to remove it. Drag along walls, or click a room to clear it.",
@@ -34,6 +35,9 @@ var options: Dictionary = {
 	"stairs_kind": "straight", "stairs_dir": "N", "post_kind": "timber_post",
 	"room_paint": "cream", "room_height": 2.7, "room_floor": "floor_boards", "room_name": "Room",
 	"extend": false, "free": false, "latch_night": false, "curtains_dusk": true, "lock_night": false,
+	"paint_kind": "paint", "paint_colour": "cream", "wallpaper": "floral", "colourway": "cream_rose",
+	"cladding": "weatherboard", "lining": "wall_tiles", "paint_part": "finish", "dado_h": 1.0,
+	"paint_scope": "face", "eyedropper": false,
 }
 var house: HouseView = null  ## the house being edited
 var selection: Dictionary = {}  ## {type: run|room|opening|stairs, ...}
@@ -265,7 +269,11 @@ func _key(k: InputEventKey) -> void:
 	elif k.keycode in [KEY_LEFT, KEY_RIGHT, KEY_UP, KEY_DOWN]:
 		_nudge(k.keycode)
 	else:
-		var keys := {KEY_R: "room", KEY_W: "", KEY_T: "wall", KEY_V: "select", KEY_D: "door", KEY_N: "window", KEY_F: "floor", KEY_G: "stairs", KEY_X: "demolish"}
+		if k.keycode == KEY_I and tool == "paint":
+			set_option("eyedropper", not bool(options["eyedropper"]))
+			get_viewport().set_input_as_handled()
+			return
+		var keys := {KEY_R: "room", KEY_W: "", KEY_T: "wall", KEY_V: "select", KEY_D: "door", KEY_N: "window", KEY_F: "floor", KEY_P: "paint", KEY_G: "stairs", KEY_X: "demolish"}
 		if keys.has(k.keycode) and str(keys[k.keycode]) != "" and not k.ctrl_pressed:
 			set_tool(str(keys[k.keycode]))
 			return
@@ -294,7 +302,8 @@ func _press(screen: Vector2, shift: bool, alt: bool) -> void:
 		level = clampi(level, house.data.levels()[0], house.data.levels()[-1])
 		_apply_view()
 		changed.emit()
-	_drag = {"start": p, "screen": screen, "shift": shift or options["extend"], "alt": alt or options["free"], "moved": false}
+	_drag = {"start": p, "screen": screen, "shift": shift or options["extend"], "alt": alt or options["free"], "moved": false,
+		"ctrl": Input.is_key_pressed(KEY_CTRL)}
 	match tool:
 		"select":
 			_select_press(p)
@@ -321,6 +330,8 @@ func _move(screen: Vector2, alt: bool = false) -> void:
 			_opening_preview(p, alt or options["free"])
 		"floor":
 			_floor_preview(p)
+		"paint":
+			_paint_preview(p)
 		"stairs":
 			_stairs_preview(p)
 		"post":
@@ -1018,6 +1029,138 @@ func _floor_action(p: Vector3) -> Dictionary:
 	return {"label": "Lay floor", "confirm": tiles.size() > 1, "fn": func(h: HouseData) -> Dictionary: return BuildOps.paint_floor(h, lv, tiles, mat, quarters, rot)}
 
 
+# --- Paint ------------------------------------------------------------------------------------------
+
+## The surface the Paint tool will apply, from its options.
+func surface_from_options() -> Dictionary:
+	match str(options["paint_kind"]):
+		"wallpaper":
+			return {"mat": "wallpaper", "pattern": options["wallpaper"], "colourway": options["colourway"]}
+		"cladding":
+			return {"mat": options["cladding"], "paint": options["paint_colour"]}
+		"lining":
+			var lining := {"mat": options["lining"]}
+			if options["lining"] != "vj_panelling":
+				lining["paint"] = options["paint_colour"]
+			return lining
+		_:
+			return {"mat": "plaster", "paint": options["paint_colour"]}
+
+
+## The wall face under the pointer: [edge, side], picking the side the pointer is on.
+func _face_at(p: Vector3) -> Array:
+	if house == null:
+		return []
+	var k := _near_edge(p, house, level, 0.55)
+	if k == "":
+		return []
+	var pts := HouseData.edge_points(k)
+	var mid := (Vector2(pts[0]) + Vector2(pts[1])) * 0.5
+	var na3 := HouseMeshBuilder._side_normal3(k)
+	var side := "a" if (to_local_2d(p) - mid).dot(Vector2(na3.x, na3.z)) > 0.0 else "b"
+	return [k, side]
+
+
+## Faces a click paints: one face, the room (Shift) or the whole house (Ctrl). Outside, Shift paints
+## the storey's outside walls and Ctrl every outside wall.
+func _paint_targets(p: Vector3) -> Array:
+	var f := _face_at(p)
+	if f.is_empty():
+		return []
+	var scope := str(options["paint_scope"])
+	if not _drag.is_empty():
+		if _drag.get("ctrl", false):
+			scope = "house"
+		elif _drag.get("shift", false) and not options["extend"]:
+			scope = "room"
+	var r := house.data.room_on_side(level, f[0], f[1])
+	match scope:
+		"room":
+			if r.is_empty():
+				return BuildOps.exterior_faces(house.data, level)
+			return BuildOps.room_faces(house.data, level, r)
+		"house":
+			if r.is_empty():
+				return BuildOps.exterior_faces(house.data)
+			return BuildOps.interior_faces(house.data)
+	return [f]
+
+
+func _paint_preview(p: Vector3) -> void:
+	if house == null:
+		_clear_preview()
+		return
+	var faces := _paint_targets(p)
+	var kit := MeshKit.new()
+	for f: Array in faces:
+		var lv: int = f[2] if f.size() > 2 else level
+		var pts := HouseData.edge_points(f[0])
+		var na3 := HouseMeshBuilder._side_normal3(f[0])
+		var n := na3 if f[1] == "a" else -na3
+		var off := Vector2(n.x, n.z) * 0.1
+		var y := house.builder.level_y(lv)
+		var hh := house.data.wall_h(lv, f[0])
+		_ghost_box(kit, Vector2(pts[0]) + off, Vector2(pts[1]) + off, y, y + hh, 0.03)
+	_set_preview(kit, true)
+	if not faces.is_empty():
+		var what := "Pick up this finish" if options["eyedropper"] else ("%d m of wall" % faces.size())
+		_show_label(_pv(_hover_world) + Vector3(0, 1.6, 0), what, true)
+
+
+func _paint_action(p: Vector3) -> Dictionary:
+	if house == null:
+		_say("Build a room first.", "warn")
+		return {}
+	var f := _face_at(p)
+	if f.is_empty():
+		_say("Point at a wall.", "warn")
+		return {}
+	if options["eyedropper"]:
+		var picked := BuildOps.pick_surface(house.data, level, f[0], f[1])
+		_apply_picked(picked)
+		return {}
+	var faces := _paint_targets(p)
+	var surface := surface_from_options()
+	var part := str(options["paint_part"])
+	var lv := level
+	if part == "dado":
+		surface["h"] = float(options["dado_h"])
+		if str(options["paint_kind"]) not in ["lining", "paint"]:
+			surface = {"mat": options["lining"], "h": float(options["dado_h"])}
+	var label := "Paint %d m of wall" % faces.size() if faces.size() > 1 else "Paint a wall"
+	return {"label": label, "confirm": faces.size() > 1, "fn": func(h: HouseData) -> Dictionary: return BuildOps.paint_faces(h, lv, faces, surface, part)}
+
+
+func _apply_picked(s: Dictionary) -> void:
+	var mat := str(s.get("mat", "plaster"))
+	if mat == "wallpaper":
+		options["paint_kind"] = "wallpaper"
+		options["wallpaper"] = s.get("pattern", "floral")
+		options["colourway"] = s.get("colourway", "")
+	elif MaterialLibrary.def(mat).get("category", "") == "cladding":
+		options["paint_kind"] = "cladding"
+		options["cladding"] = mat
+	elif mat in ["wall_tiles", "vj_panelling"]:
+		options["paint_kind"] = "lining"
+		options["lining"] = mat
+	else:
+		options["paint_kind"] = "paint"
+	if s.has("paint"):
+		options["paint_colour"] = s["paint"]
+	options["eyedropper"] = false
+	sfx.play("click")
+	_say("Picked up %s." % _surface_name(s), "done")
+	changed.emit()
+
+
+func _surface_name(s: Dictionary) -> String:
+	if str(s.get("mat", "")) == "wallpaper":
+		var p: Dictionary = (MaterialLibrary.palettes()["wallpapers"] as Dictionary).get(s.get("pattern", ""), {})
+		return "%s wallpaper" % str(p.get("name", "patterned")).to_lower()
+	var paint := str(s.get("paint", ""))
+	return "%s %s" % [paint.replace("_", " "), str(s.get("mat", "paint")).replace("_", " ")]
+
+
 # --- Stairs and posts ------------------------------------------------------------------------------------
 
 func _stairs_def(p: Vector3) -> Dictionary:
@@ -1143,6 +1286,8 @@ func _action_for(p: Vector3) -> Dictionary:
 			return _opening_action(p)
 		"floor":
 			return _floor_action(p)
+		"paint":
+			return _paint_action(p)
 		"stairs":
 			if house == null:
 				_say("Draw a room first.", "warn")

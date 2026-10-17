@@ -11,7 +11,7 @@ const SKY := Color("#4BC9F5")
 const AMBER := Color("#FBAD45")
 const SECONDARY := Color("#3D5670")
 const TOOL_LABELS := {"room": "Room", "wall": "Wall", "select": "Select", "door": "Door", "window": "Window",
-	"arch": "Arch", "floor": "Floor", "stairs": "Stairs", "post": "Post", "demolish": "Demolish"}
+	"arch": "Arch", "floor": "Floor", "paint": "Paint", "stairs": "Stairs", "post": "Post", "demolish": "Demolish"}
 const PAINTS: Array[String] = ["cream", "ivory", "white", "butter", "apricot", "rose", "mint", "duck_egg", "sky", "sage"]
 const OPTIONS_W := 320.0
 const FLOORS: Array[String] = ["floor_boards", "pine_boards", "lino_checks", "decking", "concrete", "quarry_tiles"]
@@ -164,7 +164,7 @@ func _palette() -> void:
 		b.pressed.connect(func() -> void: build.set_tool(t))
 		grid.add_child(b)
 		_tools[t] = b
-	for t2: String in ["Paint", "Roof", "Verandah", "Furnish"]:
+	for t2: String in ["Roof", "Verandah", "Furnish"]:
 		var b2 := Button.new()
 		b2.text = t2
 		b2.disabled = true
@@ -360,6 +360,8 @@ func _fill_options() -> void:
 			r3.add_child(_toggle("Boards east-west", int(o["floor_rot"]) == 0, func() -> void: build.set_option("floor_rot", 0), 120))
 			r3.add_child(_toggle("North-south", int(o["floor_rot"]) == 90, func() -> void: build.set_option("floor_rot", 90), 120))
 			_options.add_child(r3)
+		"paint":
+			_paint_options(o)
 		"stairs":
 			_heading("Stairs")
 			var f2 := _flow()
@@ -406,6 +408,9 @@ func _selection_options(sel: Dictionary) -> void:
 			_paints(h.room_paint(r), func(p: String) -> void: build.set_selection_prop("paint", p))
 			var k0: String = h.room_walls(build.level, r)[0] if not h.room_walls(build.level, r).is_empty() else ""
 			_heights(h.wall_h(build.level, k0) if k0 != "" else 2.7, func(v: float) -> void: build.set_selection_prop("height", v))
+			var top_h := h.wall_h(build.level, k0) if k0 != "" else 2.7
+			_yes_no("Picture rail", bool((r["props"] as Dictionary).get("picture_rail", top_h >= 2.9)), func(v: bool) -> void: build.set_selection_prop("picture_rail", v))
+			_yes_no("Cornice", bool((r["props"] as Dictionary).get("cornice", false)), func(v: bool) -> void: build.set_selection_prop("cornice", v))
 			var row := _row()
 			row.add_child(_button("Turn left", func() -> void: build.call("_rotate", -1), 110))
 			row.add_child(_button("Turn right", func() -> void: build.call("_rotate", 1), 110))
@@ -503,6 +508,95 @@ func _paints(current: String, cb: Callable) -> void:
 	for p in PAINTS:
 		f.add_child(_swatch(p, p == current, func() -> void: cb.call(p)))
 	_options.add_child(f)
+
+
+const LININGS := {"wall_tiles": "Wall tiles", "vj_panelling": "VJ panelling"}
+const CLADDINGS := {"weatherboard": "Weatherboard", "fibro": "Fibro", "brick_red": "Red brick", "render": "Render",
+	"corrugated_wall": "Corrugated iron"}
+
+
+func _paint_options(o: Dictionary) -> void:
+	_heading("Paint and wallpaper")
+	var kinds := _row()
+	for k: String in ["paint", "wallpaper", "lining", "cladding"]:
+		kinds.add_child(_toggle(k.capitalize(), o["paint_kind"] == k, func() -> void: build.set_option("paint_kind", k), 66))
+	_options.add_child(kinds)
+	var kind := str(o["paint_kind"])
+	if kind == "wallpaper":
+		var papers: Dictionary = MaterialLibrary.palettes()["wallpapers"]
+		for pat: String in papers:
+			_caps_add(str(papers[pat]["name"]))
+			var f := _flow()
+			var ways: Dictionary = papers[pat]["colourways"]
+			for cw: String in ways:
+				f.add_child(_paper_swatch(pat, cw, ways[cw], o["wallpaper"] == pat and o["colourway"] == cw))
+			_options.add_child(f)
+	elif kind == "lining" or kind == "cladding":
+		var names: Dictionary = LININGS if kind == "lining" else CLADDINGS
+		var f2 := _flow()
+		for m: String in names:
+			f2.add_child(_card(names[m], "£1 a metre", o[kind] == m, func() -> void: build.set_option(kind, m)))
+		_options.add_child(f2)
+	if kind == "paint" or (kind == "lining" and o["lining"] != "vj_panelling") or kind == "cladding":
+		for group: String in ["walls", "trims"]:
+			_caps_add("Wall colours" if group == "walls" else "Trim colours")
+			var f3 := _flow()
+			for pn in MaterialLibrary.paint_names(group):
+				f3.add_child(_swatch(pn, pn == o["paint_colour"], func() -> void: build.set_option("paint_colour", pn)))
+			if group == "trims":
+				var pick := ColorPickerButton.new()
+				pick.custom_minimum_size = Vector2(44, 44)
+				pick.tooltip_text = "Mix a custom colour"
+				pick.color = MaterialLibrary.paint(str(o["paint_colour"]))
+				pick.popup_closed.connect(func() -> void: build.set_option("paint_colour", "#" + pick.color.to_html(false)))
+				f3.add_child(pick)
+			_options.add_child(f3)
+	if kind != "cladding":
+		_caps_add("Part of the wall")
+		var r := _row()
+		r.add_child(_toggle("Whole wall", o["paint_part"] == "finish", func() -> void: build.set_option("paint_part", "finish"), 120))
+		r.add_child(_toggle("Lower (dado)", o["paint_part"] == "dado", func() -> void: build.set_option("paint_part", "dado"), 120))
+		_options.add_child(r)
+		if o["paint_part"] == "dado":
+			var r2 := _row()
+			for dh: float in [0.9, 1.0, 1.2]:
+				r2.add_child(_toggle("%.1f m" % dh, is_equal_approx(float(o["dado_h"]), dh), func() -> void: build.set_option("dado_h", dh), 70))
+			_options.add_child(r2)
+	_caps_add("Apply to")
+	var sc := _row()
+	for s: String in ["face", "room", "house"]:
+		sc.add_child(_toggle({"face": "One wall", "room": "Room", "house": "Whole house"}[s], o["paint_scope"] == s,
+			func() -> void: build.set_option("paint_scope", s), 90))
+	_options.add_child(sc)
+	_options.add_child(_toggle("Eyedropper (I)", bool(o["eyedropper"]), func() -> void: build.set_option("eyedropper", not bool(o["eyedropper"]))))
+	_options.add_child(_text("Shift paints the room, Ctrl the whole house. Outside walls take the outside.", 13, SECONDARY))
+
+
+func _paper_swatch(pat: String, cw: String, cols: Array, selected: bool) -> Button:
+	var b := Button.new()
+	b.custom_minimum_size = Vector2(60, 44)
+	b.focus_mode = Control.FOCUS_NONE
+	b.tooltip_text = cw.replace("_", " ").capitalize()
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(str(cols[0]))
+	sb.border_color = Color(str(cols[1]))
+	sb.set_border_width_all(4 if not selected else 6)
+	if selected:
+		sb.border_color = NAVY
+	sb.set_corner_radius_all(10)
+	for st in ["normal", "hover", "pressed"]:
+		b.add_theme_stylebox_override(st, sb)
+	var dot := ColorRect.new()
+	dot.color = Color(str(cols[2]))
+	dot.custom_minimum_size = Vector2(12, 12)
+	dot.position = Vector2(24, 16)
+	dot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	b.add_child(dot)
+	b.pressed.connect(func() -> void:
+		build.sfx.play("click")
+		build.options["wallpaper"] = pat
+		build.set_option("colourway", cw))
+	return b
 
 
 func _heights(current: float, cb: Callable) -> void:

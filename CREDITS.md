@@ -61,9 +61,11 @@ None yet. Added from M1.
 | Rocky Trail (texture) | Amal Kumar | https://polyhaven.com/a/rocky_trail | CC0 | Gravel |
 | Rough Linen (texture) | Rico Cilliers, colormass | https://polyhaven.com/a/rough_linen | CC0 | Upholstery and bedding base |
 | Side Table 01 (model) | James Ray Cock | https://polyhaven.com/a/side_table_01 | CC0 | Side table |
+| Square Tiles (texture) | Charlotte Baglioni | https://polyhaven.com/a/square_tiles | CC0 | Kitchen and wash-house wall tiles |
 | Throw Pillows 01 (model) | Serhii Khromov | https://polyhaven.com/a/throw_pillows_01 | CC0 | Cushions |
 | Vintage Day Bed (model) | Aron Łyczek | https://polyhaven.com/a/vintage_day_bed | CC0 | Single bed |
 | Vintage Oil Lamp (model) | Monsta3D | https://polyhaven.com/a/vintage_oil_lamp | CC0 | Kerosene lamp |
+| White Rough Plaster (texture) | Rob Tuytel | https://polyhaven.com/a/white_rough_plaster | CC0 | Rendered walls |
 | Withered Grass (texture) | Charlotte Baglioni | https://polyhaven.com/a/withered_grass | CC0 | Dry summer grass |
 | Wood Plank Wall (texture) | Dimitrios Savva | https://polyhaven.com/a/wood_plank_wall | CC0 | Painted weatherboard cladding |
 | Wooden Bucket 01 (model) | James Ray Cock | https://polyhaven.com/a/wooden_bucket_01 | CC0 | Outdoor bucket |
