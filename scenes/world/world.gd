@@ -196,6 +196,15 @@ func _clear_site(h: HouseData) -> void:
 		r = r.grow(float(v.get("depth", 2.0)))
 	vegetation.clear_rect(r)
 	var o := Vector2(h.origin)
+	# Inside the fences is the yard: the bush is cleared back to the fence line.
+	if not h.fences.is_empty():
+		var fr := Rect2()
+		var first := true
+		for k: String in h.fences:
+			for pt in HouseData.edge_points(k):
+				fr = Rect2(Vector2(pt), Vector2.ZERO) if first else fr.expand(Vector2(pt))
+				first = false
+		vegetation.clear_rect(Rect2(fr.position + o, fr.size).grow(0.5))
 	for it: Dictionary in h.garden:
 		var ir := GardenOps.item_rect(it)
 		vegetation.clear_rect(Rect2(ir.position + o, ir.size).grow(0.3))
@@ -288,6 +297,8 @@ func set_walls_mode(mode: String) -> void:
 	walls_mode = mode
 	for h in houses:
 		h.set_view(mode, rig.forward_xz())
+	if hud:
+		hud.call("_refresh_view_chips")
 
 
 func cycle_walls_mode() -> void:

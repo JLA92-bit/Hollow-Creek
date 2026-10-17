@@ -1,5 +1,5 @@
 {
-  "_comment": "Assets fetched by tools/assets/fetch_polyhaven.py and fetch_ambientcg.py. 'as' is our id. 'size_m' is the real-world width of one texture tile in metres. 'neutral' makes a pale albedo so paint colours can tint it. 'array' packs ground layers into one Texture2DArray.",
+  "_comment": "Assets fetched by tools/assets/fetch_polyhaven.py and fetch_ambientcg.py. 'as' is our id. 'size_m' is the real-world width of one texture tile in metres. 'neutral' makes a pale albedo so paint colours can tint it. 'array' packs ground layers into one Texture2DArray. 'detail_limit' imports the normal and ORM maps at that size (px) to save download size.",
   "polyhaven": {
     "textures": [
       {
@@ -95,7 +95,8 @@
         "res": "1k",
         "size_m": 2.0,
         "neutral": 0.86,
-        "use": "Rendered walls"
+        "use": "Rendered walls",
+        "detail_limit": 512
       },
       {
         "id": "square_tiles",
@@ -103,7 +104,8 @@
         "res": "1k",
         "size_m": 0.6,
         "neutral": 0.88,
-        "use": "Kitchen and wash-house wall tiles"
+        "use": "Kitchen and wash-house wall tiles",
+        "detail_limit": 512
       },
       {
         "id": "withered_grass",
@@ -146,22 +148,16 @@
         "as": "roof_terracotta",
         "res": "1k",
         "size_m": 2.5,
-        "use": "Terracotta Marseille tile roofs"
+        "use": "Terracotta Marseille tile roofs",
+        "detail_limit": 512
       },
       {
         "id": "roof_slates_03",
         "as": "roof_slate",
         "res": "1k",
         "size_m": 3.0,
-        "use": "Slate roofs on the church and older houses"
-      },
-      {
-        "id": "roof_slates_02",
-        "as": "roof_shingles",
-        "res": "1k",
-        "size_m": 3.0,
-        "neutral": 0.8,
-        "use": "Timber shingles (tinted)"
+        "use": "Slate roofs on the church and older houses",
+        "detail_limit": 512
       }
     ],
     "hdris": [

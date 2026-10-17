@@ -14,7 +14,8 @@ func _ready() -> void:
 	# Test and preview hooks: ?scene=look_test or ?scene=world skips the menus.
 	var target := str(UrlParams.read().get("scene", ""))
 	var scenes := {"look_test": "res://scenes/world/look_test.tscn", "world": "res://scenes/world/world.tscn",
-		"build_demo": "res://scenes/build_ui/build_demo.tscn"}
+		"build_demo": "res://scenes/build_ui/build_demo.tscn",
+		"sandbox_demo": "res://scenes/build_ui/sandbox_demo.tscn"}
 	if scenes.has(target):
 		_leaving = true
 		get_tree().change_scene_to_file.call_deferred(str(scenes[target]))

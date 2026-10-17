@@ -65,7 +65,9 @@ def fetch_texture(t: dict) -> dict[str, Path]:
             dest.write_bytes(cached.read_bytes())
         paths[ours] = dest
         if "array" not in t:
-            write_if_changed(Path(str(dest) + ".import"), texture_import(normal_map=(ours == "normal")))
+            # Normal and ORM maps can be imported smaller ("detail_limit") to save download size.
+            limit = 1024 if ours == "albedo" else int(t.get("detail_limit", 1024))
+            write_if_changed(Path(str(dest) + ".import"), texture_import(normal_map=(ours == "normal"), size_limit=limit))
         elif dest.with_suffix(".jpg.import").exists():
             dest.with_suffix(".jpg.import").unlink()
     credit(t["id"], "texture", t.get("use", t["as"]))

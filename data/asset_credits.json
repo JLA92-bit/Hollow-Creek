@@ -255,16 +255,6 @@
     "kind": "texture",
     "used_as": "Gravel"
   },
-  "polyhaven:roof_slates_02": {
-    "name": "Roof Slates 02",
-    "authors": [
-      "Rob Tuytel"
-    ],
-    "source": "https://polyhaven.com/a/roof_slates_02",
-    "licence": "CC0",
-    "kind": "texture",
-    "used_as": "Timber shingles (tinted)"
-  },
   "polyhaven:roof_slates_03": {
     "name": "Roof Slates 03",
     "authors": [

@@ -1,5 +1,5 @@
 """Generates leaf-card textures for garden plants: a round clump of leaves with flowers or fruit.
-Deterministic (seeded). Cards are drawn on crossed quads by scripts/build/garden_builder.gd.
+Deterministic (seeded), 256 px. Cards are drawn on crossed quads by scripts/build/garden_builder.gd.
 
 Usage: python3 tools/textures/make_garden.py
 Writes assets/models/garden/{rose,hydrangea,lavender,agapanthus,geranium,hedge,vegies,lemon,apple,wattle}.png
@@ -194,7 +194,7 @@ def main():
         "wattle": fruit_tree(33, (86, 108, 64), None, 0, flowers=[(238, 196, 40), (246, 214, 70)]),
     }
     for name, img in out.items():
-        save(img.resize((512, 512), Image.LANCZOS), OUT / f"{name}.png")
+        save(img.resize((256, 256), Image.LANCZOS), OUT / f"{name}.png")
 
 
 if __name__ == "__main__":

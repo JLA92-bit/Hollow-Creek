@@ -60,7 +60,6 @@ None yet. Added from M1.
 | Red Brick (texture) | Rob Tuytel | https://polyhaven.com/a/red_brick | CC0 | Chimneys |
 | River Small Rocks (texture) | Rico Cilliers, Rob Tuytel | https://polyhaven.com/a/river_small_rocks | CC0 | Creek bed under the water |
 | Rocky Trail (texture) | Amal Kumar | https://polyhaven.com/a/rocky_trail | CC0 | Gravel |
-| Roof Slates 02 (texture) | Rob Tuytel | https://polyhaven.com/a/roof_slates_02 | CC0 | Timber shingles (tinted) |
 | Roof Slates 03 (texture) | Rob Tuytel | https://polyhaven.com/a/roof_slates_03 | CC0 | Slate roofs on the church and older houses |
 | Rough Linen (texture) | Rico Cilliers, colormass | https://polyhaven.com/a/rough_linen | CC0 | Upholstery and bedding base |
 | Side Table 01 (model) | James Ray Cock | https://polyhaven.com/a/side_table_01 | CC0 | Side table |
