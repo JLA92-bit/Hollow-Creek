@@ -101,6 +101,8 @@ func _ready() -> void:
 	day.apply(Clock.minute_f())
 	_update_house_lighting()
 	ready_to_play.emit()
+	if not look_test and UrlParams.read().get("build", "") == "1":
+		enter_build_mode.call_deferred()
 
 
 func _build_houses() -> void:

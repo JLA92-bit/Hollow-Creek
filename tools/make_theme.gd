@@ -107,6 +107,26 @@ func _initialize() -> void:
 	t.set_stylebox("background", "ProgressBar", _box(Color("#E3E8EE"), 4))
 	t.set_stylebox("fill", "ProgressBar", _box(NAVY, 4))
 
+	# Text fields: white with a soft border, navy text.
+	var le := _box(Color.WHITE, 10, Color("#C9D2DC"), 2)
+	le.content_margin_top = 8
+	le.content_margin_bottom = 8
+	t.set_stylebox("normal", "LineEdit", le)
+	t.set_stylebox("focus", "LineEdit", _box(Color.WHITE, 10, Color("#4BC9F5"), 2))
+	t.set_stylebox("read_only", "LineEdit", _box(Color("#F4F6F8"), 10, Color("#C9D2DC"), 2))
+	t.set_color("font_color", "LineEdit", NAVY)
+	t.set_color("font_placeholder_color", "LineEdit", Color(SECONDARY, 0.6))
+	t.set_color("caret_color", "LineEdit", NAVY)
+	t.set_color("selection_color", "LineEdit", Color("#4BC9F5", 0.35))
+	t.set_font_size("font_size", "LineEdit", 16)
+	# Scrollbars: slim, navy grabber.
+	var grab := _box(Color("#9FB0C2"), 4)
+	grab.set_content_margin_all(3)
+	t.set_stylebox("grabber", "VScrollBar", grab)
+	t.set_stylebox("grabber_highlight", "VScrollBar", _box(NAVY, 4))
+	t.set_stylebox("grabber_pressed", "VScrollBar", _box(NAVY, 4))
+	t.set_stylebox("scroll", "VScrollBar", _box(Color("#EDF1F5"), 4))
+
 	var err := ResourceSaver.save(t, OUT)
 	print("Saved theme: ", OUT, " (", error_string(err), ")")
 	quit(0 if err == OK else 1)

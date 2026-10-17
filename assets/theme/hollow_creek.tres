@@ -4,7 +4,7 @@
 [ext_resource type="FontFile" path="res://assets/fonts/Fraunces.ttf" id="2_tdyav"]
 [ext_resource type="FontFile" path="res://assets/fonts/AtkinsonHyperlegible-Regular.ttf" id="3_uiisk"]
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_0m136"]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_wx7tt"]
 content_margin_left = 18.0
 content_margin_top = 12.0
 content_margin_right = 18.0
@@ -20,7 +20,7 @@ corner_radius_top_right = 12
 corner_radius_bottom_right = 12
 corner_radius_bottom_left = 12
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_kw73i"]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_tdyav"]
 content_margin_left = 18.0
 content_margin_top = 12.0
 content_margin_right = 18.0
@@ -36,7 +36,7 @@ corner_radius_top_right = 12
 corner_radius_bottom_right = 12
 corner_radius_bottom_left = 12
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ecmaq"]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_uiisk"]
 content_margin_left = 18.0
 content_margin_top = 12.0
 content_margin_right = 18.0
@@ -52,7 +52,7 @@ corner_radius_top_right = 12
 corner_radius_bottom_right = 12
 corner_radius_bottom_left = 12
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_001sm"]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_0m136"]
 content_margin_left = 18.0
 content_margin_top = 12.0
 content_margin_right = 18.0
@@ -68,7 +68,7 @@ corner_radius_top_right = 12
 corner_radius_bottom_right = 12
 corner_radius_bottom_left = 12
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_e0aa0"]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_kw73i"]
 content_margin_left = 18.0
 content_margin_top = 12.0
 content_margin_right = 18.0
@@ -84,7 +84,7 @@ corner_radius_top_right = 12
 corner_radius_bottom_right = 12
 corner_radius_bottom_left = 12
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_rywdi"]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ecmaq"]
 content_margin_left = 14.0
 content_margin_top = 6.0
 content_margin_right = 14.0
@@ -95,12 +95,60 @@ corner_radius_top_right = 16
 corner_radius_bottom_right = 16
 corner_radius_bottom_left = 16
 
-[sub_resource type="FontVariation" id="FontVariation_v75eg"]
+[sub_resource type="FontVariation" id="FontVariation_001sm"]
 base_font = ExtResource("2_tdyav")
 variation_opentype = {
 1869640570: 72,
 2003265652: 700
 }
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_e0aa0"]
+content_margin_left = 18.0
+content_margin_top = 12.0
+content_margin_right = 18.0
+content_margin_bottom = 12.0
+bg_color = Color(1, 1, 1, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.29411766, 0.7882353, 0.9607843, 1)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_rywdi"]
+content_margin_left = 18.0
+content_margin_top = 8.0
+content_margin_right = 18.0
+content_margin_bottom = 8.0
+bg_color = Color(1, 1, 1, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.7882353, 0.8235294, 0.8627451, 1)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_v75eg"]
+content_margin_left = 18.0
+content_margin_top = 12.0
+content_margin_right = 18.0
+content_margin_bottom = 12.0
+bg_color = Color(0.95686275, 0.9647059, 0.972549, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.7882353, 0.8235294, 0.8627451, 1)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_20p6r"]
 content_margin_left = 18.0
@@ -185,6 +233,50 @@ corner_radius_top_right = 4
 corner_radius_bottom_right = 4
 corner_radius_bottom_left = 4
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ss443"]
+content_margin_left = 3.0
+content_margin_top = 3.0
+content_margin_right = 3.0
+content_margin_bottom = 3.0
+bg_color = Color(0.62352943, 0.6901961, 0.7607843, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bg3y8"]
+content_margin_left = 18.0
+content_margin_top = 12.0
+content_margin_right = 18.0
+content_margin_bottom = 12.0
+bg_color = Color(0, 0.16078432, 0.3019608, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_f7ufv"]
+content_margin_left = 18.0
+content_margin_top = 12.0
+content_margin_right = 18.0
+content_margin_bottom = 12.0
+bg_color = Color(0, 0.16078432, 0.3019608, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_cubqf"]
+content_margin_left = 18.0
+content_margin_top = 12.0
+content_margin_right = 18.0
+content_margin_bottom = 12.0
+bg_color = Color(0.92941177, 0.94509804, 0.9607843, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
 [resource]
 default_font = ExtResource("3_uiisk")
 default_font_size = 18
@@ -196,11 +288,11 @@ Button/colors/font_pressed_color = Color(1, 1, 1, 1)
 Button/constants/h_separation = 8
 Button/font_sizes/font_size = 18
 Button/fonts/font = ExtResource("1_wx7tt")
-Button/styles/disabled = SubResource("StyleBoxFlat_0m136")
-Button/styles/focus = SubResource("StyleBoxFlat_kw73i")
-Button/styles/hover = SubResource("StyleBoxFlat_ecmaq")
-Button/styles/normal = SubResource("StyleBoxFlat_001sm")
-Button/styles/pressed = SubResource("StyleBoxFlat_e0aa0")
+Button/styles/disabled = SubResource("StyleBoxFlat_wx7tt")
+Button/styles/focus = SubResource("StyleBoxFlat_tdyav")
+Button/styles/hover = SubResource("StyleBoxFlat_uiisk")
+Button/styles/normal = SubResource("StyleBoxFlat_0m136")
+Button/styles/pressed = SubResource("StyleBoxFlat_kw73i")
 CapsLabel/base_type = &"Label"
 CapsLabel/colors/font_color = Color(0.23921569, 0.3372549, 0.4392157, 1)
 CapsLabel/font_sizes/font_size = 13
@@ -208,11 +300,19 @@ CapsLabel/fonts/font = ExtResource("1_wx7tt")
 ChipLabel/base_type = &"Label"
 ChipLabel/font_sizes/font_size = 15
 ChipLabel/fonts/font = ExtResource("1_wx7tt")
-ChipLabel/styles/normal = SubResource("StyleBoxFlat_rywdi")
+ChipLabel/styles/normal = SubResource("StyleBoxFlat_ecmaq")
 HeadingLabel/base_type = &"Label"
 HeadingLabel/font_sizes/font_size = 28
-HeadingLabel/fonts/font = SubResource("FontVariation_v75eg")
+HeadingLabel/fonts/font = SubResource("FontVariation_001sm")
 Label/colors/font_color = Color(0, 0.16078432, 0.3019608, 1)
+LineEdit/colors/caret_color = Color(0, 0.16078432, 0.3019608, 1)
+LineEdit/colors/font_color = Color(0, 0.16078432, 0.3019608, 1)
+LineEdit/colors/font_placeholder_color = Color(0.23921569, 0.3372549, 0.4392157, 0.6)
+LineEdit/colors/selection_color = Color(0.29411766, 0.7882353, 0.9607843, 0.35)
+LineEdit/font_sizes/font_size = 16
+LineEdit/styles/focus = SubResource("StyleBoxFlat_e0aa0")
+LineEdit/styles/normal = SubResource("StyleBoxFlat_rywdi")
+LineEdit/styles/read_only = SubResource("StyleBoxFlat_v75eg")
 Panel/styles/panel = SubResource("StyleBoxFlat_20p6r")
 PanelContainer/styles/panel = SubResource("StyleBoxFlat_bk0cj")
 PrimaryButton/base_type = &"Button"
@@ -230,4 +330,8 @@ SecondaryLabel/colors/font_color = Color(0.23921569, 0.3372549, 0.4392157, 1)
 SecondaryLabel/font_sizes/font_size = 16
 TitleLabel/base_type = &"Label"
 TitleLabel/font_sizes/font_size = 96
-TitleLabel/fonts/font = SubResource("FontVariation_v75eg")
+TitleLabel/fonts/font = SubResource("FontVariation_001sm")
+VScrollBar/styles/grabber = SubResource("StyleBoxFlat_ss443")
+VScrollBar/styles/grabber_highlight = SubResource("StyleBoxFlat_bg3y8")
+VScrollBar/styles/grabber_pressed = SubResource("StyleBoxFlat_f7ufv")
+VScrollBar/styles/scroll = SubResource("StyleBoxFlat_cubqf")

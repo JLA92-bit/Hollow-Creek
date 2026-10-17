@@ -13,6 +13,7 @@ const SECONDARY := Color("#3D5670")
 const TOOL_LABELS := {"room": "Room", "wall": "Wall", "select": "Select", "door": "Door", "window": "Window",
 	"arch": "Arch", "floor": "Floor", "stairs": "Stairs", "post": "Post", "demolish": "Demolish"}
 const PAINTS: Array[String] = ["cream", "ivory", "white", "butter", "apricot", "rose", "mint", "duck_egg", "sky", "sage"]
+const OPTIONS_W := 320.0
 const FLOORS: Array[String] = ["floor_boards", "pine_boards", "lino_checks", "decking", "concrete", "quarry_tiles"]
 
 var build: BuildMode
@@ -20,6 +21,10 @@ var world: Node3D
 var _tools: Dictionary = {}
 var _options: VBoxContainer
 var _options_panel: PanelContainer
+var _options_scroll: ScrollContainer
+var _palette_panel: PanelContainer
+var _house_panel: PanelContainer
+var _actions_panel: PanelContainer
 var _house_box: VBoxContainer
 var _status: Label
 var _status_panel: PanelContainer
@@ -30,7 +35,7 @@ var _cancel_btn: Button
 
 
 func _ready() -> void:
-	set_anchors_preset(Control.PRESET_FULL_RECT)
+	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_palette()
 	_options_area()
@@ -39,6 +44,7 @@ func _ready() -> void:
 	_status_line()
 	build.changed.connect(refresh)
 	build.message.connect(_on_message)
+	_on_message(str(BuildMode.HINTS.get(build.tool, "")), "hint")
 	refresh()
 
 
@@ -97,6 +103,7 @@ func _row(sep: int = 6) -> HBoxContainer:
 
 func _flow() -> HFlowContainer:
 	var f := HFlowContainer.new()
+	f.custom_minimum_size = Vector2(OPTIONS_W - 28, 0)
 	f.add_theme_constant_override("h_separation", 6)
 	f.add_theme_constant_override("v_separation", 6)
 	return f
@@ -140,9 +147,10 @@ func _swatch(paint: String, selected: bool, cb: Callable) -> Button:
 
 func _palette() -> void:
 	var p := PanelContainer.new()
+	_palette_panel = p
 	add_child(p)
 	var grid := GridContainer.new()
-	grid.columns = 2
+	grid.columns = 3
 	grid.add_theme_constant_override("h_separation", 6)
 	grid.add_theme_constant_override("v_separation", 6)
 	p.add_child(grid)
@@ -151,8 +159,8 @@ func _palette() -> void:
 		b.text = TOOL_LABELS[t]
 		b.toggle_mode = true
 		b.focus_mode = Control.FOCUS_NONE
-		b.custom_minimum_size = Vector2(88, 48)
-		b.add_theme_font_size_override("font_size", 15)
+		b.custom_minimum_size = Vector2(84, 46)
+		b.add_theme_font_size_override("font_size", 14)
 		b.pressed.connect(func() -> void: build.set_tool(t))
 		grid.add_child(b)
 		_tools[t] = b
@@ -160,36 +168,37 @@ func _palette() -> void:
 		var b2 := Button.new()
 		b2.text = t2
 		b2.disabled = true
-		b2.custom_minimum_size = Vector2(88, 48)
-		b2.add_theme_font_size_override("font_size", 15)
+		b2.custom_minimum_size = Vector2(84, 46)
+		b2.add_theme_font_size_override("font_size", 14)
 		grid.add_child(b2)
-	_anchor.call_deferred(p, Control.PRESET_TOP_LEFT, 16, Vector2(0, 112))
 
 
 func _options_area() -> void:
 	_options_panel = PanelContainer.new()
-	_options_panel.custom_minimum_size = Vector2(300, 0)
 	add_child(_options_panel)
+	_options_scroll = ScrollContainer.new()
+	_options_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_options_panel.add_child(_options_scroll)
 	_options = VBoxContainer.new()
 	_options.add_theme_constant_override("separation", 8)
-	_options_panel.add_child(_options)
+	_options.custom_minimum_size = Vector2(OPTIONS_W - 28, 0)
+	_options_scroll.add_child(_options)
 
 
 func _house_area() -> void:
-	var p := PanelContainer.new()
-	p.custom_minimum_size = Vector2(300, 0)
-	add_child(p)
+	_house_panel = PanelContainer.new()
+	add_child(_house_panel)
 	_house_box = VBoxContainer.new()
 	_house_box.add_theme_constant_override("separation", 6)
-	p.add_child(_house_box)
-	p.set_meta("anchor", Control.PRESET_BOTTOM_LEFT)
+	_house_box.custom_minimum_size = Vector2(290, 0)
+	_house_panel.add_child(_house_box)
 
 
 func _actions() -> void:
-	var p := PanelContainer.new()
-	add_child(p)
+	_actions_panel = PanelContainer.new()
+	add_child(_actions_panel)
 	var row := _row(8)
-	p.add_child(row)
+	_actions_panel.add_child(row)
 	_cancel_btn = _button("Cancel", func() -> void: build.call("_cancel"), 90)
 	_confirm_btn = _button("Build", func() -> void: build.confirm_pending(), 110, true)
 	_undo_btn = _button("Undo", func() -> void: build.do_undo(), 80)
@@ -197,7 +206,6 @@ func _actions() -> void:
 	var done := _button("Done", func() -> void: world.call("exit_build_mode"), 90, true)
 	for b in [_cancel_btn, _confirm_btn, _undo_btn, _redo_btn, done]:
 		row.add_child(b)
-	p.set_meta("anchor", Control.PRESET_BOTTOM_RIGHT)
 
 
 func _status_line() -> void:
@@ -206,6 +214,7 @@ func _status_line() -> void:
 	_status = _text("", 15)
 	_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_status.custom_minimum_size = Vector2(420, 0)
+	_status.autowrap_mode = TextServer.AUTOWRAP_OFF
 	_status_panel.add_child(_status)
 
 
@@ -223,16 +232,49 @@ func _on_message(text: String, kind: String) -> void:
 	_layout.call_deferred()
 
 
+## Places each panel from its measured size: palette top left, options top right (scrolling when
+## tall), house panel bottom left, actions bottom right, status bottom centre.
 func _layout() -> void:
-	for c in get_children():
-		if c.has_meta("anchor"):
-			var ctl := c as Control
-			ctl.reset_size()
-			_anchor(ctl, c.get_meta("anchor"), 16)
-	_options_panel.reset_size()
-	_anchor(_options_panel, Control.PRESET_TOP_RIGHT, 16, Vector2(0, 160))
-	_status_panel.reset_size()
-	_anchor(_status_panel, Control.PRESET_CENTER_BOTTOM, 16, Vector2(0, -76))
+	var vp := get_viewport_rect().size
+	_place(_palette_panel, Vector2(16, 128), false, false)
+	var act := _actions_panel.get_combined_minimum_size()
+	_place(_actions_panel, Vector2(16, 16), true, true)
+	var house := _house_panel.get_combined_minimum_size()
+	_place(_house_panel, Vector2(16, 16), false, true)
+	var avail := vp.y - 176.0 - act.y - 40.0
+	var want := _options.get_combined_minimum_size().y + 28.0
+	_options_scroll.custom_minimum_size = Vector2(OPTIONS_W - 28, clampf(want - 28.0, 60.0, maxf(avail - 28.0, 60.0)))
+	_place(_options_panel, Vector2(16, 176), true, false)
+	var st := _status_panel.get_combined_minimum_size()
+	_status_panel.anchor_left = 0.5
+	_status_panel.anchor_right = 0.5
+	_status_panel.anchor_top = 1.0
+	_status_panel.anchor_bottom = 1.0
+	var bottom := -16.0 - act.y - 10.0 if vp.x < house.x + act.x + st.x + 80.0 else -16.0
+	_status_panel.offset_left = -st.x * 0.5
+	_status_panel.offset_right = st.x * 0.5
+	_status_panel.offset_bottom = bottom
+	_status_panel.offset_top = bottom - st.y
+
+
+func _place(c: Control, margin: Vector2, right: bool, bottom: bool) -> void:
+	var sz := c.get_combined_minimum_size()
+	c.anchor_left = 1.0 if right else 0.0
+	c.anchor_right = c.anchor_left
+	c.anchor_top = 1.0 if bottom else 0.0
+	c.anchor_bottom = c.anchor_top
+	if right:
+		c.offset_right = -margin.x
+		c.offset_left = -margin.x - sz.x
+	else:
+		c.offset_left = margin.x
+		c.offset_right = margin.x + sz.x
+	if bottom:
+		c.offset_bottom = -margin.y
+		c.offset_top = -margin.y - sz.y
+	else:
+		c.offset_top = margin.y
+		c.offset_bottom = margin.y + sz.y
 
 
 # --- Refresh -------------------------------------------------------------------------------------
