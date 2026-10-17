@@ -15,6 +15,7 @@ const SPILL_M := 3.0
 const CURTAIN_SPILL_M := 1.5
 const FULL_MOON_DAY := 6     ## Sunday 8 June 1952 in the game's calendar (day 0 is Monday 2 June)
 const LUNATION := 29.53
+const LAMPS_BELOW := 4.0     ## sun elevation (degrees) under which lamps are lit
 
 var night := false
 var outdoor := 1.0
@@ -51,21 +52,24 @@ static func compute(p_sight: SightMap, day: int, minute: int, raining: bool, occ
 	g.sight = p_sight
 	var el := sun_elevation(minute)
 	g.night = el < -2.0
-	if not g.night:
-		g.outdoor = 1.0
+	g.outdoor = 1.0 if not g.night else (MOON if bright_moon(day) and not raining else NIGHT)
+	if el >= LAMPS_BELOW:
 		return g
-	g.outdoor = MOON if bright_moon(day) and not raining else NIGHT
+	# From dusk, lamps are lit in rooms where somebody's up.
 	var ids := occupied.keys()
 	ids.sort()
 	for rid: String in ids:
 		if not p_sight.rooms.has(rid) or int(p_sight.rooms[rid]["lamps"]) <= 0:
 			continue
 		g.lit_rooms[rid] = true
+		if not g.night:
+			continue
 		for w: Dictionary in p_sight.rooms[rid]["windows"]:
 			var reach := CURTAIN_SPILL_M if p_sight.curtains.has(str(w["edge"])) else SPILL_M
 			g._glow(Vector2(w["out"]) + Vector2(0.5, 0.5), reach)
-	for l: Dictionary in p_sight.outdoor_lamps:
-		g._glow(l["at"], float(l["radius"]))
+	if g.night:
+		for l: Dictionary in p_sight.outdoor_lamps:
+			g._glow(l["at"], float(l["radius"]))
 	return g
 
 
@@ -88,7 +92,7 @@ func _glow(at: Vector2, reach: float) -> void:
 func at(t: Vector2i) -> float:
 	var rid := sight.room_at(t) if sight else ""
 	if rid != "":
-		if not night:
-			return ROOM_DAY
-		return ROOM_LIT if lit_rooms.has(rid) else ROOM_DARK
+		if lit_rooms.has(rid):
+			return ROOM_LIT
+		return ROOM_DAY if not night else ROOM_DARK
 	return maxf(outdoor, float(spill.get("%d,%d" % [t.x, t.y], 0.0)))

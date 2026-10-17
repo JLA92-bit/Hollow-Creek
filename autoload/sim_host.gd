@@ -4,6 +4,7 @@ extends Node
 ## tells it how every home is doing (scores and wishes), banking the rent and Town Trust it earns.
 
 signal town_changed  ## somebody moved in, or the town was rebuilt
+signal lights_changed(lit_rooms: Dictionary)  ## the rooms with lamps lit changed (room id -> true)
 
 const COTTAGE_ID := "lm_agnes_cottage"
 
@@ -11,6 +12,7 @@ var sim: Sim = Sim.new(1952)
 var active := false
 var tick_ms := 0.0  ## time the last batch of ticks took, for the debug panel
 var _world: Node3D = null
+var _lit_sig := ""
 
 
 func _ready() -> void:
@@ -35,8 +37,10 @@ func start(world: Node3D) -> void:
 		sim.town = town
 		sim.data = Sim.load_data()
 	active = true
+	_lit_sig = "?"
 	review_homes()
 	town_changed.emit()
+	_check_lights()
 
 
 func stop() -> void:
@@ -67,6 +71,8 @@ func _on_time_changed(_day: int, _minute: int) -> void:
 	if not active or sim.town == null:
 		return
 	var t0 := Time.get_ticks_usec()
+	var rain: Node = _world.get("rain") if _world else null
+	sim.raining = rain != null and float(rain.get("intensity")) > 0.3
 	var target := Clock.day * 1440 + Clock.minute
 	var n := 0
 	var day_before := sim.day
@@ -75,7 +81,23 @@ func _on_time_changed(_day: int, _minute: int) -> void:
 		n += 1
 	if sim.day != day_before:
 		review_homes()
+	_check_lights()
 	tick_ms = (Time.get_ticks_usec() - t0) / 1000.0
+
+
+## Tells the world when the set of lit rooms changes, so the lamps drawn match the light grid.
+func _check_lights() -> void:
+	var lit := sim.light_now().lit_rooms if sim.town else {}
+	var keys := lit.keys()
+	keys.sort()
+	var sig := ",".join(PackedStringArray(keys))
+	if sig != _lit_sig:
+		_lit_sig = sig
+		lights_changed.emit(lit)
+
+
+func lit_rooms() -> Dictionary:
+	return sim.light_now().lit_rooms if active and sim.town else {}
 
 
 # --- Homes ---------------------------------------------------------------------------------------

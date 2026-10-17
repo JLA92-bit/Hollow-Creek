@@ -125,6 +125,7 @@ func _ready() -> void:
 
 ## The town's life: the sim gets its walk graph from this valley, and its people are drawn here.
 func _start_residents() -> void:
+	SimHost.lights_changed.connect(_on_lights_changed)
 	SimHost.start(self)
 	residents = ResidentViews.new()
 	residents.name = "Residents"
@@ -138,6 +139,20 @@ func _start_residents() -> void:
 
 func _exit_tree() -> void:
 	SimHost.stop()
+	if SimHost.lights_changed.is_connected(_on_lights_changed):
+		SimHost.lights_changed.disconnect(_on_lights_changed)
+
+
+## Lamps burn only in rooms where somebody's up (the light grid), so what's drawn is what's seen.
+func _on_lights_changed(lit: Dictionary) -> void:
+	for hv in houses:
+		var mine := {}
+		var prefix := hv.data.id + ":"
+		for rid: String in lit:
+			if rid.begins_with(prefix):
+				mine[rid.substr(prefix.length())] = true
+		hv.lit_filter = mine
+	_update_house_lighting()
 
 
 func select_resident(rid: String) -> void:

@@ -43,6 +43,9 @@ var incidents: Array = []          ## {id, tile: [x, y], from, to (ticks), label
 var next_memory: int = 0
 var raining := false               ## set by the host from the weather
 var rain_minutes: int = 0          ## minutes of rain so far (bootprints wash out after 6 hours of it)
+var last_rain_tick: int = -100000
+var traces: Dictionary = {}        ## "x,y" -> bootprints (Traces)
+var records: Dictionary = {"time_cards": [], "ledger": [], "exchange": []}  ## the town's paperwork
 var _light: LightGrid
 var _light_tick := -1
 var collected: int = 0             ## rent paid to the town and not yet banked by the host
@@ -183,6 +186,9 @@ func tick() -> void:
 	_socialise(ids)
 	if raining:
 		rain_minutes += 1
+		last_rain_tick = ticks
+	if minute % 60 == 0:
+		Traces.fade(self)
 	if town.sight != null:
 		Memories.observe(self)
 
@@ -223,6 +229,8 @@ func _step(r: Dictionary) -> void:
 	if not r["route"].is_empty():
 		var walked := float(ticks - int(r["walk_start"])) * SimTown.WALK_M_PER_MIN
 		var length := SimTown.route_length(r["route"])
+		if town.grid != null:
+			Traces.walk(self, r, walked - SimTown.WALK_M_PER_MIN, minf(walked, length))
 		if walked >= length:
 			r["pos"] = (r["route"][r["route"].size() - 1] as Array).duplicate()
 			r["route"] = []
@@ -232,9 +240,13 @@ func _step(r: Dictionary) -> void:
 			return
 	var kind := str(act.get("kind", "idle"))
 	if kind != "idle":
+		if kind == "work" and str(act.get("place", "")) == "lm_mill" and not act.get("clocked", false):
+			act["clocked"] = true
+			_record("time_cards", {"rid": r["id"], "day": day, "in": minute, "out": -1})
 		_satisfy(r, act)
 		if ticks < int(act.get("until", 0)) and not _interrupted(r, act):
 			return
+		_finished(r, act)
 		act["kind"] = "idle"
 	_choose(r)
 
@@ -253,6 +265,62 @@ func _satisfy(r: Dictionary, act: Dictionary) -> void:
 			continue
 		var needs: Dictionary = r["needs"]
 		needs[n] = q(minf(100.0, float(needs[n]) + float(adv[n]) / mins))
+
+
+## Paperwork when something's done: a mill hand clocks off; a shopper's purchases go in the
+## store's ledger, and now and then they ring somebody from the store's telephone.
+func _finished(r: Dictionary, act: Dictionary) -> void:
+	var kind := str(act["kind"])
+	if kind == "work" and act.get("clocked", false):
+		var cards: Array = records["time_cards"]
+		for i in range(cards.size() - 1, -1, -1):
+			if cards[i]["rid"] == r["id"] and int(cards[i]["out"]) < 0:
+				cards[i]["out"] = minute
+				break
+	elif kind == "shop" and str(town.place(str(act.get("place", ""))).get("house", "")) != home_of(str(r["id"])):
+		var h := absi(hash("%s|%d" % [r["id"], ticks]))
+		var goods := ["tea and sugar", "flour and lard", "a tin of Bushells", "kerosene", "tobacco", "a pound of butter", "matches and soap", "a bag of oats"]
+		_record("ledger", {"day": day, "minute": minute, "rid": r["id"], "household": r["household"], "goods": goods[h % goods.size()], "pence": 12 + (h >> 3) % 96})
+		if h % 4 == 0:
+			_record("exchange", {"day": day, "minute": minute, "caller": r["id"], "from": "the store", "to": _ring_whom(r), "operator": _operator()})
+
+
+## Who somebody rings: their best friend outside the house, or a trunk call to Benalla.
+func _ring_whom(r: Dictionary) -> String:
+	var best := ""
+	var best_f := 30.0
+	var keys := relationships.keys()
+	keys.sort()
+	for k: String in keys:
+		if not k.begins_with(str(r["id"]) + ">"):
+			continue
+		var other := k.substr(str(r["id"]).length() + 1)
+		if not residents.has(other) or residents[other]["household"] == r["household"]:
+			continue
+		var f := float(relationships[k]["friendship"])
+		if f > best_f:
+			best_f = f
+			best = other
+	if best == "":
+		return "Benalla (trunk call)"
+	return "%s %s" % [residents[best]["first"], residents[best]["last"]]
+
+
+func _operator() -> String:
+	var ids := residents.keys()
+	ids.sort()
+	for rid: String in ids:
+		var act: Dictionary = residents[rid]["action"]
+		if str(act.get("kind", "")) == "work" and str(act.get("place", "")).ends_with("exchange") and (residents[rid]["route"] as Array).is_empty():
+			return rid
+	return ""
+
+
+func _record(book: String, entry: Dictionary) -> void:
+	var list: Array = records[book]
+	list.append(entry)
+	if list.size() > 500:
+		list.remove_at(0)
 
 
 ## Work and sleep end on the clock; other things stop when something urgent comes up.
@@ -620,7 +688,8 @@ func snapshot() -> Dictionary:
 		"residents": residents.duplicate(true), "households": households.duplicate(true), "relationships": relationships.duplicate(true),
 		"grievances": grievances.duplicate(true), "secrets": secrets.duplicate(true), "events": events.duplicate(true), "home_scores": home_scores.duplicate(),
 		"wishes": wishes.duplicate(true), "collected": collected, "trust_change": trust_change,
-		"incidents": incidents.duplicate(true), "next_memory": next_memory, "raining": raining, "rain_minutes": rain_minutes}
+		"incidents": incidents.duplicate(true), "next_memory": next_memory, "raining": raining, "rain_minutes": rain_minutes,
+		"last_rain_tick": last_rain_tick, "traces": traces.duplicate(true), "records": records.duplicate(true)}
 
 
 func restore(d: Dictionary) -> void:
@@ -643,4 +712,7 @@ func restore(d: Dictionary) -> void:
 	next_memory = int(d.get("next_memory", 0))
 	raining = bool(d.get("raining", false))
 	rain_minutes = int(d.get("rain_minutes", 0))
+	last_rain_tick = int(d.get("last_rain_tick", -100000))
+	traces = (d.get("traces", {}) as Dictionary).duplicate(true)
+	records = (d.get("records", {"time_cards": [], "ledger": [], "exchange": []}) as Dictionary).duplicate(true)
 	_light = null

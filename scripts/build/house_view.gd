@@ -532,6 +532,11 @@ func _make_lights() -> void:
 
 
 ## level: 0 lamps off to 1 all lit. daylight: 0 night to 1 noon. budget: real lights allowed.
+## Ground-floor rooms the town's light grid says are lit ("0:key" -> true), or null to light every
+## lamp after dark (Sandbox and previews, with nobody living here).
+var lit_filter: Variant = null
+
+
 func set_lighting(level: float, daylight: float, budget: int, lamp_shadows: bool) -> void:
 	_lamp_level = level
 	_daylight = daylight
@@ -541,6 +546,8 @@ func set_lighting(level: float, daylight: float, budget: int, lamp_shadows: bool
 	var used := 0
 	for l in _lights:
 		var on := level > 0.4 and int(l["level"]) <= view_level
+		if on and lit_filter is Dictionary and int(l["level"]) == 0:
+			on = (lit_filter as Dictionary).has(l["room"])
 		var light: OmniLight3D = l["light"]
 		light.visible = on and used < budget
 		light.shadow_enabled = lamp_shadows and l["kind"] == "kerosene"
