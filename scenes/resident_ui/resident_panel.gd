@@ -11,10 +11,10 @@ const MAROON := Color("#940E16")
 const BARS := {"energy": Color("#FBAD45"), "social": Color("#F26839"), "hunger": Color("#5CBD6C"), "fun": Color("#4BC9F5"), "mood": Color("#00294D")}
 const DOING := {"sleep": "Asleep", "cook": "Cooking a meal", "snack": "Having a bite to eat", "wireless": "Listening to the wireless",
 	"sit": "Sitting down for a spell", "garden": "Pottering in the garden", "shop": "Shopping at the store", "fish": "Fishing at the creek",
-	"potter": "Pottering about at home", "idle": "Standing about"}
+	"potter": "Pottering about at home", "idle": "Standing about", "sit_up": "Sitting up late", "loiter": "Hanging about"}
 const GOING := {"sleep": "Off to bed", "cook": "Going to cook", "snack": "Going for a bite", "wireless": "Going to the wireless",
 	"sit": "Going to sit down", "garden": "Heading into the garden", "shop": "Walking to the store", "fish": "Walking down to the creek",
-	"potter": "Heading home", "idle": "Out walking"}
+	"potter": "Heading home", "idle": "Out walking", "sit_up": "Going to sit up", "loiter": "Out walking"}
 
 var rid := ""
 var _body: VBoxContainer
@@ -109,6 +109,30 @@ func _rebuild() -> void:
 	_body.add_child(_bar("Mood", float(r["mood"]), BARS["mood"]))
 	_body.add_child(_heading("NOW"))
 	_body.add_child(_text(doing(sim, r) if r["status"] == "living" else "Waiting at the siding for a home"))
+	# What they remember (newest first), as in the town mockup.
+	var mem: Array = r.get("memories", [])
+	if not mem.is_empty():
+		_body.add_child(_heading("RECENT MEMORY"))
+		for i in range(mem.size() - 1, maxi(-1, mem.size() - 3), -1):
+			var m: Dictionary = mem[i]
+			var card2 := PanelContainer.new()
+			var sb2 := StyleBoxFlat.new()
+			sb2.bg_color = Color("#F4F1EA")
+			sb2.set_corner_radius_all(8)
+			sb2.set_content_margin_all(8)
+			card2.add_theme_stylebox_override("panel", sb2)
+			var v2 := VBoxContainer.new()
+			card2.add_child(v2)
+			var ml := _text("%s · %s" % [Clock.time_label(int(m["minute"])), Memories.describe(sim, m)])
+			ml.add_theme_font_override("font", load("res://assets/fonts/CourierPrime-Regular.ttf") as Font)
+			ml.add_theme_font_size_override("font_size", 14)
+			v2.add_child(ml)
+			var cl := _text("Confidence: %s" % Memories.confidence_word(float(m["confidence"])))
+			cl.add_theme_font_override("font", load("res://assets/fonts/CourierPrime-Regular.ttf") as Font)
+			cl.add_theme_font_size_override("font_size", 14)
+			cl.add_theme_color_override("font_color", MAROON)
+			v2.add_child(cl)
+			_body.add_child(card2)
 	# Home and wishes.
 	var hid := str(r["household"])
 	var home := str(sim.households[hid].get("home", ""))

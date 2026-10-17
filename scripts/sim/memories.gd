@@ -24,6 +24,36 @@ const PUBLIC: Array[String] = ["shop", "store", "exchange", "hotel", "bar", "chu
 const LANDMARK_NAMES := {"lm_mill": "the mill", "lm_siding": "the siding", "plot_store": "the store", "lm_old_town": "the old town"}
 
 
+## "high", "medium" or "low".
+static func confidence_word(c: float) -> String:
+	return "high" if c >= 0.7 else "medium" if c >= 0.45 else "low"
+
+
+## A memory in words, as the resident would put it: "Saw Frank Hayward carrying a cash tin, outside
+## the General store."
+static func describe(sim: Sim, m: Dictionary) -> String:
+	var who := ""
+	if str(m.get("subject", "")) != "" and sim.residents.has(m["subject"]):
+		var s: Dictionary = sim.residents[m["subject"]]
+		who = "%s %s" % [s["first"], s["last"]]
+	var place := str(m.get("place", ""))
+	var kind := str(m.get("told_kind", m["kind"])) if m["kind"] == "was_told" else str(m["kind"])
+	var text := ""
+	match kind:
+		"saw_person":
+			text = "Saw %s %s, %s." % [who if who != "" else "somebody", m["detail"], place]
+		"saw_light":
+			text = "Saw %s." % m["detail"]
+		"heard_noise":
+			text = "Heard %s, %s." % [m["detail"], place]
+		_:
+			text = "Saw %s, %s." % [m["detail"], place]
+	if m["kind"] == "was_told":
+		var from: Dictionary = sim.residents.get(m.get("from", ""), {})
+		text = "%s says she %s" % [from.get("first", "Somebody"), text.substr(0, 1).to_lower() + text.substr(1)] if str(from.get("sex", "m")) == "f" else "%s says he %s" % [from.get("first", "Somebody"), text.substr(0, 1).to_lower() + text.substr(1)]
+	return text
+
+
 static func tile_of(r: Dictionary) -> Vector2i:
 	var p: Array = r["pos"]
 	return Vector2i(floori(float(p[1])), floori(float(p[2])))

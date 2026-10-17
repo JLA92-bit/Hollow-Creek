@@ -48,6 +48,9 @@ jobs:
       - name: Residents demo (M5 move-ins, routines, wishes, rent)
         run: timeout 1200 tools/bin/godot --headless --path . res://scenes/resident_ui/residents_demo.tscn
 
+      - name: Night demo (M6 light, sightlines, memories, traces)
+        run: timeout 1200 tools/bin/godot --headless --path . res://scenes/resident_ui/night_demo.tscn
+
       - name: Export web build
         run: |
           mkdir -p build/web

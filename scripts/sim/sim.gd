@@ -281,7 +281,7 @@ func _finished(r: Dictionary, act: Dictionary) -> void:
 		var h := absi(hash("%s|%d" % [r["id"], ticks]))
 		var goods := ["tea and sugar", "flour and lard", "a tin of Bushells", "kerosene", "tobacco", "a pound of butter", "matches and soap", "a bag of oats"]
 		_record("ledger", {"day": day, "minute": minute, "rid": r["id"], "household": r["household"], "goods": goods[h % goods.size()], "pence": 12 + (h >> 3) % 96})
-		if h % 4 == 0:
+		if h % 4 == 0 and _operator() != "":
 			_record("exchange", {"day": day, "minute": minute, "caller": r["id"], "from": "the store", "to": _ring_whom(r), "operator": _operator()})
 
 
@@ -325,6 +325,8 @@ func _record(book: String, entry: Dictionary) -> void:
 
 ## Work and sleep end on the clock; other things stop when something urgent comes up.
 func _interrupted(r: Dictionary, act: Dictionary) -> bool:
+	if act.get("hold", false):
+		return false  # scripted (a demo, or the crime director): runs its full time
 	var kind := str(act["kind"])
 	if kind == "sleep":
 		return minute == _wake(r)
@@ -588,6 +590,14 @@ func weekly_economy() -> void:
 		collected += rent_w
 		h["money"] = q(float(h["money"]) + income - 3.0 - members * 1.5 - rent_w)
 		h["last_week"] = {"income": income, "costs": 3.0 + members * 1.5 + rent_w, "rent": rent_w}
+
+
+## Sends somebody somewhere to do something for a while, whatever the hour (scripted events and,
+## later, the crime director). The action isn't cut short by bedtime or work.
+func direct(rid: String, at: Array, house: String, kind: String, minutes: int, carrying: String = "") -> void:
+	var r: Dictionary = residents[rid]
+	r["carrying"] = carrying
+	_go(r, {"kind": kind, "place": "", "minutes": minutes, "hold": true}, at, house)
 
 
 # --- Light and incidents ----------------------------------------------------------------------

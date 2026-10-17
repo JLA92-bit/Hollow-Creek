@@ -288,10 +288,16 @@ func show_resident(rid: String) -> void:
 
 func _debug_panel(root: Control) -> void:
 	_debug = _panel(root)
+	var v := VBoxContainer.new()
+	_debug.add_child(v)
 	_debug_label = Label.new()
 	_debug_label.add_theme_font_override("font", load("res://assets/fonts/CourierPrime-Regular.ttf") as Font)
 	_debug_label.add_theme_font_size_override("font_size", 14)
-	_debug.add_child(_debug_label)
+	v.add_child(_debug_label)
+	var ob := _text_button("Overlay: off", func() -> void: pass)
+	ob.tooltip_text = "Light, sightlines (from the selected resident), routes, bootprints (F4)"
+	ob.pressed.connect(func() -> void: ob.text = DebugOverlays.NAMES[str(world.call("cycle_overlay"))])
+	v.add_child(ob)
 	_debug.visible = false
 	_anchor.call_deferred(_debug, Control.PRESET_BOTTOM_LEFT, 16)
 

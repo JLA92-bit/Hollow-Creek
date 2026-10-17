@@ -40,6 +40,7 @@ var _landscape_sig := ""
 var photo_mode := false
 var _work_cache: Dictionary = {}  ## house id -> Construction work list for its current plan
 var residents: ResidentViews
+var overlays: DebugOverlays
 var _follow := ""
 var _press_at := Vector2(-1, -1)
 var _photo_layer: CanvasLayer
@@ -133,8 +134,18 @@ func _start_residents() -> void:
 	residents.height_fn = slice.grid.height_at
 	residents.lod = 1 if quality == "low" else 0
 	add_child(residents)
+	overlays = DebugOverlays.new()
+	overlays.name = "Overlays"
+	overlays.residents = residents
+	overlays.focus_fn = func() -> Vector3: return rig.focus
+	add_child(overlays)
 	if hud:
 		hud.call("_refresh_toolbar")
+
+
+## Cycles the debug overlays: light, sightlines, routes, prints, off. Returns the new mode.
+func cycle_overlay() -> String:
+	return overlays.cycle() if overlays else "off"
 
 
 func _exit_tree() -> void:
@@ -553,6 +564,10 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		KEY_P:
 			if hud and residents:
 				hud.toggle_residents()
+		KEY_F4:
+			var m := cycle_overlay()
+			if hud:
+				hud.show_toast(DebugOverlays.NAMES[m])
 
 
 # --- Photo mode ----------------------------------------------------------------------------------
