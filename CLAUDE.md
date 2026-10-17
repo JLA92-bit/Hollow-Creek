@@ -32,7 +32,13 @@ tools/bin/godot --headless --path . -s addons/gut/gut_cmdln.gd -gdir=res://tests
 tools/bin/godot --headless --path . -s tools/director_soak.gd -- --seeds 500     # from M8
 mkdir -p build/web && tools/bin/godot --headless --path . --export-release "Web" build/web/index.html
 node tools/web_smoke_test.mjs --viewport 1280x720  # load the build in headless Chromium, screenshot
+python3 -I tools/assets/fetch_polyhaven.py && python3 -I tools/assets/write_credits.py   # assets from data/asset_manifest.json
+python3 -I tools/textures/make_foliage.py          # regenerate leaf, grass, noise and water textures
+node tools/look_test.mjs --out docs/screens/m1      # M1 look test: 26 screenshots + perf JSON (about 40 min on SwiftShader)
+tools/bin/godot --headless --path . -s tools/map_preview.gd   # top-down PNG of data/map_slice.json
 ```
+
+URL hooks for previews and tests: `?scene=world` opens the valley directly, `?scene=look_test` runs the look test (options in `scenes/world/look_test.gd`).
 
 `tools/bin/`, `tools/cache/` and `build/` are git-ignored. Run `--import` before tests or exports in a fresh checkout. The engine is about 9.6 MB gzipped on its own (`index.wasm`, 4.7.2).
 

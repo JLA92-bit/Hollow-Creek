@@ -12,9 +12,9 @@ Things Claude Code couldn't fetch itself. Each batch lists exact files with dire
 
 **Easiest fix (2 minutes):** in Claude Code, open the cloud environment menu in the session title bar, choose Edit, and under Network access add `acg-download.struffelproductions.com` to Allowed domains (keep "Allow package managers" ticked). Steps: https://code.claude.com/docs/en/cloud-environments#network-access. Then Claude Code fetches everything itself and Batch 1 below isn't needed.
 
-**Meanwhile:** Poly Haven also has CC0 PBR textures (wood floors, plaster, brick, ground), so M1 uses those where they fit and falls back to procedural placeholders for the rest.
+**Update (M1):** Poly Haven covered everything M1 needed (weatherboard, plaster, floorboards, lino, corrugated iron, brick, bark, fabrics and all four ground layers), so **nothing is blocked and no download is needed right now.** Batch 1 below is optional, for extra variety later. `tools/assets/fetch_ambientcg.py` picks up any of these zips dropped into `assets/incoming/`.
 
-## Batch 1 - ambientCG materials for M1 (only if the domain can't be allowed)
+## Batch 1 - ambientCG materials (optional, only if the domain can't be allowed)
 
 Click each link, which downloads a 1K JPG zip. About 5 to 8 MB each.
 

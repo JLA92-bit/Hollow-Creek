@@ -29,3 +29,45 @@ Every external file in the game, with its author, source and licence. Shown in-g
 ## Materials, models, skies, sounds
 
 None yet. Added from M1.
+
+## Materials, models and skies (generated)
+
+<!-- assets:start -->
+| Asset | Authors | Source | Licence | Used as |
+|---|---|---|---|---|
+| Arm Chair 01 (model) | Kirill Sannikov | https://polyhaven.com/a/ArmChair_01 | CC0 | Sitting room armchair |
+| Rockingchair 01 (model) | Jorge Camacho | https://polyhaven.com/a/Rockingchair_01 | CC0 | Agnes's rocking chair |
+| Brass Pot 01 (model) | Rico Cilliers | https://polyhaven.com/a/brass_pot_01 | CC0 | Pot on the stove |
+| Brown Mud 02 (texture) | Rob Tuytel | https://polyhaven.com/a/brown_mud_02 | CC0 | Mud by the creek |
+| Corrugated Iron (texture) | Dimitrios Savva, Jenelle van Heerden | https://polyhaven.com/a/corrugated_iron | CC0 | Roofs and tanks |
+| Dirt (texture) | Charlotte Baglioni | https://polyhaven.com/a/dirt | CC0 | Dirt roads and bare ground |
+| Gingham Check (texture) | Rico Cilliers, colormass | https://polyhaven.com/a/gingham_check | CC0 | Curtains, tablecloths |
+| Hanging Picture Frame 01 (model) | James Ray Cock | https://polyhaven.com/a/hanging_picture_frame_01 | CC0 | Picture on the wall |
+| Japanese Sycamore (texture) | Charlotte Baglioni | https://polyhaven.com/a/japanese_sycamore | CC0 | Smooth eucalypt bark |
+| Jug 01 (model) | Kuutti Siitonen | https://polyhaven.com/a/jug_01 | CC0 | Jug on the table |
+| Old Linoleum Flooring 01 (texture) | Charlotte Baglioni | https://polyhaven.com/a/old_linoleum_flooring_01 | CC0 | Kitchen lino |
+| Old Wood Floor (texture) | Guillaume Monsergent | https://polyhaven.com/a/old_wood_floor | CC0 | Timber floorboards |
+| Painted Plaster Wall (texture) | Amal Kumar | https://polyhaven.com/a/painted_plaster_wall | CC0 | Interior lining and paint base |
+| Painted Wooden Cabinet (model) | Kirill Sannikov | https://polyhaven.com/a/painted_wooden_cabinet | CC0 | Kitchen dresser |
+| Painted Wooden Chair 01 (model) | Kuutti Siitonen | https://polyhaven.com/a/painted_wooden_chair_01 | CC0 | Kitchen chair |
+| Painted Wooden Nightstand (model) | Kirill Sannikov | https://polyhaven.com/a/painted_wooden_nightstand | CC0 | Bedside table |
+| Painted Wooden Table (model) | Kirill Sannikov | https://polyhaven.com/a/painted_wooden_table | CC0 | Kitchen table |
+| Qwantani Dusk 2 (Pure Sky) (hdri) | Greg Zaal, Jarod Guest | https://polyhaven.com/a/qwantani_dusk_2_puresky | CC0 | sky_dusk |
+| Qwantani Morning (Pure Sky) (hdri) | Jarod Guest | https://polyhaven.com/a/qwantani_morning_puresky | CC0 | sky_morning |
+| Qwantani Night (Pure Sky) (hdri) | Greg Zaal, Jarod Guest | https://polyhaven.com/a/qwantani_night_puresky | CC0 | sky_night |
+| Qwantani Noon (Pure Sky) (hdri) | Greg Zaal, Jarod Guest | https://polyhaven.com/a/qwantani_noon_puresky | CC0 | sky_noon |
+| Red Brick (texture) | Rob Tuytel | https://polyhaven.com/a/red_brick | CC0 | Chimneys |
+| River Small Rocks (texture) | Rico Cilliers, Rob Tuytel | https://polyhaven.com/a/river_small_rocks | CC0 | Creek bed under the water |
+| Rocky Trail (texture) | Amal Kumar | https://polyhaven.com/a/rocky_trail | CC0 | Gravel |
+| Rough Linen (texture) | Rico Cilliers, colormass | https://polyhaven.com/a/rough_linen | CC0 | Upholstery and bedding base |
+| Side Table 01 (model) | James Ray Cock | https://polyhaven.com/a/side_table_01 | CC0 | Side table |
+| Throw Pillows 01 (model) | Serhii Khromov | https://polyhaven.com/a/throw_pillows_01 | CC0 | Cushions |
+| Vintage Day Bed (model) | Aron Łyczek | https://polyhaven.com/a/vintage_day_bed | CC0 | Single bed |
+| Vintage Oil Lamp (model) | Monsta3D | https://polyhaven.com/a/vintage_oil_lamp | CC0 | Kerosene lamp |
+| Withered Grass (texture) | Charlotte Baglioni | https://polyhaven.com/a/withered_grass | CC0 | Dry summer grass |
+| Wood Plank Wall (texture) | Dimitrios Savva | https://polyhaven.com/a/wood_plank_wall | CC0 | Painted weatherboard cladding |
+| Wooden Bucket 01 (model) | James Ray Cock | https://polyhaven.com/a/wooden_bucket_01 | CC0 | Outdoor bucket |
+| Wooden Crate 01 (model) | James Ray Cock | https://polyhaven.com/a/wooden_crate_01 | CC0 | Crates at the siding |
+| Wooden Planks (texture) | Charlotte Baglioni, Dario Barresi | https://polyhaven.com/a/wooden_planks | CC0 | Verandah decking, stumps and trims |
+| Worn Corrugated Iron (texture) | Dimitrios Savva, Jenelle van Heerden | https://polyhaven.com/a/worn_corrugated_iron | CC0 | Old roofs, sheds, the mill |
+<!-- assets:end -->

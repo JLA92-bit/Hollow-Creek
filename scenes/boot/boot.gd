@@ -11,6 +11,11 @@ var _t := 0.0
 
 func _ready() -> void:
 	_version.text = "Version %s" % GameState.version()
+	# Test and preview hooks: ?scene=look_test or ?scene=world skips the menus.
+	var target := str(UrlParams.read().get("scene", ""))
+	if target in ["look_test", "world"]:
+		_leaving = true
+		get_tree().change_scene_to_file.call_deferred("res://scenes/world/%s.tscn" % target)
 
 
 func _process(delta: float) -> void:

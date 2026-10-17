@@ -1,0 +1,36 @@
+{
+  "_comment": "Material library. 'tex' names a folder in assets/materials with _albedo, _normal and _orm maps. 'size_m' is metres per texture tile. 'tint' is the default colour; paintable materials are tinted per face. 'tier' is the cost tier (0 cheap to 3 dear).",
+  "materials": {
+    "weatherboard":   {"category": "cladding", "tex": "weatherboard", "size_m": 1.6, "tint": "#EFE6CC", "roughness": 0.75, "normal_scale": 1.4, "tier": 1},
+    "plaster":        {"category": "lining", "tex": "plaster", "size_m": 2.0, "tint": "#F2EBD9", "roughness": 0.85, "normal_scale": 0.4, "tier": 1},
+    "trim_paint":     {"category": "trim", "tex": "plaster", "size_m": 0.6, "tint": "#F7F3E8", "roughness": 0.45, "normal_scale": 0.2, "tier": 1},
+    "trim_stain":     {"category": "trim", "tex": "decking", "size_m": 1.0, "tint": "#8A5A3A", "roughness": 0.55, "tier": 1},
+    "floor_boards":   {"category": "floor", "tex": "floor_boards", "size_m": 3.0, "tint": "#D9B68F", "roughness": 0.6, "tier": 1},
+    "pine_boards":    {"category": "floor", "tex": "decking", "size_m": 2.0, "tint": "#F2D4AA", "roughness": 0.65, "tier": 1},
+    "decking":        {"category": "floor", "tex": "decking", "size_m": 2.0, "tint": "#C9B39A", "roughness": 0.8, "tier": 1},
+    "lino_checks":    {"category": "floor", "tex": "lino_checks", "size_m": 3.5, "tint": "#FFFFFF", "roughness": 0.35, "tier": 1},
+    "corrugated_iron": {"category": "roof", "tex": "corrugated_iron", "size_m": 1.12, "tint": "#DDE3E6", "roughness": 0.5, "metallic": 0.6, "normal_scale": 1.6, "tier": 1},
+    "corrugated_iron_old": {"category": "roof", "tex": "corrugated_iron_old", "size_m": 1.12, "tint": "#FFFFFF", "roughness": 0.6, "metallic": 0.4, "normal_scale": 1.6, "tier": 0},
+    "roof_paint_red": {"category": "roof", "tex": "corrugated_iron", "size_m": 1.12, "tint": "#8E3B2F", "roughness": 0.55, "metallic": 0.1, "normal_scale": 1.6, "tier": 2},
+    "brick_red":      {"category": "masonry", "tex": "brick_red", "size_m": 1.4, "tint": "#FFFFFF", "roughness": 0.85, "tier": 2},
+    "stump":          {"category": "structure", "tex": "decking", "size_m": 1.0, "tint": "#8C8378", "roughness": 0.9, "tier": 0},
+    "bark_gum":       {"category": "plant", "tex": "bark_gum", "size_m": 1.1, "tint": "#F0EBE3", "roughness": 0.85, "tier": 0},
+    "fabric_gingham": {"category": "fabric", "tex": "fabric_gingham", "size_m": 0.5, "tint": "#FFFFFF", "roughness": 0.9, "tier": 1},
+    "fabric_linen":   {"category": "fabric", "tex": "fabric_linen", "size_m": 0.5, "tint": "#F4EEDC", "roughness": 0.95, "tier": 1},
+    "rug_wool":       {"category": "fabric", "tex": "fabric_linen", "size_m": 0.4, "tint": "#8E2E2A", "roughness": 1.0, "tier": 1},
+    "creek_bed":      {"category": "ground", "tex": "creek_bed", "size_m": 2.0, "tint": "#FFFFFF", "roughness": 0.7, "tier": 0},
+    "enamel_black":   {"category": "metal", "tint": "#1E1E1E", "roughness": 0.25, "metallic": 0.1, "tier": 2},
+    "enamel_cream":   {"category": "metal", "tint": "#EDE4CC", "roughness": 0.2, "metallic": 0.05, "tier": 2},
+    "cast_iron":      {"category": "metal", "tint": "#2B2A28", "roughness": 0.6, "metallic": 0.7, "tier": 1},
+    "chrome":         {"category": "metal", "tint": "#E8E8E8", "roughness": 0.12, "metallic": 1.0, "tier": 2},
+    "brass":          {"category": "metal", "tint": "#C79A4A", "roughness": 0.3, "metallic": 1.0, "tier": 2},
+    "rail_steel":     {"category": "metal", "tint": "#5A534C", "roughness": 0.5, "metallic": 0.8, "tier": 1},
+    "glass":          {"category": "glass", "tint": "#B9C9C4", "alpha": 0.22, "roughness": 0.04, "metallic": 0.0, "specular": 0.9, "tier": 1},
+    "blueprint":      {"category": "ui", "tint": "#4BC9F5", "alpha": 0.35, "unshaded": true, "tier": 0}
+  },
+  "paint_chart": {
+    "cream": "#EFE6CC", "ivory": "#F6F0DF", "mint": "#CFE3CF", "duck_egg": "#C9DCD8", "butter": "#F2E2A6",
+    "apricot": "#F2C7A0", "rose": "#E9C3C0", "sky": "#C7DCEB", "sage": "#B9C7A5", "white": "#F7F5EF",
+    "brunswick_green": "#2F4A35", "maroon": "#6E1F1F", "mission_brown": "#5A4032", "indian_red": "#8E3B2F"
+  }
+}

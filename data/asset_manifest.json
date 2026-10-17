@@ -1,0 +1,232 @@
+{
+  "_comment": "Assets fetched by tools/assets/fetch_polyhaven.py and fetch_ambientcg.py. 'as' is our id. 'size_m' is the real-world width of one texture tile in metres. 'neutral' makes a pale albedo so paint colours can tint it. 'array' packs ground layers into one Texture2DArray.",
+  "polyhaven": {
+    "textures": [
+      {
+        "id": "wood_plank_wall",
+        "as": "weatherboard",
+        "res": "1k",
+        "size_m": 2.0,
+        "neutral": 0.86,
+        "use": "Painted weatherboard cladding"
+      },
+      {
+        "id": "painted_plaster_wall",
+        "as": "plaster",
+        "res": "1k",
+        "size_m": 2.0,
+        "neutral": 0.9,
+        "use": "Interior lining and paint base"
+      },
+      {
+        "id": "old_wood_floor",
+        "as": "floor_boards",
+        "res": "1k",
+        "size_m": 2.0,
+        "use": "Timber floorboards"
+      },
+      {
+        "id": "wooden_planks",
+        "as": "decking",
+        "res": "1k",
+        "size_m": 2.0,
+        "use": "Verandah decking, stumps and trims"
+      },
+      {
+        "id": "old_linoleum_flooring_01",
+        "as": "lino_checks",
+        "res": "1k",
+        "size_m": 2.0,
+        "use": "Kitchen lino"
+      },
+      {
+        "id": "corrugated_iron",
+        "as": "corrugated_iron",
+        "res": "1k",
+        "size_m": 2.0,
+        "use": "Roofs and tanks"
+      },
+      {
+        "id": "worn_corrugated_iron",
+        "as": "corrugated_iron_old",
+        "res": "1k",
+        "size_m": 2.0,
+        "use": "Old roofs, sheds, the mill"
+      },
+      {
+        "id": "red_brick",
+        "as": "brick_red",
+        "res": "1k",
+        "size_m": 2.0,
+        "use": "Chimneys"
+      },
+      {
+        "id": "japanese_sycamore",
+        "as": "bark_gum",
+        "res": "1k",
+        "size_m": 1.0,
+        "use": "Smooth eucalypt bark"
+      },
+      {
+        "id": "gingham_check",
+        "as": "fabric_gingham",
+        "res": "1k",
+        "size_m": 0.5,
+        "use": "Curtains, tablecloths"
+      },
+      {
+        "id": "rough_linen",
+        "as": "fabric_linen",
+        "res": "1k",
+        "size_m": 0.5,
+        "neutral": 0.85,
+        "use": "Upholstery and bedding base"
+      },
+      {
+        "id": "river_small_rocks",
+        "as": "creek_bed",
+        "res": "1k",
+        "size_m": 2.0,
+        "use": "Creek bed under the water"
+      },
+      {
+        "id": "withered_grass",
+        "as": "ground_dry_grass",
+        "res": "1k",
+        "size_m": 4.0,
+        "array": "ground",
+        "slot": 0,
+        "use": "Dry summer grass"
+      },
+      {
+        "id": "dirt",
+        "as": "ground_dirt",
+        "res": "1k",
+        "size_m": 3.0,
+        "array": "ground",
+        "slot": 1,
+        "use": "Dirt roads and bare ground"
+      },
+      {
+        "id": "rocky_trail",
+        "as": "ground_gravel",
+        "res": "1k",
+        "size_m": 3.0,
+        "array": "ground",
+        "slot": 2,
+        "use": "Gravel"
+      },
+      {
+        "id": "brown_mud_02",
+        "as": "ground_mud",
+        "res": "1k",
+        "size_m": 3.0,
+        "array": "ground",
+        "slot": 3,
+        "use": "Mud by the creek"
+      }
+    ],
+    "hdris": [
+      {
+        "id": "qwantani_morning_puresky",
+        "as": "sky_morning",
+        "res": "1k"
+      },
+      {
+        "id": "qwantani_noon_puresky",
+        "as": "sky_noon",
+        "res": "1k"
+      },
+      {
+        "id": "qwantani_dusk_2_puresky",
+        "as": "sky_dusk",
+        "res": "1k"
+      },
+      {
+        "id": "qwantani_night_puresky",
+        "as": "sky_night",
+        "res": "1k"
+      }
+    ],
+    "models": [
+      {
+        "id": "painted_wooden_chair_01",
+        "res": "1k",
+        "use": "Kitchen chair"
+      },
+      {
+        "id": "painted_wooden_table",
+        "res": "1k",
+        "use": "Kitchen table"
+      },
+      {
+        "id": "painted_wooden_cabinet",
+        "res": "1k",
+        "use": "Kitchen dresser"
+      },
+      {
+        "id": "painted_wooden_nightstand",
+        "res": "1k",
+        "use": "Bedside table"
+      },
+      {
+        "id": "ArmChair_01",
+        "res": "1k",
+        "use": "Sitting room armchair"
+      },
+      {
+        "id": "Rockingchair_01",
+        "res": "1k",
+        "use": "Agnes's rocking chair"
+      },
+      {
+        "id": "vintage_day_bed",
+        "res": "1k",
+        "use": "Single bed"
+      },
+      {
+        "id": "side_table_01",
+        "res": "1k",
+        "use": "Side table"
+      },
+      {
+        "id": "vintage_oil_lamp",
+        "res": "1k",
+        "use": "Kerosene lamp"
+      },
+      {
+        "id": "hanging_picture_frame_01",
+        "res": "1k",
+        "use": "Picture on the wall"
+      },
+      {
+        "id": "throw_pillows_01",
+        "res": "1k",
+        "use": "Cushions"
+      },
+      {
+        "id": "jug_01",
+        "res": "1k",
+        "use": "Jug on the table"
+      },
+      {
+        "id": "brass_pot_01",
+        "res": "1k",
+        "use": "Pot on the stove"
+      },
+      {
+        "id": "wooden_bucket_01",
+        "res": "1k",
+        "use": "Outdoor bucket"
+      },
+      {
+        "id": "wooden_crate_01",
+        "res": "1k",
+        "use": "Crates at the siding"
+      }
+    ]
+  },
+  "ambientcg": {
+    "materials": []
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "_comment": "docs/ART_DIRECTION.md quality presets. texture_size is applied at import time for now (see docs/BACKLOG.md).",
+  "low":    {"render_scale": 0.75, "shadow_size": 1024, "shadow_splits": 1, "shadow_distance": 45,  "soft_shadows": false, "ssao": "off",  "lamps": 4,  "msaa": 0, "texture_size": 512,  "resident_lod_m": 15, "terrain_detail": false, "tufts": false, "glow": false},
+  "medium": {"render_scale": 0.9,  "shadow_size": 2048, "shadow_splits": 2, "shadow_distance": 70,  "soft_shadows": false, "ssao": "half", "lamps": 8,  "msaa": 2, "texture_size": 1024, "resident_lod_m": 25, "terrain_detail": true,  "tufts": true,  "glow": true},
+  "high":   {"render_scale": 1.0,  "shadow_size": 4096, "shadow_splits": 3, "shadow_distance": 110, "soft_shadows": true,  "ssao": "full", "lamps": 16, "msaa": 4, "texture_size": 2048, "resident_lod_m": 40, "terrain_detail": true,  "tufts": true,  "glow": true}
+}

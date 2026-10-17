@@ -20,6 +20,8 @@ Claude Code uses the default for anything not marked "needs Josh". For "needs Jo
 | 14 | Analytics | None. Feedback form only | Default | - |
 | 15 | Monetisation | None while testing | Default | - |
 | 16 | App store wrappers | Not planned | **Needs Josh** | M12 |
+| 17 | 3D texture format | Lossy WebP in the pack, size-capped (1k architecture and ground, 512 props), instead of Basis Universal. Godot 4.7's Basis encoder is UASTC-only: about 2.2 MB per 1k texture even with RDO, against 0.3 MB for WebP, which would break the 40 MB first download. Trade-off: WebP decodes to uncompressed RGBA in GPU memory. Revisit with per-preset texture packs (`docs/BACKLOG.md`) | Default (M1) | - |
+| 18 | Season of the opening week | The slice opens on Mon 2 June 1952 (winter). Daylight keyframes use a generic temperate day (sunrise about 6:30 am, sunset about 6 pm) until seasons arrive in Chapter 1 | Default (M1) | - |
 
 ## Josh's answers
 

@@ -1,0 +1,77 @@
+{
+  "id": "lm_agnes_cottage",
+  "name": "Doyle cottage",
+  "built": 1889,
+  "foundation": {"type": "stumps", "height": 0.6},
+  "exterior": {"cladding": "weatherboard", "paint": "cream", "trim": "brunswick_green", "door": "brunswick_green"},
+  "storeys": [
+    {
+      "level": 0,
+      "wall_height": 3.0,
+      "rooms": [
+        {"id": "bedroom", "name": "Bedroom", "rect": [0, 0, 4, 4], "floor": "floor_boards", "paint": "rose", "light": "candle"},
+        {"id": "hall", "name": "Hall", "rect": [4, 0, 2, 4], "floor": "floor_boards", "paint": "cream", "needs_window": false},
+        {"id": "sitting", "name": "Sitting room", "rect": [6, 0, 4, 4], "floor": "floor_boards", "paint": "duck_egg"},
+        {"id": "sewing", "name": "Sewing room", "rect": [0, 4, 4, 4], "floor": "pine_boards", "paint": "butter"},
+        {"id": "kitchen", "name": "Kitchen", "rect": [4, 4, 6, 4], "floor": "lino_checks", "paint": "mint"}
+      ],
+      "openings": [
+        {"kind": "door", "style": "four_panel", "axis": "x", "x": 4.59, "z": 0, "width": 0.82, "height": 2.1, "exterior": true, "fanlight": true},
+        {"kind": "window", "style": "double_hung", "axis": "x", "x": 1.45, "z": 0, "width": 1.1, "sill": 0.85, "height": 1.65},
+        {"kind": "window", "style": "double_hung", "axis": "x", "x": 7.45, "z": 0, "width": 1.1, "sill": 0.85, "height": 1.65},
+        {"kind": "window", "style": "double_hung", "axis": "z", "x": 0, "z": 1.6, "width": 0.9, "sill": 0.9, "height": 1.5},
+        {"kind": "window", "style": "double_hung", "axis": "z", "x": 10, "z": 1.0, "width": 0.9, "sill": 0.9, "height": 1.5},
+        {"kind": "window", "style": "double_hung", "axis": "z", "x": 0, "z": 5.6, "width": 0.9, "sill": 0.9, "height": 1.5},
+        {"kind": "window", "style": "double_hung", "axis": "z", "x": 10, "z": 5.3, "width": 1.1, "sill": 1.0, "height": 1.4, "note": "Agnes's kitchen window, facing the store"},
+        {"kind": "window", "style": "double_hung", "axis": "x", "x": 1.55, "z": 8, "width": 0.9, "sill": 0.9, "height": 1.5},
+        {"kind": "door", "style": "ledge_brace", "axis": "x", "x": 5.0, "z": 8, "width": 0.82, "height": 2.05, "exterior": true},
+        {"kind": "door", "style": "four_panel", "axis": "z", "x": 4, "z": 2.6, "width": 0.78, "height": 2.05, "open": 95},
+        {"kind": "door", "style": "four_panel", "axis": "z", "x": 6, "z": 0.5, "width": 0.78, "height": 2.05, "open": -95},
+        {"kind": "doorway", "style": "arch", "axis": "x", "x": 4.2, "z": 4, "width": 1.0, "height": 2.15},
+        {"kind": "door", "style": "four_panel", "axis": "z", "x": 4, "z": 6.6, "width": 0.78, "height": 2.05, "open": -95}
+      ]
+    }
+  ],
+  "roof": {"type": "hip", "pitch": 28, "overhang": 0.45, "material": "corrugated_iron"},
+  "verandahs": [
+    {"side": "N", "from": 0.0, "to": 10.0, "depth": 2.1, "shape": "bullnose", "material": "corrugated_iron", "posts": [0.1, 3.4, 6.6, 9.9], "steps": {"from": 4.2, "to": 5.8}}
+  ],
+  "chimneys": [
+    {"x": 7.4, "z": 3.6, "w": 1.2, "d": 0.8, "top": 5.6, "breast": [{"room": "sitting", "face": "N", "x": 7.2, "w": 1.6, "depth": 0.38, "fireplace": true}, {"room": "kitchen", "face": "S", "x": 7.0, "w": 2.0, "depth": 0.45, "recess": true}]}
+  ],
+  "fixtures": [
+    {"kind": "stove", "room": "kitchen", "x": 8.0, "z": 4.78, "rot": 0},
+    {"kind": "rug", "room": "sitting", "x": 8.0, "z": 2.0, "w": 2.2, "d": 1.5, "material": "rug_wool"},
+    {"kind": "rug", "room": "bedroom", "x": 2.3, "z": 2.1, "w": 1.6, "d": 1.0, "material": "rug_wool", "tint": "#3E5A6E"},
+    {"kind": "tablecloth", "room": "kitchen", "x": 6.0, "z": 6.1, "w": 1.25, "d": 1.15, "h": 0.965, "material": "fabric_gingham"},
+    {"kind": "curtains", "all_windows": true, "material": "fabric_linen", "tint": "#F1EAD6"}
+  ],
+  "objects": [
+    {"model": "vintage_day_bed", "room": "bedroom", "x": 0.62, "z": 2.0, "rot": 90},
+    {"model": "painted_wooden_nightstand", "room": "bedroom", "x": 0.4, "z": 0.45, "rot": 0},
+    {"model": "hanging_picture_frame_01", "room": "bedroom", "x": 3.92, "z": 2.0, "y": 1.6, "rot": -90},
+    {"model": "ArmChair_01", "room": "sitting", "x": 6.95, "z": 1.35, "rot": 150},
+    {"model": "Rockingchair_01", "room": "sitting", "x": 9.1, "z": 1.55, "rot": 215},
+    {"model": "side_table_01", "room": "sitting", "x": 9.45, "z": 0.45, "rot": 0},
+    {"model": "vintage_oil_lamp", "room": "sitting", "x": 9.45, "z": 0.45, "on": "side_table_01", "light": "sitting"},
+    {"model": "hanging_picture_frame_01", "room": "sitting", "x": 8.0, "z": 3.53, "y": 1.75, "rot": 180},
+    {"model": "painted_wooden_table", "room": "kitchen", "x": 6.0, "z": 6.1, "rot": 90, "scale": [0.55, 1.0, 1.0]},
+    {"model": "painted_wooden_chair_01", "room": "kitchen", "x": 5.3, "z": 6.1, "rot": 90},
+    {"model": "painted_wooden_chair_01", "room": "kitchen", "x": 6.7, "z": 6.1, "rot": -90},
+    {"model": "painted_wooden_chair_01", "room": "kitchen", "x": 6.0, "z": 6.95, "rot": 180},
+    {"model": "vintage_oil_lamp", "room": "kitchen", "x": 6.2, "z": 5.9, "on": "table", "light": "kitchen"},
+    {"model": "jug_01", "room": "kitchen", "x": 5.8, "z": 6.3, "on": "table"},
+    {"model": "painted_wooden_cabinet", "room": "kitchen", "x": 9.62, "z": 7.0, "rot": -90},
+    {"model": "brass_pot_01", "room": "kitchen", "x": 7.75, "z": 4.75, "on": "stove"},
+    {"model": "side_table_01", "room": "sewing", "x": 1.0, "z": 5.6, "rot": 90},
+    {"model": "painted_wooden_chair_01", "room": "sewing", "x": 1.6, "z": 5.6, "rot": -90},
+    {"model": "wooden_crate_01", "room": "sewing", "x": 3.3, "z": 7.5, "rot": 10},
+    {"model": "wooden_bucket_01", "room": "", "x": 6.3, "z": 8.6, "rot": 0, "outside": true},
+    {"model": "wooden_crate_01", "room": "", "x": 8.4, "z": 8.9, "rot": -20, "outside": true}
+  ],
+  "lights": [
+    {"room": "sitting", "kind": "kerosene", "x": 9.45, "z": 0.45, "y": 0.95},
+    {"room": "kitchen", "kind": "kerosene", "x": 6.2, "z": 5.9, "y": 1.35},
+    {"room": "sitting", "kind": "fire", "x": 8.0, "z": 3.4, "y": 0.35}
+  ]
+}

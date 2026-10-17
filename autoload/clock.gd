@@ -11,6 +11,17 @@ var speed: int = 0
 var _accum: float = 0.0
 
 
+## The current minute including the fraction since the last tick, for smooth lighting.
+func minute_f() -> float:
+	return float(minute) + _accum
+
+
+func set_minute(m: int) -> void:
+	minute = clampi(m, 0, MINUTES_PER_DAY - 1)
+	_accum = 0.0
+	EventBus.time_changed.emit(day, minute)
+
+
 func set_speed(s: int) -> void:
 	if s in SPEEDS:
 		speed = s

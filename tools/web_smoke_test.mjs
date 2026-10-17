@@ -1,6 +1,6 @@
 // Loads the web export in headless Chromium, checks for console errors,
 // optionally taps through, and saves a screenshot (landscape 1280x720 by default).
-// Usage: node tools/web_smoke_test.mjs [--viewport 1280x720] [--wait 8000] [--tap x,y ...] [--out docs/screens/name.png]
+// Usage: node tools/web_smoke_test.mjs [--viewport 1280x720] [--wait 8000] [--tap x,y ...] [--out docs/screens/name.png] [--query "scene=world"]
 // Needs: npm i -D playwright (the browser itself is already installed in Claude Code cloud sessions).
 import http from "node:http";
 import fs from "node:fs";
@@ -16,6 +16,7 @@ const taps = args.flatMap((a, i) => (a === "--tap" ? [args[i + 1]] : []));
 const waitMs = Number(opt("--wait", "8000"));
 const stamp = new Date().toISOString().replace(/[:.]/g, "-");
 const out = opt("--out", `docs/screens/smoke-${stamp}.png`);
+const query = opt("--query", "");
 const root = path.resolve("build/web");
 
 const types = {
@@ -51,7 +52,7 @@ const errors = [];
 page.on("console", (m) => { if (m.type() === "error") errors.push(m.text()); });
 page.on("pageerror", (e) => errors.push(String(e)));
 
-await page.goto(`http://localhost:${port}/`);
+await page.goto(`http://localhost:${port}/${query ? "?" + query : ""}`);
 await page.waitForSelector("canvas", { timeout: 30000 });
 await page.waitForTimeout(waitMs);
 for (const t of taps) {
@@ -60,7 +61,7 @@ for (const t of taps) {
   await page.waitForTimeout(1500);
 }
 fs.mkdirSync(path.dirname(out), { recursive: true });
-await page.screenshot({ path: out });
+await page.screenshot({ path: out, timeout: 15 * 60 * 1000 });
 await browser.close();
 server.close();
 
