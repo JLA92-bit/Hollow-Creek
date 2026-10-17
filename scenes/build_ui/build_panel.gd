@@ -1043,6 +1043,16 @@ func _fill_house() -> void:
 	frow.add_child(_toggle("Slab", f.get("type", "stumps") == "slab", func() -> void:
 		build.call("_commit", "Concrete slab", func(d: HouseData) -> Dictionary: return BuildOps.set_foundation(d, "slab", 0.15)), 70))
 	_house_box.add_child(frow)
+	if not GameState.is_sandbox():
+		var st: Dictionary = world.call("construction_status", h.id)
+		if not st.is_empty():
+			var line := "Materials arrive at the siding tomorrow" if st["waiting"] else "%s · %d%% · about %d day%s" % [st["stage"], st["percent"], ceili(float(st["days"])), "" if ceili(float(st["days"])) == 1 else "s"]
+			_house_box.add_child(_text(line, 14, NAVY))
+		var qrow := _row()
+		for tier: String in ["rough", "standard", "fine"]:
+			qrow.add_child(_toggle(str(Construction.TIERS[tier]["name"]), h.quality == tier, func() -> void:
+				build.call("_commit", "%s work" % Construction.TIERS[tier]["name"], func(d: HouseData) -> Dictionary: return BuildOps.set_quality(d, tier)), 92))
+		_house_box.add_child(qrow)
 	var share_row := _row()
 	share_row.add_child(_button("Share", open_share, 90))
 	share_row.add_child(_button("Library", open_library, 90))

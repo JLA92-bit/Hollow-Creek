@@ -882,6 +882,14 @@ static func pick_surface(h: HouseData, level: int, k: String, side: String) -> D
 	return {"mat": "plaster", "paint": h.room_paint(r)}
 
 
+## The quality tier for building work: rough, standard or fine.
+static func set_quality(h: HouseData, tier: String) -> Dictionary:
+	if not Construction.TIERS.has(tier):
+		return fail("Unknown quality.")
+	h.quality = tier
+	return ok()
+
+
 ## Sets the house's trim colour (fascias, sashes, posts) and door colour.
 static func set_exterior(h: HouseData, changes: Dictionary) -> Dictionary:
 	h.exterior.merge(changes, true)

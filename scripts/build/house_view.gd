@@ -12,7 +12,9 @@ const MODEL_PATH := "res://assets/models/%s/%s.gltf"
 
 signal rebuilt(chunks: int)
 
-var data: HouseData
+var data: HouseData  ## the plan: what the player designs and edits
+var shown: HouseData  ## what's drawn: the plan, or the house as it stands while being built
+var display_fn: Callable  ## plan -> HouseData to draw (set by the world in story mode)
 var builder: HouseMeshBuilder
 var walls_mode := WALLS_UP
 var view_level := 99  ## show storeys up to this level (99 = all)
@@ -39,8 +41,9 @@ var _t := 0.0
 
 func setup(p_data: HouseData, p_ground_fn: Callable) -> void:
 	data = p_data
+	shown = _display()
 	ground_fn = p_ground_fn
-	builder = HouseMeshBuilder.new(data, ground_fn)
+	builder = HouseMeshBuilder.new(shown, ground_fn)
 	_roof = MeshInstance3D.new()
 	_roof.name = "Roof"
 	add_child(_roof)
@@ -53,16 +56,32 @@ func setup(p_data: HouseData, p_ground_fn: Callable) -> void:
 ## Replaces the data (undo, redo, loading) and rebuilds everything.
 func set_data(p_data: HouseData) -> void:
 	data = p_data
-	builder = HouseMeshBuilder.new(data, ground_fn)
+	shown = _display()
+	builder = HouseMeshBuilder.new(shown, ground_fn)
 	rebuild_all()
 
 
-## Swaps in new data and rebuilds only what differs from before (the old data's dict by default).
-func replace_data(p_data: HouseData, before: Variant = null) -> void:
-	var old_dict: Dictionary = before if before is Dictionary else data.to_dict()
+## Swaps in new data and rebuilds only what differs from what's on screen.
+func replace_data(p_data: HouseData, _before: Variant = null) -> void:
+	var old_dict := shown.to_dict()
 	data = p_data
-	builder.house = p_data
+	shown = _display()
+	builder.house = shown
 	refresh_after_edit(old_dict)
+
+
+## Redraws after the house as it stands changed (a construction stage, a delivery) but the plan didn't.
+func refresh_display() -> void:
+	replace_data(data)
+
+
+## What to draw: the plan, or the house part-way through being built.
+func _display() -> HouseData:
+	if display_fn.is_valid():
+		var d: Variant = display_fn.call(data)
+		if d is HouseData:
+			return d
+	return data
 
 
 func rebuild_all() -> void:
@@ -70,7 +89,7 @@ func rebuild_all() -> void:
 		(_levels[l]["node"] as Node3D).queue_free()
 	_levels.clear()
 	_cut_signature = _cut_sig()
-	for l2 in data.levels():
+	for l2 in shown.levels():
 		_build_level(l2)
 	_build_roof()
 	_build_garden()
@@ -102,7 +121,7 @@ func _build_level(l: int) -> void:
 		(chunks[c] as MeshInstance3D).queue_free()
 	chunks.clear()
 	var wanted: Dictionary = {Vector2i.ZERO: true}
-	for k: String in data.walls(l):
+	for k: String in shown.walls(l):
 		wanted[HouseMeshBuilder.edge_chunk(k)] = true
 	for c2: Vector2i in wanted:
 		_build_chunk(l, c2)
@@ -142,15 +161,15 @@ func _build_roof() -> void:
 func refresh_after_edit(before: Dictionary) -> void:
 	var old := HouseData.from_dict(before) if not before.is_empty() else HouseData.new()
 	var count := 0
-	for l in data.levels():
-		if not old.has_storey(l) or _room_sig(data, l) != _room_sig(old, l) or _floors_changed(old, l):
+	for l in shown.levels():
+		if not old.has_storey(l) or _room_sig(shown, l) != _room_sig(old, l) or _floors_changed(old, l):
 			_build_level(l)
 			count += (_levels[l]["chunks"] as Dictionary).size()
-			if data.has_storey(l + 1):
+			if shown.has_storey(l + 1):
 				_build_level(l + 1)
 			continue
 		var dirty: Dictionary = {}
-		var nw := data.walls(l)
+		var nw := shown.walls(l)
 		var ow := old.walls(l)
 		for k: String in nw:
 			if not ow.has(k) or JSON.stringify(nw[k]) != JSON.stringify(ow[k]):
@@ -158,7 +177,7 @@ func refresh_after_edit(before: Dictionary) -> void:
 		for k2: String in ow:
 			if not nw.has(k2):
 				_mark(dirty, k2)
-		var no := _openings_by_id(data.openings(l))
+		var no := _openings_by_id(shown.openings(l))
 		var oo := _openings_by_id(old.openings(l))
 		for id: String in no:
 			if not oo.has(id) or JSON.stringify(no[id]) != JSON.stringify(oo[id]):
@@ -171,23 +190,23 @@ func refresh_after_edit(before: Dictionary) -> void:
 		for c: Vector2i in dirty:
 			_build_chunk(l, c)
 		count += dirty.size()
-		var outside_changed := not dirty.is_empty() or JSON.stringify(data.verandahs) != JSON.stringify(old.verandahs) \
-			or JSON.stringify(data.exterior) != JSON.stringify(old.exterior) or JSON.stringify(data.terrain) != JSON.stringify(old.terrain) \
-			or JSON.stringify(data.foundation) != JSON.stringify(old.foundation)
-		if outside_changed or JSON.stringify(data.stairs(l)) != JSON.stringify(old.stairs(l)) or JSON.stringify(data.storey(l).get("columns", [])) != JSON.stringify(old.storey(l).get("columns", [])):
+		var outside_changed := not dirty.is_empty() or JSON.stringify(shown.verandahs) != JSON.stringify(old.verandahs) \
+			or JSON.stringify(shown.exterior) != JSON.stringify(old.exterior) or JSON.stringify(shown.terrain) != JSON.stringify(old.terrain) \
+			or JSON.stringify(shown.foundation) != JSON.stringify(old.foundation)
+		if outside_changed or JSON.stringify(shown.stairs(l)) != JSON.stringify(old.stairs(l)) or JSON.stringify(shown.storey(l).get("columns", [])) != JSON.stringify(old.storey(l).get("columns", [])):
 			var kit := MeshKit.new()
 			builder.build_structure(kit, l)
 			(_levels[l]["structure"] as MeshInstance3D).mesh = kit.commit(builder.mats) if kit.has_geometry() else null
-			if data.has_storey(l + 1):
+			if shown.has_storey(l + 1):
 				_build_level(l + 1)
 	for l2: int in _levels.keys():
-		if not data.has_storey(l2):
+		if not shown.has_storey(l2):
 			(_levels[l2]["node"] as Node3D).queue_free()
 			_levels.erase(l2)
 	_build_roof()
-	if JSON.stringify([data.garden, data.fences, data.terrain]) != JSON.stringify([old.garden, old.fences, old.terrain]):
+	if JSON.stringify([shown.garden, shown.fences, shown.terrain]) != JSON.stringify([old.garden, old.fences, old.terrain]):
 		_build_garden()
-	if JSON.stringify(data.objects) != JSON.stringify(old.objects):
+	if JSON.stringify(shown.objects) != JSON.stringify(old.objects):
 		_place_objects()
 	_make_lights()
 	_apply_visibility()
@@ -212,7 +231,7 @@ func _openings_by_id(arr: Array) -> Dictionary:
 
 
 func _floors_changed(old: HouseData, l: int) -> bool:
-	return JSON.stringify(data.floors(l)) != JSON.stringify(old.floors(l))
+	return JSON.stringify(shown.floors(l)) != JSON.stringify(old.floors(l))
 
 
 static func _room_sig(h: HouseData, l: int) -> String:
@@ -224,8 +243,8 @@ static func _room_sig(h: HouseData, l: int) -> String:
 
 func _snapshot_rooms() -> void:
 	_room_signature.clear()
-	for l in data.levels():
-		_room_signature[l] = _room_sig(data, l)
+	for l in shown.levels():
+		_room_signature[l] = _room_sig(shown, l)
 
 
 # --- Views ---------------------------------------------------------------------------------------
@@ -244,7 +263,7 @@ func set_view_level(l: int) -> void:
 
 
 func top_level() -> int:
-	var levels := data.levels()
+	var levels := shown.levels()
 	return levels[levels.size() - 1] if not levels.is_empty() else 0
 
 
@@ -271,7 +290,7 @@ func _apply_visibility() -> void:
 func _cut_sig() -> String:
 	var sig := "%s|%d|" % [walls_mode, active_level()]
 	if walls_mode == WALLS_CUTAWAY:
-		for k: String in data.walls(active_level()):
+		for k: String in shown.walls(active_level()):
 			sig += "1" if _wall_is_cut(active_level(), k) else "0"
 	return sig
 
@@ -286,13 +305,13 @@ func _wall_is_cut(l: int, k: String) -> bool:
 			return true
 	var pts := HouseData.edge_points(k)
 	var mid := (Vector2(pts[0]) + Vector2(pts[1])) * 0.5
-	var out_a := data.room_on_side(l, k, "a").is_empty()
-	var out_b := data.room_on_side(l, k, "b").is_empty()
+	var out_a := shown.room_on_side(l, k, "a").is_empty()
+	var out_b := shown.room_on_side(l, k, "b").is_empty()
 	var na := HouseMeshBuilder._side_normal3(k)
 	if out_a != out_b:
 		var out := na if out_a else -na
 		return out.dot(_cam_forward) < -0.2
-	var b := data.bounds(l)
+	var b := shown.bounds(l)
 	var centre := Vector2(b.position) + Vector2(b.size) * 0.5
 	var towards_camera := -Vector2(_cam_forward.x, _cam_forward.z)
 	return (mid - centre).dot(towards_camera) > 0.6
@@ -305,7 +324,7 @@ func _place_objects() -> void:
 		c.queue_free()
 	var placed: Dictionary = {}
 	var deferred: Array[Dictionary] = []
-	for o in data.objects:
+	for o in shown.objects:
 		if o.has("item"):
 			# Buy mode objects carry their own height above the floor.
 			var nb := _instance(o)
@@ -335,7 +354,7 @@ func _place_objects() -> void:
 		var on := str(o2["on"])
 		var top := fy + 0.8
 		if on == "table":
-			for f in data.fixtures:
+			for f in shown.fixtures:
 				if f["kind"] == "tablecloth":
 					top = fy + float(f["h"]) + 0.003
 		elif on == "stove":
@@ -424,7 +443,7 @@ func _make_lights() -> void:
 		(b["light"] as Node).queue_free()
 	_lights.clear()
 	_bounce.clear()
-	for l2 in data.lights:
+	for l2 in shown.lights:
 		var kind := str(l2["kind"])
 		var lvl := int(l2.get("level", 0))
 		var fy := builder.level_y(lvl)
@@ -453,11 +472,11 @@ func _make_lights() -> void:
 		flame.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		flame.visible = false
 		add_child(flame)
-		var room := data.room_at_tile(lvl, Vector2i(floori(float(l2["x"])), floori(float(l2["z"]))))
+		var room := shown.room_at_tile(lvl, Vector2i(floori(float(l2["x"])), floori(float(l2["z"]))))
 		_lights.append({"light": light, "room": "%d:%s" % [lvl, str(room.get("key", "none"))], "kind": kind,
 			"base": 1.5 if kind == "kerosene" else 1.8, "flame": flame, "level": lvl})
 	# Lamps, candles and lights from the catalogue, with their own brightness and colour temperature.
-	for o in data.objects:
+	for o in shown.objects:
 		var ld := Catalogue.light_of(o)
 		if ld.is_empty():
 			continue
@@ -490,12 +509,12 @@ func _make_lights() -> void:
 		glow.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		glow.visible = false
 		add_child(glow)
-		var room3 := data.room_at_tile(lvl3, Vector2i(floori(float(o["x"])), floori(float(o["z"]))))
+		var room3 := shown.room_at_tile(lvl3, Vector2i(floori(float(o["x"])), floori(float(o["z"]))))
 		_lights.append({"light": lamp, "room": "%d:%s" % [lvl3, str(room3.get("key", "none"))], "kind": "kerosene" if lk != "electric" else "electric",
 			"base": 1.6 * float(ld.get("energy", 1.0)), "flame": glow, "level": lvl3})
 	# One soft fill light per room, tinted by its walls and floor (fake bounce light).
-	for lvl2 in data.levels():
-		for r in data.rooms(lvl2):
+	for lvl2 in shown.levels():
+		for r in shown.rooms(lvl2):
 			var rb: Rect2i = r["bounds"]
 			var b2 := OmniLight3D.new()
 			b2.position = Vector3(rb.get_center().x, builder.level_y(lvl2) + 1.7, rb.get_center().y)
@@ -503,9 +522,9 @@ func _make_lights() -> void:
 			b2.omni_attenuation = 0.7
 			b2.light_specular = 0.0
 			var t: Vector2i = (r["full_tiles"] as Array)[0] if not (r["full_tiles"] as Array).is_empty() else (r["tiles"] as Array)[0]
-			var f: Dictionary = data.floors(lvl2).get(HouseData.tile_key(t.x, t.y), {"m": "floor_boards"})
+			var f: Dictionary = shown.floors(lvl2).get(HouseData.tile_key(t.x, t.y), {"m": "floor_boards"})
 			var fm2 := str(f["m"]) if f["m"] is String else str((f["m"] as Array)[0])
-			var colour := HouseMeshBuilder._paint(data.room_paint(r)).lerp(MaterialLibrary.get_material(fm2).albedo_color, 0.35)
+			var colour := HouseMeshBuilder._paint(shown.room_paint(r)).lerp(MaterialLibrary.get_material(fm2).albedo_color, 0.35)
 			b2.light_color = colour
 			add_child(b2)
 			_bounce.append({"light": b2, "room": "%d:%s" % [lvl2, r["key"]], "colour": colour, "level": lvl2})

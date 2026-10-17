@@ -491,6 +491,8 @@ func _commit(label: String, fn: Callable, new_house: bool = false, origin: Vecto
 		sfx.play("error")
 		return false
 	var cost := int(res.get("cost", 0))
+	if GameState.mode == GameState.MODE_STORY:
+		cost = roundi(cost * float((Construction.TIERS.get(h.quality, Construction.TIERS["standard"]) as Dictionary)["cost"]))
 	if GameState.mode == GameState.MODE_STORY and cost > GameState.money:
 		if before != null:
 			house.replace_data(HouseData.from_dict(before))
@@ -500,6 +502,7 @@ func _commit(label: String, fn: Callable, new_house: bool = false, origin: Vecto
 	if GameState.mode == GameState.MODE_STORY:
 		GameState.money -= cost
 	var after := h.to_dict()
+	world.call("order_construction", h.id, before)
 	undo.push(label, h.id, before, after, cost if GameState.mode == GameState.MODE_STORY else 0)
 	if new_house:
 		house = world.call("add_house", h) as HouseView
@@ -560,6 +563,8 @@ func _restore(step: Dictionary) -> void:
 				house = null
 		return
 	var data := HouseData.from_dict(step["state"])
+	# In the story, undoing and redoing are building work too.
+	world.call("order_construction", data.id, hv.data.to_dict() if hv != null else null)
 	if hv == null:
 		house = world.call("add_house", data) as HouseView
 	else:
@@ -867,6 +872,8 @@ func _finish_live(a: Dictionary) -> void:
 	var cost := int(a.get("cost", 0))
 	if GameState.mode == GameState.MODE_STORY:
 		GameState.money -= cost
+	world.call("order_construction", house.data.id, original)
+	house.refresh_display()
 	undo.push(str(a["label"]), house.data.id, original, house.data.to_dict(), cost if GameState.mode == GameState.MODE_STORY else 0)
 	world.call("house_changed", house.data)
 	sfx.play("place")

@@ -159,6 +159,7 @@ static func _style(h: HouseData, rooms: Array, items: Dictionary) -> float:
 	s += minf(plants * 1.0, 10.0)
 	if not h.fences.is_empty():
 		s += 3.0
+	s += float((Construction.TIERS.get(h.quality, Construction.TIERS["standard"]) as Dictionary)["style"])
 	return s
 
 

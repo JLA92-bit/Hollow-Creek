@@ -192,6 +192,20 @@ func build_structure(kit: MeshKit, l: int) -> void:
 
 func _floor_tile(kit: MeshKit, t: Vector2i, f: Dictionary) -> void:
 	var y := fy
+	match str(f.get("stage", "")):
+		"blueprint":
+			kit.quad(blueprint(), Vector3(t.x, y - 0.25, t.y + 1), Vector3(t.x + 1, y - 0.25, t.y + 1), Vector3(t.x + 1, y - 0.25, t.y), Vector3(t.x, y - 0.25, t.y),
+				Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
+			return
+		"stumps":
+			return
+		"frame":
+			# Bearers and joists, no boards yet.
+			var timber := m("decking", Color("#D8C29C"))
+			for i in 3:
+				var z := t.y + 0.17 + i * 0.33
+				flat_box(kit, timber, t.x, t.x + 1, y - 0.16, y - 0.02, z - 0.025, z + 0.025)
+			return
 	var rot := int(f.get("rot", 0))
 	var corners := [Vector3(t.x, y, t.y), Vector3(t.x + 1, y, t.y), Vector3(t.x + 1, y, t.y + 1), Vector3(t.x, y, t.y + 1)]
 	var c := Vector3(t.x + 0.5, y, t.y + 0.5)
@@ -294,12 +308,46 @@ func _corner_boards(kit: MeshKit, l: int) -> void:
 func _ceilings(kit: MeshKit, l: int) -> void:
 	var y := fy + wh
 	var above := house.floors(l + 1)
+	var unbuilt: Dictionary = house.stage.get("new_tiles", {}) if int(house.stage.get("index", 99)) < 7 else {}
 	for r in house.rooms(l):
 		var key := m("plaster", Color("#F4F0E6"))
 		for t: Vector2i in r["full_tiles"]:
+			if unbuilt.has("%s:%d" % [HouseData.tile_key(t.x, t.y), l]):
+				continue
 			var yy := y if not above.has(HouseData.tile_key(t.x, t.y)) else level_y(l + 1) - FLOOR_THICKNESS
 			kit.quad(key, Vector3(t.x, yy, t.y), Vector3(t.x + 1, yy, t.y), Vector3(t.x + 1, yy, t.y + 1), Vector3(t.x, yy, t.y + 1),
 				Vector2(t.x, t.y), Vector2(t.x + 1, t.y), Vector2(t.x + 1, t.y + 1), Vector2(t.x, t.y + 1))
+
+
+## The see-through sky-blue material for things that are still only on the plan.
+func blueprint() -> String:
+	if not mats.has("blueprint_ghost"):
+		var g := StandardMaterial3D.new()
+		g.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		g.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		g.albedo_color = Color(0.294, 0.788, 0.961, 0.35)
+		g.cull_mode = BaseMaterial3D.CULL_DISABLED
+		mats["blueprint_ghost"] = g
+	return "blueprint_ghost"
+
+
+## A wall still being built: a blueprint outline, or a timber frame of plates and studs.
+func _wall_in_progress(kit: MeshKit, k: String, a: Vector3, b: Vector3, stage: String) -> void:
+	var h := house.wall_h(level, k)
+	if stage == "blueprint":
+		kit.beam(blueprint(), a + Vector3(0, fy + h * 0.5, 0), b + Vector3(0, fy + h * 0.5, 0), T, h)
+		return
+	var timber := m("decking", Color("#D8C29C"))
+	var base := Vector3(0, fy, 0)
+	kit.beam(timber, a + base + Vector3(0, 0.025, 0), b + base + Vector3(0, 0.025, 0), 0.09, 0.05)
+	kit.beam(timber, a + base + Vector3(0, h - 0.025, 0), b + base + Vector3(0, h - 0.025, 0), 0.09, 0.05)
+	var length := a.distance_to(b)
+	var n := maxi(1, roundi(length / 0.45))
+	for i in n + 1:
+		var p := a.lerp(b, float(i) / n)
+		kit.beam(timber, p + base + Vector3(0, 0.05, 0), p + base + Vector3(0, h - 0.05, 0), 0.045, 0.09)
+	if length > 0.9:
+		kit.beam(timber, a + base + Vector3(0, 0.05, 0), b + base + Vector3(0, h - 0.05, 0), 0.03, 0.09)
 
 
 func _columns(kit: MeshKit, l: int) -> void:
@@ -442,6 +490,10 @@ func _wall_edge(kit: MeshKit, k: String, cut: bool) -> void:
 	var pts := HouseData.edge_points(k)
 	var a := Vector3(pts[0].x, 0, pts[0].y)
 	var b := Vector3(pts[1].x, 0, pts[1].y)
+	var stage := str(house.wall(level, k).get("stage", ""))
+	if stage != "":
+		_wall_in_progress(kit, k, a, b, stage)
+		return
 	var dir := (b - a).normalized()
 	var length := a.distance_to(b)
 	var na := _side_normal3(k)  # points out of side a
@@ -1225,6 +1277,24 @@ func _lace_mat(tex: String, colour: String) -> String:
 ## walls, fascias, gutters, barge boards, cappings and finials.
 func _roof_piece(kit: MeshKit, p: Dictionary) -> void:
 	var g := Roofs.geometry(p, Roofs.eave_y(house, p))
+	if str(house.roof.get("stage", "")) == "frame":
+		# Rafters on 0.6 m centres up each slope, with the ridge and hip beams.
+		var timber := m("decking", Color("#D8C29C"))
+		for f: Dictionary in g["roof"]:
+			var pts: Array = f["pts"]
+			if pts.size() < 4:
+				continue
+			var p0: Vector3 = pts[0]
+			var p1: Vector3 = pts[1]
+			var p2: Vector3 = pts[2]
+			var p3: Vector3 = pts[3]
+			var n := maxi(1, roundi(p0.distance_to(p1) / 0.6))
+			for i in n + 1:
+				var t := float(i) / n
+				kit.beam(timber, p0.lerp(p1, t) - Vector3(0, 0.06, 0), p3.lerp(p2, t) - Vector3(0, 0.06, 0), 0.045, 0.12)
+		for ed: Array in g["capping"]:
+			kit.beam(timber, ed[0], ed[1], 0.06, 0.18)
+		return
 	var mat_id := str(p.get("material", "corrugated_iron"))
 	var roofing := m(mat_id)
 	var lining := m("trim_paint", MaterialLibrary.paint("white"))

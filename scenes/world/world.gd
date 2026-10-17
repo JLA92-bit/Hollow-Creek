@@ -38,6 +38,7 @@ var _orig_heights: PackedFloat32Array
 var _orig_ground: PackedByteArray
 var _landscape_sig := ""
 var photo_mode := false
+var _work_cache: Dictionary = {}  ## house id -> Construction work list for its current plan
 var _photo_layer: CanvasLayer
 var _photo_bar: PanelContainer
 
@@ -93,6 +94,7 @@ func _ready() -> void:
 	rain.name = "Rain"
 	add_child(rain)
 	day.lamps_changed.connect(func(_l: float) -> void: _update_house_lighting())
+	EventBus.time_changed.connect(_on_minute)
 	build = BuildMode.new()
 	build.name = "BuildMode"
 	build.world = self
@@ -141,6 +143,7 @@ func _build_houses() -> void:
 func add_house(h: HouseData, save: bool = true) -> HouseView:
 	var view := HouseView.new()
 	view.name = h.id
+	view.display_fn = _construction_display
 	var grid := slice.grid
 	var ox := float(h.origin.x)
 	var oz := float(h.origin.y)
@@ -173,6 +176,8 @@ func remove_house(id: String) -> void:
 			hv.queue_free()
 			break
 	GameState.houses.erase(id)
+	GameState.construction.erase(id)
+	_work_cache.erase(id)
 	apply_landscape()
 	request_autosave()
 
@@ -181,6 +186,7 @@ func remove_house(id: String) -> void:
 func house_changed(h: HouseData) -> void:
 	if not h.locked:
 		GameState.houses[h.id] = h.to_dict()
+		_work_cache.erase(h.id)
 		_clear_site(h)
 	apply_landscape()
 	request_autosave()
@@ -215,8 +221,8 @@ func _clear_site(h: HouseData) -> void:
 func apply_landscape() -> void:
 	var parts: Array = []
 	for hv in houses:
-		if not hv.data.locked and (not hv.data.terrain.is_empty() or not hv.data.ground.is_empty()):
-			parts.append([hv.data.id, hv.data.origin, hv.data.base_y, hv.data.terrain, hv.data.ground])
+		if not hv.data.locked and (not hv.shown.terrain.is_empty() or not hv.shown.ground.is_empty()):
+			parts.append([hv.data.id, hv.data.origin, hv.data.base_y, hv.shown.terrain, hv.shown.ground])
 	var sig := JSON.stringify(parts)
 	if sig == _landscape_sig:
 		return
@@ -226,7 +232,7 @@ func apply_landscape() -> void:
 	grid.heights = _orig_heights.duplicate()
 	grid.ground = _orig_ground.duplicate()
 	for hv2 in houses:
-		var h := hv2.data
+		var h := hv2.shown
 		if h.locked or is_nan(h.base_y):
 			continue
 		for ck: String in h.terrain:
@@ -243,6 +249,94 @@ func apply_landscape() -> void:
 		for hv3 in houses:
 			if not hv3.data.locked:
 				hv3.rebuild_all()
+
+
+# --- Construction (story mode) ------------------------------------------------------------------
+
+## Called by build mode before an edit lands in story mode: the first edit to a house starts a
+## project from how it stood before (nothing, for a new house); later edits extend it. Materials
+## for the new work are ordered today and arrive at the siding tomorrow.
+func order_construction(id: String, before: Variant) -> void:
+	if GameState.is_sandbox():
+		return
+	if not GameState.construction.has(id):
+		var built: Dictionary = before if before is Dictionary else {"id": id, "storeys": [HouseData.new_storey(0)]}
+		GameState.construction[id] = Construction.new_project(built, Clock.day, Clock.minute)
+	else:
+		var p: Dictionary = GameState.construction[id]
+		p["ordered_day"] = Clock.day
+		p["ordered_minute"] = Clock.minute
+	_work_cache.erase(id)
+
+
+func _construction_work(hv: HouseView) -> Array[float]:
+	var id := hv.data.id
+	if not _work_cache.has(id):
+		var p: Dictionary = GameState.construction[id]
+		_work_cache[id] = Construction.work(HouseData.from_dict(p["built"]), hv.data)
+	return _work_cache[id]
+
+
+## What a house looks like while it's being built.
+func _construction_display(plan: HouseData) -> HouseData:
+	if not GameState.construction.has(plan.id):
+		return plan
+	var p: Dictionary = GameState.construction[plan.id]
+	var before := HouseData.from_dict(p["built"])
+	var w := Construction.work(before, plan)
+	var delivered := Construction.delivered(p, Clock.day, Clock.minute)
+	var stage := int(Construction.stage_at(w, float(p["done"]))["index"]) if delivered else -1
+	p["shown_stage"] = stage
+	if stage >= Construction.STAGES.size():
+		return plan
+	return Construction.display(before, plan, stage, delivered)
+
+
+## Crews work through every project a minute at a time; the house is redrawn at each new stage.
+func _on_minute(day: int, minute: int) -> void:
+	if GameState.construction.is_empty():
+		return
+	var raining := rain != null and rain.intensity > 0.3
+	for hv in houses:
+		var id := hv.data.id
+		if not GameState.construction.has(id):
+			continue
+		var p: Dictionary = GameState.construction[id]
+		p["tier"] = hv.data.quality
+		var stage := Construction.tick(p, _construction_work(hv), day, minute, GameState.crews, raining)
+		if stage == int(p.get("shown_stage", -2)):
+			continue
+		if stage >= Construction.STAGES.size():
+			GameState.construction.erase(id)
+			_work_cache.erase(id)
+			hv.refresh_display()
+			if hud:
+				hud.show_toast("%s is finished." % hv.data.name)
+		else:
+			hv.refresh_display()
+			if hud and stage >= 0:
+				hud.show_toast("%s: %s" % [hv.data.name, Construction.STAGE_NAMES[Construction.STAGES[stage]].to_lower()])
+		apply_landscape()
+		request_autosave()
+
+
+## {stage name, percent, days left, waiting for materials} for a house being built, or {}.
+func construction_status(id: String) -> Dictionary:
+	if not GameState.construction.has(id):
+		return {}
+	var hv: HouseView = null
+	for x in houses:
+		if x.data.id == id:
+			hv = x
+	if hv == null:
+		return {}
+	var p: Dictionary = GameState.construction[id]
+	var w := _construction_work(hv)
+	var st := Construction.stage_at(w, float(p["done"]))
+	var tot := Construction.total(w)
+	return {"stage": str(Construction.STAGE_NAMES.get(str(st["name"]), "Finishing")), "percent": roundi(100.0 * float(p["done"]) / maxf(tot, 0.01)),
+		"days": Construction.days_left(w, float(p["done"]), GameState.crews, hv.data.quality),
+		"waiting": not Construction.delivered(p, Clock.day, Clock.minute)}
 
 
 func request_autosave() -> void:

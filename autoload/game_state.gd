@@ -10,6 +10,10 @@ var town_trust: int = 50
 var seed_value: int = 1952
 ## Houses the player has built: id -> HouseData.to_dict(). Landmarks come from the map, not here.
 var houses: Dictionary = {}
+## Story-mode building projects: house id -> Construction project.
+var construction: Dictionary = {}
+## Building crews in the town (docs/GAME_DESIGN.md: two to start).
+var crews: int = 2
 
 
 ## The autosave slot for this kind of game: story and sandbox saves are kept apart.
@@ -26,7 +30,8 @@ static func version() -> String:
 
 
 func to_dict() -> Dictionary:
-	return {"mode": mode, "money": money, "town_trust": town_trust, "seed": seed_value, "houses": houses.duplicate(true)}
+	return {"mode": mode, "money": money, "town_trust": town_trust, "seed": seed_value, "houses": houses.duplicate(true),
+		"construction": construction.duplicate(true), "crews": crews}
 
 
 func from_dict(d: Dictionary) -> void:
@@ -35,6 +40,8 @@ func from_dict(d: Dictionary) -> void:
 	town_trust = int(d.get("town_trust", 50))
 	seed_value = int(d.get("seed", 1952))
 	houses = (d.get("houses", {}) as Dictionary).duplicate(true)
+	construction = (d.get("construction", {}) as Dictionary).duplicate(true)
+	crews = int(d.get("crews", 2))
 
 
 func reset() -> void:
@@ -42,3 +49,5 @@ func reset() -> void:
 	money = 1500
 	town_trust = 50
 	houses.clear()
+	construction.clear()
+	crews = 2

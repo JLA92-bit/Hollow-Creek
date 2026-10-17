@@ -77,7 +77,7 @@ static func apply_to(h: HouseData, src: HouseData) -> void:
 	if copy.name == "":
 		copy.name = h.name
 	for prop: String in ["name", "foundation", "exterior", "storeys", "roof", "verandahs", "chimneys", "fixtures", "objects",
-			"lights", "garden", "fences", "ground", "terrain", "_next_id"]:
+			"lights", "garden", "fences", "ground", "terrain", "quality", "_next_id"]:
 		h.set(prop, copy.get(prop))
 	h.touch()
 

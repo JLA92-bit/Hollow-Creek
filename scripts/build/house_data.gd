@@ -42,11 +42,15 @@ var objects: Array[Dictionary] = []
 var lights: Array[Dictionary] = []
 var exterior: Dictionary = {"cladding": "weatherboard", "paint": "cream", "trim": "brunswick_green", "door": "brunswick_green"}
 ## Landscaping, all in house-local coordinates so a share code carries the garden with the house.
+## Quality tier for building work: rough, standard or fine (cost, time and Style).
+var quality := "standard"
 var garden: Array[Dictionary] = []   ## plants, outbuildings and outdoor items: {id, kind, x, z, rot}
 var fences: Dictionary = {}          ## edge key ("x,y,N" or "x,y,W") -> {type, gate}
 var ground: Dictionary = {}          ## tile key -> ground name (paths, lawn, garden beds)
 var terrain: Dictionary = {}         ## corner key -> height relative to base_y
 var _next_id := 1
+## While it's being built: {index (Construction stage), new_tiles}. Not saved; only for drawing.
+var stage: Dictionary = {}
 var _room_cache: Dictionary = {}  ## level -> Array[Dictionary]
 
 
@@ -74,6 +78,7 @@ static func from_dict(d: Dictionary) -> HouseData:
 	h.exterior = (d.get("exterior", h.exterior) as Dictionary).duplicate(true)
 	h.roof = (d.get("roof", {}) as Dictionary).duplicate(true)
 	h._next_id = int(d.get("next_id", 1))
+	h.quality = str(d.get("quality", "standard"))
 	h.fences = (d.get("fences", {}) as Dictionary).duplicate(true)
 	h.ground = (d.get("ground", {}) as Dictionary).duplicate(true)
 	h.terrain = (d.get("terrain", {}) as Dictionary).duplicate(true)
@@ -115,7 +120,7 @@ func to_dict() -> Dictionary:
 		"verandahs": verandahs.duplicate(true), "chimneys": chimneys.duplicate(true),
 		"fixtures": fixtures.duplicate(true), "objects": objects.duplicate(true), "lights": lights.duplicate(true),
 		"garden": garden.duplicate(true), "fences": fences.duplicate(true), "ground": ground.duplicate(true),
-		"terrain": terrain.duplicate(true),
+		"terrain": terrain.duplicate(true), "quality": quality,
 	}
 
 
