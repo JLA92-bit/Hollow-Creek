@@ -83,7 +83,7 @@ func _shot(name: String) -> void:
 		await _frames(2)
 		return
 	var start := Time.get_ticks_msec()
-	while Time.get_ticks_msec() - start < 120000:
+	while Time.get_ticks_msec() - start < 900000:
 		await get_tree().process_frame
 		var ack: Variant = JavaScriptBridge.eval("window.hcAck || ''")
 		if str(ack) == name:

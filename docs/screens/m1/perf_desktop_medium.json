@@ -1,0 +1,21 @@
+{
+  "avg_ms": 5424.9,
+  "draw_calls": 255,
+  "frames": 10,
+  "median_ms": 5884.4,
+  "p95_ms": 11731.5,
+  "quality": "medium",
+  "sim_ms": 0.4,
+  "triangles": 486684,
+  "viewport": [
+    1280,
+    720
+  ],
+  "throttle": 1,
+  "css_viewport": [
+    1280,
+    720
+  ],
+  "device_pixel_ratio": 1.5,
+  "renderer": "Chromium headless, SwiftShader (CPU WebGL 2)"
+}

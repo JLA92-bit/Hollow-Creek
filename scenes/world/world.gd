@@ -70,7 +70,7 @@ func _ready() -> void:
 	rig.height_fn = slice.grid.height_at
 	add_child(rig)
 	var c := cottage_centre()
-	rig.set_view(c, 205.0, 34.0, 26.0)
+	rig.set_view(c, 212.0, 26.0, 30.0)
 	rig.view_changed.connect(_on_view_changed)
 	rain = Rain.new()
 	rain.name = "Rain"

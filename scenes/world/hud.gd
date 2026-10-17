@@ -51,6 +51,12 @@ func _icon_button(icon_path: String, tip: String) -> Button:
 	b.focus_mode = Control.FOCUS_NONE
 	b.expand_icon = false
 	b.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	# Icons are white, tinted navy normally and left white on the navy pressed state.
+	b.add_theme_color_override("icon_normal_color", NAVY)
+	b.add_theme_color_override("icon_focus_color", NAVY)
+	b.add_theme_color_override("icon_pressed_color", Color.WHITE)
+	b.add_theme_color_override("icon_hover_color", Color.WHITE)
+	b.add_theme_color_override("icon_hover_pressed_color", Color.WHITE)
 	return b
 
 
@@ -164,7 +170,9 @@ func _view_chips(root: Control) -> void:
 	var dbg := _text_button("Debug", toggle_debug)
 	row.add_child(dbg)
 	_refresh_view_chips()
+	# Second row on the right, under the top bar, so nothing overlaps at 1280 px.
 	_anchor.call_deferred(p, Control.PRESET_TOP_RIGHT, 16)
+	(func() -> void: p.offset_top += 92.0; p.offset_bottom += 92.0).call_deferred()
 
 
 func _text_button(text: String, cb: Callable) -> Button:
@@ -195,7 +203,6 @@ func _toolbar(root: Control) -> void:
 		var b := Button.new()
 		b.text = t
 		b.disabled = true
-		b.tooltip_text = "Coming in a later build"
 		b.custom_minimum_size = Vector2(80, 48)
 		b.add_theme_font_size_override("font_size", 15)
 		row.add_child(b)
