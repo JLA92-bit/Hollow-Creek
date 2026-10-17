@@ -307,6 +307,21 @@
       "metallic": 0.6,
       "normal_scale": 1.6,
       "tier": 0
-    }
+    },
+    "timber_oak": {"category": "timber", "name": "Oak", "tex": "decking", "size_m": 2.0, "tint": "#B08A5E", "roughness": 0.55, "tier": 2},
+    "timber_dark": {"category": "timber", "name": "Blackwood", "tex": "decking", "size_m": 2.0, "tint": "#5E3B26", "roughness": 0.45, "tier": 3},
+    "timber_maple": {"category": "timber", "name": "Maple", "tex": "decking", "size_m": 2.0, "tint": "#D8B48A", "roughness": 0.5, "tier": 2},
+    "timber_painted": {"category": "timber", "name": "Painted timber", "tex": "plaster", "size_m": 2.0, "tint": "#EDE4CC", "roughness": 0.45, "tier": 1},
+    "enamel": {"category": "metal", "name": "Enamel", "tint": "#EDE4CC", "roughness": 0.25, "metallic": 0.0, "tier": 1},
+    "nickel": {"category": "metal", "name": "Nickel", "tint": "#D8D6CF", "roughness": 0.2, "metallic": 1.0, "tier": 2},
+    "laminex": {"category": "plastic", "name": "Laminex", "tint": "#D9534F", "roughness": 0.3, "tier": 2},
+    "vinyl": {"category": "plastic", "name": "Vinyl", "tint": "#B02A2A", "roughness": 0.45, "tier": 1},
+    "bakelite": {"category": "plastic", "name": "Bakelite", "tint": "#4A2A18", "roughness": 0.3, "tier": 1},
+    "marble": {"category": "ceramic", "name": "Marble", "tex": "plaster", "size_m": 1.0, "tint": "#ECEAE4", "roughness": 0.2, "tier": 3},
+    "china": {"category": "ceramic", "name": "China", "tint": "#F4F2EC", "roughness": 0.15, "tier": 1},
+    "mirror": {"category": "glass", "name": "Mirror", "tint": "#D8DEE2", "roughness": 0.03, "metallic": 1.0, "tier": 2},
+    "leather": {"category": "fabric", "name": "Leather", "tex": "fabric_linen", "size_m": 0.6, "tint": "#6E3E22", "roughness": 0.5, "tier": 3},
+    "velvet": {"category": "fabric", "name": "Velvet", "tex": "fabric_linen", "size_m": 0.4, "tint": "#5A2238", "roughness": 0.95, "tier": 3},
+    "chenille": {"category": "fabric", "name": "Chenille", "tex": "fabric_linen", "size_m": 0.5, "tint": "#C9D6E4", "roughness": 1.0, "tier": 2}
   }
 }
