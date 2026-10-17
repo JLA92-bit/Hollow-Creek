@@ -1,0 +1,25 @@
+extends Node
+## Top-level state of the current game: mode, money, Town Trust.
+
+const MODE_STORY := "story"
+const MODE_SANDBOX := "sandbox"
+
+var mode: String = MODE_STORY
+var money: int = 1500
+var town_trust: int = 50
+var seed_value: int = 1952
+
+
+static func version() -> String:
+	return str(ProjectSettings.get_setting("application/config/version", "0.0.0"))
+
+
+func to_dict() -> Dictionary:
+	return {"mode": mode, "money": money, "town_trust": town_trust, "seed": seed_value}
+
+
+func from_dict(d: Dictionary) -> void:
+	mode = str(d.get("mode", MODE_STORY))
+	money = int(d.get("money", 1500))
+	town_trust = int(d.get("town_trust", 50))
+	seed_value = int(d.get("seed", 1952))

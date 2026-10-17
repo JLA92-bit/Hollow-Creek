@@ -1,0 +1,26 @@
+{
+  "name": "hollow-creek",
+  "version": "1.0.0",
+  "description": "Build and test tooling for Hollow Creek",
+  "directories": {
+    "doc": "docs",
+    "test": "tests"
+  },
+  "scripts": {
+    "smoke": "node tools/web_smoke_test.mjs --viewport 1280x720"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JLA92-bit/Hollow-Creek.git"
+  },
+  "license": "UNLICENSED",
+  "bugs": {
+    "url": "https://github.com/JLA92-bit/Hollow-Creek/issues"
+  },
+  "homepage": "https://github.com/JLA92-bit/Hollow-Creek#readme",
+  "devDependencies": {
+    "playwright": "^1.64.1"
+  },
+  "private": true,
+  "type": "module"
+}

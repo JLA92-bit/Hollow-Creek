@@ -1,0 +1,62 @@
+; Engine configuration file.
+; Hollow Creek - Godot 4.7.2, Compatibility renderer, single-threaded web.
+
+config_version=5
+
+[application]
+
+config/name="Hollow Creek"
+config/description="Country Victoria, 1952. Build a town, watch it live, solve what goes wrong."
+config/version="0.0.1"
+run/main_scene="res://scenes/boot/boot.tscn"
+config/features=PackedStringArray("4.7")
+boot_splash/bg_color=Color(1, 1, 1, 1)
+boot_splash/show_image=false
+config/icon="res://assets/icons/icon.svg"
+
+[autoload]
+
+EventBus="*res://autoload/event_bus.gd"
+Settings="*res://autoload/settings.gd"
+GameState="*res://autoload/game_state.gd"
+Clock="*res://autoload/clock.gd"
+SaveSystem="*res://autoload/save_system.gd"
+SimHost="*res://autoload/sim_host.gd"
+
+[debug]
+
+gdscript/warnings/untyped_declaration=1
+gdscript/warnings/unsafe_property_access=1
+gdscript/warnings/unsafe_method_access=1
+gdscript/warnings/unsafe_cast=1
+gdscript/warnings/unsafe_call_argument=1
+gdscript/warnings/exclude_addons=true
+
+[display]
+
+window/size/viewport_width=1280
+window/size/viewport_height=720
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+window/handheld/orientation=0
+
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/gut/plugin.cfg")
+
+[gui]
+
+theme/custom="res://assets/theme/hollow_creek.tres"
+theme/custom_font="res://assets/fonts/AtkinsonHyperlegible-Regular.ttf"
+
+[input_devices]
+
+pointing/emulate_touch_from_mouse=false
+pointing/emulate_mouse_from_touch=true
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+environment/defaults/default_clear_color=Color(1, 1, 1, 1)
+textures/vram_compression/import_etc2_astc=true

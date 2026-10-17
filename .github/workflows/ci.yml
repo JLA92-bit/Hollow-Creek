@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+    branches: [main, beta]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache Godot and templates
+        uses: actions/cache@v4
+        with:
+          path: |
+            tools/bin
+            ~/.local/share/godot/export_templates
+          key: godot-4.7.2-stable-${{ hashFiles('tools/setup_godot.sh') }}
+
+      - name: Set up Godot
+        run: bash tools/setup_godot.sh
+
+      - name: Import assets
+        run: |
+          mkdir -p build && touch build/.gdignore
+          tools/bin/godot --headless --path . --import || true
+          tools/bin/godot --headless --path . --import
+
+      - name: Run GUT tests
+        run: |
+          tools/bin/godot --headless --path . -s addons/gut/gut_cmdln.gd \
+            -gdir=res://tests -ginclude_subdirs -gexit 2>&1 | tee gut.log
+          grep -q "All tests passed" gut.log
+
+      - name: Export web build
+        run: |
+          mkdir -p build/web
+          tools/bin/godot --headless --path . --export-release "Web" build/web/index.html
+          test -f build/web/index.pck
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Smoke test in headless Chromium
+        run: |
+          npm ci
+          touch node_modules/.gdignore
+          npx playwright install --with-deps chromium
+          node tools/web_smoke_test.mjs --viewport 1280x720 --out build/smoke.png
+
+      - name: Upload web build
+        uses: actions/upload-artifact@v4
+        with:
+          name: hollow-creek-web-${{ github.sha }}
+          path: |
+            build/web
+            build/smoke.png

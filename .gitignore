@@ -1,0 +1,7 @@
+tools/bin/
+tools/cache/
+build/
+.godot/
+node_modules/
+*.tmp
+.DS_Store
