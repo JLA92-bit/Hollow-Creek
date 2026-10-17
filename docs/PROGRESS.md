@@ -56,7 +56,13 @@ Newest milestone first. Build sizes are raw bytes, with gzip -9 in brackets.
 
 **Build sizes**
 
-SIZES_TABLE
+| File | Raw | gzip -9 |
+|---|---|---|
+| index.wasm | 39,514,754 | 10,084,297 |
+| index.pck | 34,213,212 | 27,670,171 |
+| **First download** | | **about 37.75 MB** (budget 40 MB) |
+
+The browser run (`node tools/look_test.mjs --scene construction_demo --out docs/screens/m4`) passed 13 of 13 checks in headless Chromium with no console errors.
 
 **Known issues** (more in `docs/BACKLOG.md`)
 - Handy residents doing renovations and building furniture wait for residents in M5.
