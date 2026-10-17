@@ -103,9 +103,13 @@ static func kelvin_colour(k: float) -> Color:
 ## The light a placed object gives, with the object's own brightness and colour temperature:
 ## {kind, energy, range, kelvin, at} or {}.
 static func light_of(o: Dictionary) -> Dictionary:
+	# M1 houses light their lamps from HouseData.lights; only Buy mode objects light themselves.
+	if not o.has("item"):
+		return {}
 	var it := item(id_of(o))
 	if not it.has("light"):
 		return {}
 	var l: Dictionary = (it["light"] as Dictionary).duplicate()
-	l.merge(o.get("light", {}), true)
+	if o.get("light") is Dictionary:
+		l.merge(o["light"], true)
 	return l
