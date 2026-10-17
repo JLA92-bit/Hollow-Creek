@@ -7,7 +7,7 @@ extends Node
 signal changed
 signal message(text: String, kind: String)
 
-const TOOLS: Array[String] = ["room", "wall", "select", "door", "window", "arch", "floor", "paint", "roof", "stairs", "post", "demolish"]
+const TOOLS: Array[String] = ["room", "wall", "select", "door", "window", "arch", "floor", "paint", "roof", "verandah", "stairs", "post", "demolish"]
 const HINTS := {
 	"room": "Drag to draw a room. Hold Shift (or tap Add to room) to extend the room you start in.",
 	"wall": "Drag along the grid to draw a wall. Drag at 45 degrees for a diagonal.",
@@ -18,6 +18,7 @@ const HINTS := {
 	"floor": "Drag over tiles to lay floor. Quarter mode paints triangles.",
 	"paint": "Click a wall to paint that side. Shift paints the whole room, Ctrl the whole house. I picks up a finish.",
 	"roof": "Click the house to roof it. Draw adds a piece; Change lets you drag a roof's pitch or its edges. Chimney goes on a wall.",
+	"verandah": "Click an outside wall for a verandah along it, or drag along the wall for part of it. Steps and Sleep-out work on a verandah.",
 	"stairs": "Click to place stairs. Turn them with , and . (they rise the way the arrow points).",
 	"post": "Click a grid corner to stand a post.",
 	"demolish": "Click a door, window, post or stairs to remove it. Drag along walls, or click a room to clear it.",
@@ -39,6 +40,8 @@ var options: Dictionary = {
 	"paint_kind": "paint", "paint_colour": "cream", "wallpaper": "floral", "colourway": "cream_rose",
 	"cladding": "weatherboard", "lining": "wall_tiles", "paint_part": "finish", "dado_h": 1.0,
 	"paint_scope": "face", "eyedropper": false,
+	"v_mode": "add", "v_depth": 2.1, "v_shape": "bullnose", "v_post": "timber_post", "v_lace": "none", "v_rail": "none",
+	"v_lattice": false, "v_material": "corrugated_iron", "v_colour": "cream",
 	"roof_mode": "auto", "roof_shape": "hip", "roof_pitch": 28.0, "roof_overhang": 0.45, "roof_material": "corrugated_iron",
 }
 var house: HouseView = null  ## the house being edited
@@ -136,6 +139,12 @@ func set_tool(t: String) -> void:
 
 func set_option(key: String, value: Variant) -> void:
 	options[key] = value
+	if tool == "verandah" and key.begins_with("v_") and key != "v_mode" and selection.get("type", "") == "verandah":
+		var vid := str(selection["id"])
+		var vk := key.substr(2)
+		_commit("Change verandah", func(h: HouseData) -> Dictionary: return BuildOps.update_verandah(h, vid, {vk: value}))
+		changed.emit()
+		return
 	if tool == "roof" and key.begins_with("roof_") and key != "roof_mode":
 		if selection.get("type", "") == "roof":
 			var map := {"roof_shape": "shape", "roof_pitch": "pitch", "roof_overhang": "overhang", "roof_material": "material"}
@@ -292,7 +301,7 @@ func _key(k: InputEventKey) -> void:
 			set_option("eyedropper", not bool(options["eyedropper"]))
 			get_viewport().set_input_as_handled()
 			return
-		var keys := {KEY_R: "room", KEY_W: "", KEY_T: "wall", KEY_V: "select", KEY_D: "door", KEY_N: "window", KEY_F: "floor", KEY_P: "paint", KEY_O: "roof", KEY_G: "stairs", KEY_X: "demolish"}
+		var keys := {KEY_R: "room", KEY_W: "", KEY_T: "wall", KEY_V: "select", KEY_D: "door", KEY_N: "window", KEY_F: "floor", KEY_P: "paint", KEY_O: "roof", KEY_E: "verandah", KEY_G: "stairs", KEY_X: "demolish"}
 		if keys.has(k.keycode) and str(keys[k.keycode]) != "" and not k.ctrl_pressed:
 			set_tool(str(keys[k.keycode]))
 			return
@@ -330,6 +339,8 @@ func _press(screen: Vector2, shift: bool, alt: bool) -> void:
 			_drag["opening"] = _opening_at_pointer(p, alt or options["free"])
 		"roof":
 			_roof_press(screen)
+		"verandah":
+			_verandah_press(p)
 		_:
 			pass
 	_move(screen, alt)
@@ -357,6 +368,8 @@ func _move(screen: Vector2, alt: bool = false) -> void:
 			_paint_preview(p)
 		"roof":
 			_roof_preview(screen, p)
+		"verandah":
+			_verandah_preview(p)
 		"stairs":
 			_stairs_preview(p)
 		"post":
@@ -886,6 +899,9 @@ func delete_selection() -> void:
 			_commit("Remove roof piece", func(h: HouseData) -> Dictionary:
 				var pc := _roof_piece_at(h, lvr, at)
 				return BuildOps.remove_roof_piece(h, str(pc.get("id", ""))) if not pc.is_empty() else BuildOps.fail("That roof piece has gone."))
+		"verandah":
+			var vid := str(selection["id"])
+			_commit("Remove verandah", func(h: HouseData) -> Dictionary: return BuildOps.remove_verandah(h, vid))
 		"chimney":
 			var ci := int(selection["index"])
 			_commit("Remove chimney", func(h: HouseData) -> Dictionary: return BuildOps.remove_chimney(h, ci))
@@ -1613,6 +1629,147 @@ func set_roof_prop(key: String, value: Variant) -> void:
 	changed.emit()
 
 
+# --- Verandahs -----------------------------------------------------------------------------------------
+
+func verandah_opts() -> Dictionary:
+	return {"depth": float(options["v_depth"]), "shape": options["v_shape"], "post": options["v_post"], "lace": options["v_lace"],
+		"rail": options["v_rail"], "lattice": bool(options["v_lattice"]), "material": options["v_material"], "colour": options["v_colour"]}
+
+
+func selected_verandah() -> Dictionary:
+	if house == null or selection.get("type", "") != "verandah":
+		return {}
+	return BuildOps.verandah_by_id(house.data, str(selection["id"]))
+
+
+## Position along a verandah's wall line for a plan point.
+func _v_along(v: Dictionary, l: Vector2) -> float:
+	return l.x if str(v["side"]) in ["N", "S"] else l.y
+
+
+## The verandah a drag would add: the whole outside run under the pointer, or the dragged part of it.
+func _verandah_plan(p: Vector3) -> Dictionary:
+	if house == null:
+		return {}
+	var start: Vector3 = _drag.get("start", p)
+	var k := _near_edge(start, house, level, 0.6)
+	if k == "":
+		return {}
+	var run := BuildOps.outside_run(house.data, level, k)
+	if run.is_empty():
+		return {}
+	var v := verandah_opts()
+	v.merge(run, true)
+	if _drag.get("moved", false):
+		var a := _v_along(run, to_local_2d(start))
+		var b := _v_along(run, to_local_2d(p))
+		v["from"] = clampf(snappedf(minf(a, b), 0.5), float(run["from"]), float(run["to"]))
+		v["to"] = clampf(snappedf(maxf(a, b), 0.5), float(run["from"]), float(run["to"]))
+	return v
+
+
+func _verandah_press(p: Vector3) -> void:
+	if house == null:
+		return
+	if str(options["v_mode"]) == "edit":
+		var l := to_local_2d(p)
+		var v := BuildOps.verandah_at(house.data, l.x, l.y)
+		if v.is_empty():
+			selection.clear()
+		else:
+			selection = {"type": "verandah", "id": v["id"]}
+		changed.emit()
+
+
+func _verandah_preview(p: Vector3) -> void:
+	if house == null:
+		_clear_preview()
+		return
+	var kit := MeshKit.new()
+	var y := _plane_y()
+	var l := to_local_2d(p)
+	match str(options["v_mode"]):
+		"add":
+			var v := _verandah_plan(p)
+			if v.is_empty():
+				_clear_preview()
+				return
+			var r := BuildOps.verandah_rect(house.data, v)
+			_ghost_box(kit, r.position, r.end, y - 0.1, y, -1.0)
+			_ghost_box(kit, r.position, r.end, y + 2.2, y + 2.3, -1.0)
+			_set_preview(kit, true)
+			var length := float(v["to"]) - float(v["from"])
+			var cost := ceili(length * float(v["depth"]) * Pieces.cost("verandah"))
+			_show_label(_v3(r.get_center(), y + 2.8), "%s verandah · %.1f × %.1f m · £%d" % [str(v["shape"]).capitalize(), length, float(v["depth"]), cost], true)
+		_:
+			var vv := BuildOps.verandah_at(house.data, l.x, l.y)
+			if vv.is_empty():
+				_clear_preview()
+				return
+			var r2 := BuildOps.verandah_rect(house.data, vv)
+			var text := {"edit": "Change this verandah", "steps": "Add or remove steps here", "sleepout": "Drag along to enclose a sleep-out"}[str(options["v_mode"])] as String
+			if str(options["v_mode"]) == "sleepout" and not _drag.is_empty() and _drag.get("moved", false):
+				var a := _v_along(vv, to_local_2d(_drag["start"]))
+				var b := _v_along(vv, l)
+				var rr := BuildOps.sleepout_rect(vv, roundf(minf(a, b)), roundf(maxf(a, b)))
+				_ghost_box(kit, Vector2(rr.position), Vector2(rr.end), y, y + 2.4, -1.0)
+				text = "Sleep-out · %d m" % maxi(rr.size.x, rr.size.y)
+			else:
+				_ghost_box(kit, r2.position, r2.end, y - 0.1, y + 0.02, -1.0)
+			_set_preview(kit, true)
+			_show_label(_v3(l, y + 1.6), text, true)
+
+
+func _verandah_action(p: Vector3) -> Dictionary:
+	if house == null:
+		_say("Build a house first.", "warn")
+		return {}
+	var l := to_local_2d(p)
+	match str(options["v_mode"]):
+		"add":
+			var v := _verandah_plan(p)
+			if v.is_empty():
+				_say("Point at an outside wall.", "warn")
+				return {}
+			var lv := level
+			var opts := verandah_opts()
+			return {"label": "Add verandah", "confirm": true, "fn": func(h: HouseData) -> Dictionary:
+				return BuildOps.add_verandah(h, lv, v["side"], v["line"], v["from"], v["to"], opts)}
+		"steps":
+			var vs := BuildOps.verandah_at(house.data, l.x, l.y)
+			if vs.is_empty():
+				return {}
+			var vid := str(vs["id"])
+			var u := _v_along(vs, l)
+			return {"label": "Verandah steps", "fn": func(h: HouseData) -> Dictionary: return BuildOps.toggle_steps(h, vid, u)}
+		"sleepout":
+			var start := to_local_2d(_drag.get("start", p))
+			var vz := BuildOps.verandah_at(house.data, start.x, start.y)
+			if vz.is_empty():
+				return {}
+			var vid2 := str(vz["id"])
+			var a := _v_along(vz, start)
+			var b := _v_along(vz, l)
+			if not _drag.get("moved", false):
+				a = float(vz["from"])
+				b = float(vz["to"])
+			return {"label": "Enclose sleep-out", "confirm": true, "fn": func(h: HouseData) -> Dictionary: return BuildOps.enclose_sleepout(h, vid2, a, b)}
+	return {}
+
+
+func remove_sleepout() -> void:
+	var v := selected_verandah()
+	if v.is_empty():
+		return
+	var vid := str(v["id"])
+	_commit("Open up the sleep-out", func(h: HouseData) -> Dictionary: return BuildOps.remove_sleepout(h, vid))
+
+
+## House trim colour (fascias, sashes, corner boards, barges).
+func set_trim(colour: String) -> void:
+	_commit("Trim colour", func(h: HouseData) -> Dictionary: return BuildOps.set_exterior(h, {"trim": colour}))
+
+
 # --- Actions ------------------------------------------------------------------------------------------
 
 ## What releasing the pointer here would do, as {label, fn, confirm} or a live edit to finish.
@@ -1630,6 +1787,8 @@ func _action_for(p: Vector3) -> Dictionary:
 			return _paint_action(p)
 		"roof":
 			return _roof_action(p)
+		"verandah":
+			return _verandah_action(p)
 		"stairs":
 			if house == null:
 				_say("Draw a room first.", "warn")

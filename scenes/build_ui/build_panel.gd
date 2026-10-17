@@ -11,7 +11,7 @@ const SKY := Color("#4BC9F5")
 const AMBER := Color("#FBAD45")
 const SECONDARY := Color("#3D5670")
 const TOOL_LABELS := {"room": "Room", "wall": "Wall", "select": "Select", "door": "Door", "window": "Window",
-	"arch": "Arch", "floor": "Floor", "paint": "Paint", "roof": "Roof", "stairs": "Stairs", "post": "Post", "demolish": "Demolish"}
+	"arch": "Arch", "floor": "Floor", "paint": "Paint", "roof": "Roof", "verandah": "Verandah", "stairs": "Stairs", "post": "Post", "demolish": "Demolish"}
 const PAINTS: Array[String] = ["cream", "ivory", "white", "butter", "apricot", "rose", "mint", "duck_egg", "sky", "sage"]
 const OPTIONS_W := 320.0
 const FLOORS: Array[String] = ["floor_boards", "pine_boards", "lino_checks", "decking", "concrete", "quarry_tiles"]
@@ -164,7 +164,7 @@ func _palette() -> void:
 		b.pressed.connect(func() -> void: build.set_tool(t))
 		grid.add_child(b)
 		_tools[t] = b
-	for t2: String in ["Verandah", "Furnish"]:
+	for t2: String in ["Furnish"]:
 		var b2 := Button.new()
 		b2.text = t2
 		b2.disabled = true
@@ -364,6 +364,8 @@ func _fill_options() -> void:
 			_paint_options(o)
 		"roof":
 			_roof_options(o)
+		"verandah":
+			_verandah_options(o)
 		"stairs":
 			_heading("Stairs")
 			var f2 := _flow()
@@ -576,6 +578,63 @@ func _roof_options(o: Dictionary) -> void:
 		_options.add_child(_button("Roof the whole house", func() -> void: build.roof_house(), 0, true))
 
 
+func _verandah_options(o: Dictionary) -> void:
+	var v := build.selected_verandah()
+	var editing := not v.is_empty()
+	_heading("Verandah" if editing else "Verandahs")
+	if not editing:
+		var modes := _flow()
+		for md: String in ["add", "edit", "steps", "sleepout"]:
+			modes.add_child(_toggle({"add": "Add", "edit": "Change", "steps": "Steps", "sleepout": "Sleep-out"}[md], o["v_mode"] == md,
+				func() -> void: build.set_option("v_mode", md), 66))
+		_options.add_child(modes)
+	var cur := func(key: String) -> Variant: return v.get(key, o["v_" + key]) if editing else o["v_" + key]
+	_caps_add("Roof")
+	var f := _flow()
+	for sh: String in BuildOps.VERANDAH_SHAPES:
+		f.add_child(_card(sh.capitalize(), {"bullnose": "Curved iron", "skillion": "Straight fall", "gable": "Gable to the front"}[sh], cur.call("shape") == sh,
+			func() -> void: build.set_option("v_shape", sh)))
+	_options.add_child(f)
+	var r0 := _row()
+	for mt: String in ["corrugated_iron", "roof_paint_red", "roof_paint_green"]:
+		r0.add_child(_toggle({"corrugated_iron": "Iron", "roof_paint_red": "Red", "roof_paint_green": "Green"}[mt], cur.call("material") == mt,
+			func() -> void: build.set_option("v_material", mt), 70))
+	_options.add_child(r0)
+	_caps_add("Depth")
+	var r := _row()
+	for d: float in [1.5, 1.8, 2.1, 2.4, 3.0]:
+		r.add_child(_toggle("%.1f m" % d, is_equal_approx(float(cur.call("depth")), d), func() -> void: build.set_option("v_depth", d), 50))
+	_options.add_child(r)
+	_caps_add("Posts")
+	var r2 := _row()
+	for pk: String in ["timber_post", "turned_post", "cast_iron"]:
+		r2.add_child(_toggle({"timber_post": "Square", "turned_post": "Turned", "cast_iron": "Cast iron"}[pk], cur.call("post") == pk,
+			func() -> void: build.set_option("v_post", pk), 90))
+	_options.add_child(r2)
+	_caps_add("Frieze and brackets")
+	var r3 := _row()
+	for lk: String in ["none", "lace", "fretwork"]:
+		r3.add_child(_toggle({"none": "Plain", "lace": "Cast iron lace", "fretwork": "Fretwork"}[lk], cur.call("lace") == lk,
+			func() -> void: build.set_option("v_lace", lk), 90))
+	_options.add_child(r3)
+	_caps_add("Rail")
+	var r4 := _row()
+	for rk: String in ["none", "timber", "lace"]:
+		r4.add_child(_toggle({"none": "Open", "timber": "Timber", "lace": "Lace"}[rk], cur.call("rail") == rk,
+			func() -> void: build.set_option("v_rail", rk), 90))
+	_options.add_child(r4)
+	_yes_no("Lattice underneath", bool(cur.call("lattice")), func(on: bool) -> void: build.set_option("v_lattice", on))
+	_caps_add("Colour")
+	var f2 := _flow()
+	for pn in MaterialLibrary.paint_names("trims"):
+		f2.add_child(_swatch(pn, pn == str(cur.call("colour")), func() -> void: build.set_option("v_colour", pn)))
+	_options.add_child(f2)
+	if editing:
+		if v.has("sleepout"):
+			_options.add_child(_button("Open up the sleep-out", func() -> void: build.remove_sleepout()))
+		_options.add_child(_button("Remove verandah", func() -> void: build.delete_selection()))
+
+
 const LININGS := {"wall_tiles": "Wall tiles", "vj_panelling": "VJ panelling"}
 const CLADDINGS := {"weatherboard": "Weatherboard", "fibro": "Fibro", "brick_red": "Red brick", "render": "Render",
 	"corrugated_wall": "Corrugated iron"}
@@ -617,6 +676,12 @@ func _paint_options(o: Dictionary) -> void:
 				pick.popup_closed.connect(func() -> void: build.set_option("paint_colour", "#" + pick.color.to_html(false)))
 				f3.add_child(pick)
 			_options.add_child(f3)
+	if kind == "cladding" and build.house != null:
+		_caps_add("House trims")
+		var tf := _flow()
+		for tn in MaterialLibrary.paint_names("trims"):
+			tf.add_child(_swatch(tn, tn == str(build.house.data.exterior.get("trim", "white")), func() -> void: build.set_trim(tn)))
+		_options.add_child(tf)
 	if kind != "cladding":
 		_caps_add("Part of the wall")
 		var r := _row()
