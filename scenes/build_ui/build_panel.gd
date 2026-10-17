@@ -419,7 +419,9 @@ func _selection_options(sel: Dictionary) -> void:
 			_heading(str(piece.get("name", o["kind"])))
 			if o["kind"] == "window":
 				var r2 := _row()
-				r2.add_child(_text("Sill %.2f m" % float(o.get("sill", 0.9)), 15))
+				var sill_l := _text("Sill %.2f m" % float(o.get("sill", 0.9)), 15)
+				sill_l.autowrap_mode = TextServer.AUTOWRAP_OFF
+				r2.add_child(sill_l)
 				r2.add_child(_button("Lower", func() -> void: build.call("_nudge", KEY_DOWN), 80))
 				r2.add_child(_button("Raise", func() -> void: build.call("_nudge", KEY_UP), 80))
 				_options.add_child(r2)
@@ -487,6 +489,7 @@ func _caps_add(text: String) -> void:
 func _yes_no(label: String, on: bool, cb: Callable) -> void:
 	var r := _row()
 	var l := _text(label, 15)
+	l.autowrap_mode = TextServer.AUTOWRAP_OFF
 	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	r.add_child(l)
 	r.add_child(_toggle("Yes", on, func() -> void: cb.call(true), 56))
@@ -538,12 +541,15 @@ func _fill_house() -> void:
 	tl.text = h.name
 	tl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	title.add_child(tl)
-	title.add_child(_text("%d rooms" % _room_count(h), 14, SECONDARY))
+	var rooms_l := _text("%d room%s" % [_room_count(h), "" if _room_count(h) == 1 else "s"], 14, SECONDARY)
+	rooms_l.autowrap_mode = TextServer.AUTOWRAP_OFF
+	title.add_child(rooms_l)
 	_house_box.add_child(title)
 	# Storeys.
 	var srow := _row()
 	srow.add_child(_button("Down", func() -> void: build.set_level(build.level - 1), 70))
 	var sl := _text(HouseData.storey_name(build.level), 15)
+	sl.autowrap_mode = TextServer.AUTOWRAP_OFF
 	sl.custom_minimum_size = Vector2(110, 0)
 	sl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	srow.add_child(sl)
