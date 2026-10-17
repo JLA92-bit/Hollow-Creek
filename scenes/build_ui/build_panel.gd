@@ -11,7 +11,7 @@ const SKY := Color("#4BC9F5")
 const AMBER := Color("#FBAD45")
 const SECONDARY := Color("#3D5670")
 const TOOL_LABELS := {"room": "Room", "wall": "Wall", "select": "Select", "door": "Door", "window": "Window",
-	"arch": "Arch", "floor": "Floor", "paint": "Paint", "roof": "Roof", "verandah": "Verandah", "stairs": "Stairs", "post": "Post", "terrain": "Terrain", "garden": "Garden", "fence": "Fence", "demolish": "Demolish"}
+	"arch": "Arch", "floor": "Floor", "paint": "Paint", "roof": "Roof", "verandah": "Verandah", "stairs": "Stairs", "post": "Post", "terrain": "Terrain", "garden": "Garden", "fence": "Fence", "buy": "Furnish", "demolish": "Demolish"}
 const PAINTS: Array[String] = ["cream", "ivory", "white", "butter", "apricot", "rose", "mint", "duck_egg", "sky", "sage"]
 const OPTIONS_W := 320.0
 const FLOORS: Array[String] = ["floor_boards", "pine_boards", "lino_checks", "decking", "concrete", "quarry_tiles"]
@@ -167,7 +167,7 @@ func _palette() -> void:
 		b.pressed.connect(func() -> void: build.set_tool(t))
 		grid.add_child(b)
 		_tools[t] = b
-	for t2: String in ["Furnish"]:
+	for t2: String in []:
 		var b2 := Button.new()
 		b2.text = t2
 		b2.disabled = true
@@ -377,6 +377,8 @@ func _fill_options() -> void:
 			_garden_options(o)
 		"fence":
 			_fence_options(o)
+		"buy":
+			_buy_options(o)
 		"stairs":
 			_heading("Stairs")
 			var f2 := _flow()
@@ -703,6 +705,180 @@ func _fence_options(o: Dictionary) -> void:
 		f.add_child(_card(str(fences[k]["name"]), "£%d a metre · %.1f m" % [int(fences[k]["cost"]), float(fences[k]["height"])], o["fence_type"] == k,
 			func() -> void: build.set_option("fence_type", k)))
 	_options.add_child(f)
+
+
+const STYLES_PATH := "user://styles.json"
+
+
+func _buy_options(o: Dictionary) -> void:
+	var objs := build.selected_objects()
+	if not objs.is_empty() and str(o["buy_item"]) == "":
+		_design_options(objs)
+		return
+	_heading("Furnish")
+	_scores()
+	var search := LineEdit.new()
+	search.placeholder_text = "Search the catalogue"
+	search.text = str(o["buy_query"])
+	search.custom_minimum_size = Vector2(0, 44)
+	search.text_submitted.connect(func(t: String) -> void: build.set_option("buy_query", t))
+	_options.add_child(search)
+	var rooms := _flow()
+	for r: String in [""] + Array(Catalogue.data()["rooms"]):
+		rooms.add_child(_toggle("All rooms" if r == "" else r.capitalize(), o["buy_room"] == r, func() -> void: build.set_option("buy_room", r), 70))
+	_options.add_child(rooms)
+	var fns := _flow()
+	for fn: String in [""] + Array(Catalogue.data()["functions"]):
+		fns.add_child(_toggle("Everything" if fn == "" else fn.capitalize(), o["buy_function"] == fn, func() -> void: build.set_option("buy_function", fn), 70))
+	_options.add_child(fns)
+	var ids := Catalogue.search(str(o["buy_query"]), str(o["buy_room"]), str(o["buy_function"]))
+	var cards := _flow()
+	for id in ids:
+		var it := Catalogue.item(id)
+		var c := _card(str(it["name"]), "£%d · %s" % [int(it["price"]), str(it.get("function", "")).capitalize()], o["buy_item"] == id, func() -> void: build.choose_item(id))
+		c.tooltip_text = str(it.get("note", ""))
+		cards.add_child(c)
+	if ids.is_empty():
+		_options.add_child(_text("Nothing matches. Try fewer words.", 13, SECONDARY))
+	_options.add_child(cards)
+	if str(o["buy_item"]) != "":
+		var note := str(Catalogue.item(str(o["buy_item"])).get("note", ""))
+		if note != "":
+			_options.add_child(_text(note, 13, SECONDARY))
+		_options.add_child(_button("Put it back (select instead)", func() -> void: build.choose_item("")))
+	_caps_add("Placement")
+	var r2 := _row()
+	for sn: String in ["grid", "half", "free"]:
+		r2.add_child(_toggle({"grid": "Grid 0.5 m", "half": "Half 0.25 m", "free": "Free"}[sn], o["buy_snap"] == sn, func() -> void: build.set_option("buy_snap", sn), 92))
+	_options.add_child(r2)
+	var r3 := _row()
+	r3.add_child(_button("Turn left", func() -> void: build.call("_rotate", -1), 100))
+	r3.add_child(_button("Turn right", func() -> void: build.call("_rotate", 1), 100))
+	r3.add_child(_toggle("Stack", bool(o["buy_stack"]), func() -> void: build.set_option("buy_stack", not bool(o["buy_stack"])), 70))
+	_options.add_child(r3)
+
+
+## The home scores as compact bars.
+func _scores() -> void:
+	if build.house == null:
+		return
+	var s := HomeScores.compute(build.house.data)
+	var grid := GridContainer.new()
+	grid.columns = 2
+	grid.add_theme_constant_override("h_separation", 12)
+	for k in HomeScores.NAMES:
+		var row := _row(6)
+		var l := _text(k.capitalize(), 13)
+		l.custom_minimum_size = Vector2(62, 0)
+		l.autowrap_mode = TextServer.AUTOWRAP_OFF
+		row.add_child(l)
+		var bar := ProgressBar.new()
+		bar.custom_minimum_size = Vector2(56, 10)
+		bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		bar.show_percentage = false
+		bar.value = int(s[k])
+		row.add_child(bar)
+		var v := _text(str(s[k]), 13)
+		v.autowrap_mode = TextServer.AUTOWRAP_OFF
+		row.add_child(v)
+		grid.add_child(row)
+	_options.add_child(grid)
+
+
+## The Design tool for the selected pieces: every material slot, library materials and colours,
+## saved styles, and for lamps their brightness and colour temperature.
+func _design_options(objs: Array) -> void:
+	var first: Dictionary = objs[0]
+	var it := Catalogue.item(Catalogue.id_of(first))
+	_heading(str(it.get("name", "Furniture")) if objs.size() == 1 else "%d pieces" % objs.size())
+	if objs.size() == 1:
+		_options.add_child(_text("£%d · %s" % [int(it.get("price", 0)), str(it.get("note", ""))], 13, SECONDARY))
+	var r := _row()
+	r.add_child(_button("Turn left", func() -> void: build.call("_rotate", -1), 100))
+	r.add_child(_button("Turn right", func() -> void: build.call("_rotate", 1), 100))
+	r.add_child(_button("Remove", func() -> void: build.delete_selection(), 90))
+	_options.add_child(r)
+	if objs.size() == 1 and str(it.get("place", "")) == "wall":
+		var rr := _row()
+		rr.add_child(_button("Lower", func() -> void: build.call("_nudge", KEY_DOWN), 90))
+		rr.add_child(_button("Raise", func() -> void: build.call("_nudge", KEY_UP), 90))
+		_options.add_child(rr)
+	var mats := Catalogue.design_materials()
+	var slots: Dictionary = it.get("slots", {})
+	for slot: String in slots:
+		var cur := Catalogue.slot_value(first, slot)
+		_caps_add(slot.capitalize() if not slot.contains("_0") else "Finish")
+		var cat := str(MaterialLibrary.def(str(cur.get("mat", ""))).get("category", "")) if str(cur.get("mat", "")) != "" else ""
+		if cat != "" and mats.has(cat):
+			var mf := _flow()
+			for mid: String in mats[cat]:
+				var mname := str(MaterialLibrary.def(mid).get("name", mid.replace("_", " ").capitalize()))
+				mf.add_child(_toggle(mname, str(cur.get("mat", "")) == mid, func() -> void: build.set_object_slot(slot, {"mat": mid}), 80))
+			_options.add_child(mf)
+		var cf := _flow()
+		for pn in MaterialLibrary.paint_names("walls").slice(0, 6) + MaterialLibrary.paint_names("trims").slice(0, 5):
+			var hexc := "#" + MaterialLibrary.paint(pn).to_html(false)
+			cf.add_child(_swatch(pn, hexc.to_lower() == str(cur.get("colour", "")).to_lower(), func() -> void: build.set_object_slot(slot, {"colour": hexc})))
+		var pick := ColorPickerButton.new()
+		pick.custom_minimum_size = Vector2(44, 44)
+		pick.tooltip_text = "Mix a colour"
+		pick.color = Color(str(cur.get("colour", "#FFFFFF")))
+		pick.popup_closed.connect(func() -> void: build.set_object_slot(slot, {"colour": "#" + pick.color.to_html(false)}))
+		cf.add_child(pick)
+		_options.add_child(cf)
+	# Saved styles: this piece's slots by name, to put on any piece with the same slots.
+	_caps_add("Styles")
+	var styles := _load_styles()
+	var sf := _flow()
+	for sname: String in styles:
+		sf.add_child(_button(sname, func() -> void: build.apply_style(styles[sname]), 90))
+	_options.add_child(sf)
+	var sr := _row()
+	var name_edit := LineEdit.new()
+	name_edit.placeholder_text = "Style name"
+	name_edit.custom_minimum_size = Vector2(170, 44)
+	sr.add_child(name_edit)
+	sr.add_child(_button("Save style", func() -> void:
+		var st: Dictionary = {}
+		for slot2: String in slots:
+			st[slot2] = Catalogue.slot_value(first, slot2)
+		var nm := name_edit.text.strip_edges() if name_edit.text.strip_edges() != "" else "Style %d" % (styles.size() + 1)
+		styles[nm] = st
+		_save_styles(styles)
+		refresh(), 110))
+	_options.add_child(sr)
+	var ld := Catalogue.light_of(first)
+	if not ld.is_empty():
+		_caps_add("Lamp")
+		var energy := float(ld.get("energy", 1.0))
+		var kelvin := float(ld.get("kelvin", 2700))
+		var lr := _row()
+		lr.add_child(_button("Dimmer", func() -> void: build.set_object_light(energy - 0.2, kelvin), 90))
+		var el := _text("%d%%" % roundi(energy * 100), 15)
+		el.autowrap_mode = TextServer.AUTOWRAP_OFF
+		lr.add_child(el)
+		lr.add_child(_button("Brighter", func() -> void: build.set_object_light(energy + 0.2, kelvin), 90))
+		_options.add_child(lr)
+		var kr := _flow()
+		for kv: Array in [[1900, "Flame"], [2700, "Warm"], [3500, "Neutral"], [5000, "Daylight"]]:
+			var kk: float = kv[0]
+			kr.add_child(_toggle("%s %dK" % [kv[1], kk], absf(kelvin - kk) < 1.0, func() -> void: build.set_object_light(energy, kk), 90))
+		_options.add_child(kr)
+	_options.add_child(_text("Drag to move. Ctrl-click adds to the selection; arrows nudge, Shift for fine.", 13, SECONDARY))
+
+
+func _load_styles() -> Dictionary:
+	if not FileAccess.file_exists(STYLES_PATH):
+		return {}
+	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(STYLES_PATH))
+	return parsed as Dictionary if parsed is Dictionary else {}
+
+
+func _save_styles(styles: Dictionary) -> void:
+	var f := FileAccess.open(STYLES_PATH, FileAccess.WRITE)
+	if f:
+		f.store_string(JSON.stringify(styles))
+		f.close()
 
 
 const LININGS := {"wall_tiles": "Wall tiles", "vj_panelling": "VJ panelling"}

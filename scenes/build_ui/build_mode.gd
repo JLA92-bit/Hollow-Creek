@@ -7,7 +7,7 @@ extends Node
 signal changed
 signal message(text: String, kind: String)
 
-const TOOLS: Array[String] = ["room", "wall", "select", "door", "window", "arch", "floor", "paint", "roof", "verandah", "stairs", "post", "terrain", "garden", "fence", "demolish"]
+const TOOLS: Array[String] = ["room", "wall", "select", "door", "window", "arch", "floor", "paint", "roof", "verandah", "stairs", "post", "terrain", "garden", "fence", "buy", "demolish"]
 const GARDEN_TOOLS: Array[String] = ["terrain", "garden", "fence"]
 const HINTS := {
 	"room": "Drag to draw a room. Hold Shift (or tap Add to room) to extend the room you start in.",
@@ -23,6 +23,7 @@ const HINTS := {
 	"terrain": "Click or drag to shape the ground round a house. Paint lays lawn, paths, gravel or garden beds.",
 	"garden": "Click to plant or place it. , and . turn it. Demolish takes things away.",
 	"fence": "Drag along the grid to run a fence. Gate turns a metre of fence into a gate.",
+	"buy": "Pick something from the catalogue and click to place it. With nothing picked, click a piece to move, turn (, .), recolour or remove it; Ctrl adds to the selection.",
 	"stairs": "Click to place stairs. Turn them with , and . (they rise the way the arrow points).",
 	"post": "Click a grid corner to stand a post.",
 	"demolish": "Click a door, window, post or stairs to remove it. Drag along walls, or click a room to clear it.",
@@ -48,6 +49,7 @@ var options: Dictionary = {
 	"v_lattice": false, "v_material": "corrugated_iron", "v_colour": "cream",
 	"terrain_op": "raise", "terrain_radius": 2.5, "ground": "footpath",
 	"garden_cat": "plants", "garden_kind": "rose", "garden_rot": 0.0, "fence_type": "picket", "fence_mode": "build",
+	"buy_item": "", "buy_query": "", "buy_room": "", "buy_function": "", "buy_rot": 0.0, "buy_snap": "half", "buy_stack": false,
 	"roof_mode": "auto", "roof_shape": "hip", "roof_pitch": 28.0, "roof_overhang": 0.45, "roof_material": "corrugated_iron",
 }
 var house: HouseView = null  ## the house being edited
@@ -66,6 +68,7 @@ var _house_counter := 1
 var _walls_before := ""
 ## A design waiting to be placed (from the library or a share code), and its name.
 var placing: HouseData = null
+var _buy_cache: Dictionary = {}  ## the last placement preview (position key, result, score change)
 var placing_name := ""
 
 
@@ -314,7 +317,7 @@ func _key(k: InputEventKey) -> void:
 			set_option("eyedropper", not bool(options["eyedropper"]))
 			get_viewport().set_input_as_handled()
 			return
-		var keys := {KEY_R: "room", KEY_W: "", KEY_T: "wall", KEY_V: "select", KEY_D: "door", KEY_N: "window", KEY_F: "floor", KEY_P: "paint", KEY_O: "roof", KEY_E: "verandah", KEY_G: "stairs", KEY_X: "demolish"}
+		var keys := {KEY_R: "room", KEY_W: "", KEY_T: "wall", KEY_V: "select", KEY_D: "door", KEY_N: "window", KEY_F: "floor", KEY_P: "paint", KEY_O: "roof", KEY_E: "verandah", KEY_U: "buy", KEY_G: "stairs", KEY_X: "demolish"}
 		if keys.has(k.keycode) and str(keys[k.keycode]) != "" and not k.ctrl_pressed:
 			set_tool(str(keys[k.keycode]))
 			return
@@ -355,6 +358,8 @@ func _press(screen: Vector2, shift: bool, alt: bool) -> void:
 			_drag["opening"] = _opening_at_pointer(p, alt or options["free"])
 		"roof":
 			_roof_press(screen)
+		"buy":
+			_buy_press(p)
 		"verandah":
 			_verandah_press(p)
 		_:
@@ -389,6 +394,8 @@ func _move(screen: Vector2, alt: bool = false) -> void:
 			_roof_preview(screen, p)
 		"verandah":
 			_verandah_preview(p)
+		"buy":
+			_buy_preview(p)
 		"terrain":
 			_terrain_preview(p)
 		"garden":
@@ -502,6 +509,7 @@ func _commit(label: String, fn: Callable, new_house: bool = false, origin: Vecto
 	else:
 		house.replace_data(h, before)
 	world.call("house_changed", h)
+	_buy_cache.clear()
 	sfx.play("remove" if cost < 0 else "place")
 	_say("%s%s" % [label, (" · £%d" % cost) if cost > 0 else ""], "done")
 	changed.emit()
@@ -543,6 +551,7 @@ func do_redo() -> void:
 
 
 func _restore(step: Dictionary) -> void:
+	_buy_cache.clear()
 	var hv := _view_for(str(step["house"]))
 	if step["state"] == null:
 		if hv != null:
@@ -869,6 +878,23 @@ func _finish_live(a: Dictionary) -> void:
 
 
 func _rotate(dirn: int) -> void:
+	if tool == "buy":
+		var step := 15.0 if Input.is_key_pressed(KEY_SHIFT) else 45.0
+		if selection.get("type", "") == "objects" and str(options["buy_item"]) == "":
+			var ids: Array = selection["ids"]
+			if ids.size() == 1:
+				var o := FurnitureOps.object_by_id(house.data, ids[0])
+				var rot := fposmod(float(o.get("rot", 0.0)) + dirn * step + 180.0, 360.0) - 180.0
+				var oid: String = ids[0]
+				_commit("Turn %s" % _object_name(o), func(h: HouseData) -> Dictionary: return FurnitureOps.update(h, oid, {"rot": rot}))
+			else:
+				_commit("Turn group", func(h: HouseData) -> Dictionary: return FurnitureOps.move_group(h, ids, Vector2.ZERO, dirn))
+		else:
+			options["buy_rot"] = fposmod(float(options["buy_rot"]) + dirn * step + 180.0, 360.0) - 180.0
+			sfx.play("tick")
+			_buy_preview(_hover_world)
+		changed.emit()
+		return
 	if tool == "garden":
 		options["garden_rot"] = posmod(int(options["garden_rot"]) + dirn * 90, 360)
 		sfx.play("tick")
@@ -894,6 +920,9 @@ func _rotate(dirn: int) -> void:
 
 
 func _nudge(key: Key) -> void:
+	if selection.get("type", "") == "objects" and house != null:
+		_nudge_objects(key)
+		return
 	if selection.get("type", "") != "opening" or house == null:
 		return
 	var o := house.data.opening_by_id(str(selection["id"]))
@@ -931,6 +960,14 @@ func delete_selection() -> void:
 			_commit("Remove roof piece", func(h: HouseData) -> Dictionary:
 				var pc := _roof_piece_at(h, lvr, at)
 				return BuildOps.remove_roof_piece(h, str(pc.get("id", ""))) if not pc.is_empty() else BuildOps.fail("That roof piece has gone."))
+		"objects":
+			var ids: Array = selection["ids"]
+			_commit("Remove %s" % ("furniture" if ids.size() > 1 else _object_name(FurnitureOps.object_by_id(house.data, ids[0]))), func(h: HouseData) -> Dictionary:
+				var last := BuildOps.ok()
+				for id: String in ids:
+					if not FurnitureOps.object_by_id(h, id).is_empty():
+						last = FurnitureOps.remove(h, id)
+				return last)
 		"verandah":
 			var vid := str(selection["id"])
 			_commit("Remove verandah", func(h: HouseData) -> Dictionary: return BuildOps.remove_verandah(h, vid))
@@ -1870,6 +1907,199 @@ func _place_action(p: Vector3) -> Dictionary:
 		return BuildOps.ok(cost)}
 
 
+# --- Buy mode ------------------------------------------------------------------------------------------
+
+func _object_name(o: Dictionary) -> String:
+	return str(Catalogue.item(Catalogue.id_of(o)).get("name", "furniture")).to_lower()
+
+
+func selected_objects() -> Array:
+	if house == null or selection.get("type", "") != "objects":
+		return []
+	var out: Array = []
+	for id: String in selection["ids"]:
+		var o := FurnitureOps.object_by_id(house.data, id)
+		if not o.is_empty():
+			out.append(o)
+	return out
+
+
+## Snaps a plan point to the placement grid: 0.5 m, 0.25 m or free (Alt, or the Free toggle).
+func _buy_snap(l: Vector2) -> Vector2:
+	if (not _drag.is_empty() and _drag.get("alt", false)) or options["free"] or str(options["buy_snap"]) == "free":
+		return l
+	var step := 0.5 if str(options["buy_snap"]) == "grid" else 0.25
+	return Vector2(snappedf(l.x, step), snappedf(l.y, step))
+
+
+func choose_item(id: String) -> void:
+	options["buy_item"] = id
+	selection.clear()
+	_say("%s · click to place, , and . turn it" % str(Catalogue.item(id).get("name", id)) if id != "" else HINTS["buy"], "hint")
+	changed.emit()
+
+
+func _buy_press(p: Vector3) -> void:
+	if house == null or str(options["buy_item"]) != "":
+		return
+	var o := FurnitureOps.object_at(house.data, level, to_local_2d(p))
+	if o.is_empty():
+		if not Input.is_key_pressed(KEY_CTRL):
+			selection.clear()
+		changed.emit()
+		return
+	var id := str(o["id"])
+	if Input.is_key_pressed(KEY_CTRL) and selection.get("type", "") == "objects":
+		var ids: Array = selection["ids"]
+		if ids.has(id):
+			ids.erase(id)
+		else:
+			ids.append(id)
+		if ids.is_empty():
+			selection.clear()
+	elif selection.get("type", "") != "objects" or not (selection["ids"] as Array).has(id):
+		selection = {"type": "objects", "ids": [id]}
+	_drag["objects"] = true
+	_drag["grab"] = to_local_2d(p)
+	changed.emit()
+
+
+func _buy_preview(p: Vector3) -> void:
+	if house == null:
+		_clear_preview()
+		return
+	var l := _buy_snap(to_local_2d(p))
+	var kit := MeshKit.new()
+	var y := _plane_y()
+	var item_id := str(options["buy_item"])
+	if item_id == "":
+		# Moving the selection, or hovering a piece.
+		if _drag.get("objects", false) and _drag.get("moved", false):
+			var off := _buy_snap(to_local_2d(p) - (_drag["grab"] as Vector2))
+			for o: Dictionary in selected_objects():
+				var r := FurnitureOps.rect_of(o)
+				r.position += off
+				_ghost_box(kit, r.position, r.end, y + float(o.get("y", 0.0)), y + float(o.get("y", 0.0)) + 0.9, -1.0)
+			_set_preview(kit, true)
+			_show_label(_v3(l, y + 1.6), "Move %s" % ("furniture" if (selection["ids"] as Array).size() > 1 else _object_name(selected_objects()[0])), true)
+			return
+		var hov := FurnitureOps.object_at(house.data, level, to_local_2d(p))
+		if hov.is_empty():
+			_clear_preview()
+			return
+		var hr := FurnitureOps.rect_of(hov)
+		_ghost_box(kit, hr.position, hr.end, y + float(hov.get("y", 0.0)), y + float(hov.get("y", 0.0)) + 0.05, -1.0)
+		_set_preview(kit, true)
+		_show_label(_v3(hr.get_center(), y + 1.4), str(Catalogue.item(Catalogue.id_of(hov)).get("name", "")), true)
+		return
+	var it := Catalogue.item(item_id)
+	var rot := float(options["buy_rot"])
+	var key := "%s|%s|%s|%d|%s" % [item_id, l, rot, level, options["buy_stack"]]
+	if _buy_cache.get("key", "") != key:
+		var lv := level
+		var stack := bool(options["buy_stack"])
+		var trial := house.data.duplicate_house()
+		var res := FurnitureOps.place(trial, lv, item_id, l, rot, {"stack": stack})
+		_buy_cache["key"] = key
+		_buy_cache["res"] = res
+		_buy_cache["obj"] = FurnitureOps.object_by_id(trial, str(res.get("id", ""))) if res["ok"] else {}
+		_buy_cache["diff"] = HomeScores.preview(house.data, func(h: HouseData) -> Dictionary: return FurnitureOps.place(h, lv, item_id, l, rot, {"stack": stack})) if res["ok"] else {}
+	var res2: Dictionary = _buy_cache["res"]
+	var o2: Dictionary = _buy_cache["obj"]
+	var r2 := FurnitureOps.rect_of(o2) if not o2.is_empty() else Rect2(l - Vector2(0.25, 0.25), Vector2(0.5, 0.5))
+	var y0 := y + float(o2.get("y", 0.0))
+	var hgt := 0.9 if str(it.get("place", "floor")) != "ceiling" else -0.9
+	_ghost_box(kit, r2.position, r2.end, y0, y0 + hgt, -1.0)
+	_set_preview(kit, res2["ok"])
+	var text := "%s · £%d" % [it.get("name", item_id), int(it.get("price", 1))]
+	var diff: Dictionary = _buy_cache["diff"]
+	if not diff.is_empty():
+		text += " · " + HomeScores.describe(diff)
+	_show_label(_v3(r2.get_center(), y0 + 1.5), text if res2["ok"] else str(res2["msg"]), res2["ok"])
+
+
+func _buy_action(p: Vector3) -> Dictionary:
+	if house == null:
+		_say("Furniture goes in a house. Build one first.", "warn")
+		return {}
+	var item_id := str(options["buy_item"])
+	if item_id == "":
+		if not _drag.get("objects", false) or not _drag.get("moved", false):
+			return {}
+		var off := _buy_snap(to_local_2d(p) - (_drag["grab"] as Vector2))
+		var ids: Array = selection["ids"]
+		if ids.size() == 1:
+			var o := FurnitureOps.object_by_id(house.data, ids[0])
+			var changes := {"x": float(o["x"]) + off.x, "z": float(o["z"]) + off.y}
+			# Surface items pick up a new host where they're dropped.
+			var oid: String = ids[0]
+			return {"label": "Move %s" % _object_name(o), "fn": func(h: HouseData) -> Dictionary:
+				var cur := FurnitureOps.object_by_id(h, oid)
+				var it := Catalogue.item(Catalogue.id_of(cur))
+				if str(it.get("place", "")) == "surface":
+					var host := FurnitureOps.host_at(h, int(cur.get("level", 0)), Vector2(changes["x"], changes["z"]), oid)
+					if not host.is_empty():
+						changes["on"] = host["id"]
+						changes["y"] = FurnitureOps.surface_top(host)
+					else:
+						cur.erase("on")
+						changes["y"] = 0.0
+				return FurnitureOps.update(h, oid, changes)}
+		return {"label": "Move furniture", "fn": func(h: HouseData) -> Dictionary: return FurnitureOps.move_group(h, ids, off, 0)}
+	var l := _buy_snap(to_local_2d(p))
+	var rot := float(options["buy_rot"])
+	var lv := level
+	var stack := bool(options["buy_stack"])
+	return {"label": "Buy %s" % str(Catalogue.item(item_id).get("name", item_id)).to_lower(), "confirm": true,
+		"fn": func(h: HouseData) -> Dictionary: return FurnitureOps.place(h, lv, item_id, l, rot, {"stack": stack})}
+
+
+func _nudge_objects(key: Key) -> void:
+	var objs := selected_objects()
+	if objs.is_empty():
+		return
+	var ids: Array = selection["ids"]
+	var o: Dictionary = objs[0]
+	if ids.size() == 1 and str(Catalogue.item(Catalogue.id_of(o)).get("place", "")) == "wall" and (key == KEY_UP or key == KEY_DOWN):
+		var y := float(o.get("y", 1.4)) + (0.05 if key == KEY_UP else -0.05)
+		var oid: String = ids[0]
+		_commit("Raise %s" % _object_name(o) if key == KEY_UP else "Lower %s" % _object_name(o), func(h: HouseData) -> Dictionary: return FurnitureOps.update(h, oid, {"y": y}))
+		return
+	var step := 0.05 if Input.is_key_pressed(KEY_SHIFT) else 0.25
+	var off := {KEY_LEFT: Vector2(-step, 0), KEY_RIGHT: Vector2(step, 0), KEY_UP: Vector2(0, -step), KEY_DOWN: Vector2(0, step)}[key] as Vector2
+	_commit("Nudge", func(h: HouseData) -> Dictionary: return FurnitureOps.move_group(h, ids, off, 0))
+
+
+## Design tool and lamp settings for the selection, as one undo step.
+func _for_selected(label: String, fn: Callable) -> void:
+	var ids: Array = []
+	for o: Dictionary in selected_objects():
+		ids.append(str(o["id"]))
+	if ids.is_empty():
+		return
+	_commit(label, func(h: HouseData) -> Dictionary:
+		var total := 0
+		var last := BuildOps.fail("Nothing selected.")
+		for id: String in ids:
+			last = fn.call(h, id)
+			if not last["ok"]:
+				return last
+			total += int(last.get("cost", 0))
+		return BuildOps.ok(total))
+
+
+func set_object_slot(slot: String, value: Dictionary) -> void:
+	_for_selected("Recolour", func(h: HouseData, id: String) -> Dictionary: return FurnitureOps.set_slot(h, id, slot, value))
+
+
+func apply_style(style: Dictionary) -> void:
+	_for_selected("Apply style", func(h: HouseData, id: String) -> Dictionary: return FurnitureOps.apply_style(h, id, style))
+
+
+func set_object_light(energy: float, kelvin: float) -> void:
+	_for_selected("Adjust lamp", func(h: HouseData, id: String) -> Dictionary: return FurnitureOps.set_light(h, id, energy, kelvin))
+
+
 # --- Terrain, garden and fences ------------------------------------------------------------------------
 
 ## Ground height at a lot corner, relative to the house's base (the house's own edits first).
@@ -2071,6 +2301,8 @@ func _action_for(p: Vector3) -> Dictionary:
 			return _roof_action(p)
 		"verandah":
 			return _verandah_action(p)
+		"buy":
+			return _buy_action(p)
 		"terrain":
 			return _terrain_action(p)
 		"garden":

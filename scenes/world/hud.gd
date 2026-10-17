@@ -208,7 +208,12 @@ func _toolbar(root: Control) -> void:
 	for t in ["Roads", "Build", "Furnish", "Lights", "Residents", "Case file", "Photo"]:
 		var b := Button.new()
 		b.text = t
-		b.disabled = t not in ["Build", "Photo"]
+		b.disabled = t not in ["Build", "Photo", "Furnish"]
+		if t == "Furnish":
+			b.tooltip_text = "Furnish (U in build mode)"
+			b.pressed.connect(func() -> void:
+				world.call("enter_build_mode")
+				(world.get("build") as BuildMode).set_tool("buy"))
 		if t == "Photo":
 			b.tooltip_text = "Photo mode (F2)"
 			b.pressed.connect(func() -> void: world.call("toggle_photo_mode"))
