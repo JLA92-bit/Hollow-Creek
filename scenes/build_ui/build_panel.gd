@@ -11,7 +11,7 @@ const SKY := Color("#4BC9F5")
 const AMBER := Color("#FBAD45")
 const SECONDARY := Color("#3D5670")
 const TOOL_LABELS := {"room": "Room", "wall": "Wall", "select": "Select", "door": "Door", "window": "Window",
-	"arch": "Arch", "floor": "Floor", "paint": "Paint", "roof": "Roof", "verandah": "Verandah", "stairs": "Stairs", "post": "Post", "demolish": "Demolish"}
+	"arch": "Arch", "floor": "Floor", "paint": "Paint", "roof": "Roof", "verandah": "Verandah", "stairs": "Stairs", "post": "Post", "terrain": "Terrain", "garden": "Garden", "fence": "Fence", "demolish": "Demolish"}
 const PAINTS: Array[String] = ["cream", "ivory", "white", "butter", "apricot", "rose", "mint", "duck_egg", "sky", "sage"]
 const OPTIONS_W := 320.0
 const FLOORS: Array[String] = ["floor_boards", "pine_boards", "lino_checks", "decking", "concrete", "quarry_tiles"]
@@ -150,7 +150,7 @@ func _palette() -> void:
 	_palette_panel = p
 	add_child(p)
 	var grid := GridContainer.new()
-	grid.columns = 3
+	grid.columns = 4
 	grid.add_theme_constant_override("h_separation", 6)
 	grid.add_theme_constant_override("v_separation", 6)
 	p.add_child(grid)
@@ -159,7 +159,7 @@ func _palette() -> void:
 		b.text = TOOL_LABELS[t]
 		b.toggle_mode = true
 		b.focus_mode = Control.FOCUS_NONE
-		b.custom_minimum_size = Vector2(84, 46)
+		b.custom_minimum_size = Vector2(78, 44)
 		b.add_theme_font_size_override("font_size", 14)
 		b.pressed.connect(func() -> void: build.set_tool(t))
 		grid.add_child(b)
@@ -168,7 +168,7 @@ func _palette() -> void:
 		var b2 := Button.new()
 		b2.text = t2
 		b2.disabled = true
-		b2.custom_minimum_size = Vector2(84, 46)
+		b2.custom_minimum_size = Vector2(78, 44)
 		b2.add_theme_font_size_override("font_size", 14)
 		grid.add_child(b2)
 
@@ -366,6 +366,12 @@ func _fill_options() -> void:
 			_roof_options(o)
 		"verandah":
 			_verandah_options(o)
+		"terrain":
+			_terrain_options(o)
+		"garden":
+			_garden_options(o)
+		"fence":
+			_fence_options(o)
 		"stairs":
 			_heading("Stairs")
 			var f2 := _flow()
@@ -633,6 +639,65 @@ func _verandah_options(o: Dictionary) -> void:
 		if v.has("sleepout"):
 			_options.add_child(_button("Open up the sleep-out", func() -> void: build.remove_sleepout()))
 		_options.add_child(_button("Remove verandah", func() -> void: build.delete_selection()))
+
+
+func _terrain_options(o: Dictionary) -> void:
+	_heading("Terrain")
+	var r := _flow()
+	for op: String in ["raise", "lower", "flatten", "smooth", "paint"]:
+		r.add_child(_toggle(op.capitalize(), o["terrain_op"] == op, func() -> void: build.set_option("terrain_op", op), 88))
+	_options.add_child(r)
+	if o["terrain_op"] == "paint":
+		_caps_add("Ground")
+		var f := _flow()
+		var grounds: Dictionary = GardenOps.catalogue()["grounds"]
+		for g: String in grounds:
+			f.add_child(_card(str(grounds[g]["name"]), "£%d per 2 m²" % int(grounds[g]["cost"]) if int(grounds[g]["cost"]) > 0 else "Free", o["ground"] == g,
+				func() -> void: build.set_option("ground", g)))
+		_options.add_child(f)
+		_options.add_child(_text("Drag over the yard to lay it.", 13, SECONDARY))
+	else:
+		_caps_add("Brush")
+		var r2 := _row()
+		for rad: float in [1.5, 2.5, 4.0]:
+			r2.add_child(_toggle({1.5: "Small", 2.5: "Medium", 4.0: "Large"}[rad], is_equal_approx(float(o["terrain_radius"]), rad),
+				func() -> void: build.set_option("terrain_radius", rad), 88))
+		_options.add_child(r2)
+		_options.add_child(_text("Click or drag round the house. The ground under the house stays below its floor.", 13, SECONDARY))
+
+
+func _garden_options(o: Dictionary) -> void:
+	_heading("Garden")
+	var cats := _row()
+	for c: String in ["plants", "outbuildings", "items"]:
+		cats.add_child(_toggle({"plants": "Plants", "outbuildings": "Sheds", "items": "Yard"}[c], o["garden_cat"] == c, func() -> void:
+			build.options["garden_kind"] = (GardenOps.catalogue()[c] as Dictionary).keys()[0]
+			build.set_option("garden_cat", c), 90))
+	_options.add_child(cats)
+	var f := _flow()
+	var items: Dictionary = GardenOps.catalogue()[o["garden_cat"]]
+	for k: String in items:
+		f.add_child(_card(str(items[k]["name"]), "£%d · %s" % [int(items[k]["cost"]), str(items[k].get("blurb", ""))], o["garden_kind"] == k,
+			func() -> void: build.set_option("garden_kind", k)))
+	_options.add_child(f)
+	var r := _row()
+	r.add_child(_button("Turn left", func() -> void: build.call("_rotate", -1), 110))
+	r.add_child(_button("Turn right", func() -> void: build.call("_rotate", 1), 110))
+	_options.add_child(r)
+
+
+func _fence_options(o: Dictionary) -> void:
+	_heading("Fences and gates")
+	var modes := _row()
+	for md: String in ["build", "gate", "remove"]:
+		modes.add_child(_toggle(md.capitalize(), o["fence_mode"] == md, func() -> void: build.set_option("fence_mode", md), 90))
+	_options.add_child(modes)
+	var f := _flow()
+	var fences: Dictionary = GardenOps.catalogue()["fences"]
+	for k: String in fences:
+		f.add_child(_card(str(fences[k]["name"]), "£%d a metre · %.1f m" % [int(fences[k]["cost"]), float(fences[k]["height"])], o["fence_type"] == k,
+			func() -> void: build.set_option("fence_type", k)))
+	_options.add_child(f)
 
 
 const LININGS := {"wall_tiles": "Wall tiles", "vj_panelling": "VJ panelling"}

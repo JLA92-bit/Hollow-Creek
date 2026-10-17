@@ -32,10 +32,16 @@ var _bench_frames: Array[float] = []
 var _benchmarking := false
 var _bench_time := 0.0
 var _sim_ms := 0.0
+## The map's own terrain, before any garden edits (house terrain and ground are applied on top).
+var _orig_heights: PackedFloat32Array
+var _orig_ground: PackedByteArray
+var _landscape_sig := ""
 
 
 func _ready() -> void:
 	slice = MapSlice.load_default()
+	_orig_heights = slice.grid.heights.duplicate()
+	_orig_ground = slice.grid.ground.duplicate()
 	var we := WorldEnvironment.new()
 	env = Environment.new()
 	we.environment = env
@@ -78,6 +84,7 @@ func _ready() -> void:
 	rig.view_changed.connect(_on_view_changed)
 	for id: String in GameState.houses:
 		add_house(HouseData.from_dict(GameState.houses[id]), false)
+	apply_landscape()
 	rain = Rain.new()
 	rain.name = "Rain"
 	add_child(rain)
@@ -162,6 +169,7 @@ func remove_house(id: String) -> void:
 			hv.queue_free()
 			break
 	GameState.houses.erase(id)
+	apply_landscape()
 	request_autosave()
 
 
@@ -170,6 +178,7 @@ func house_changed(h: HouseData) -> void:
 	if not h.locked:
 		GameState.houses[h.id] = h.to_dict()
 		_clear_site(h)
+	apply_landscape()
 	request_autosave()
 	_update_house_lighting()
 
@@ -182,6 +191,45 @@ func _clear_site(h: HouseData) -> void:
 	for v in h.verandahs:
 		r = r.grow(float(v.get("depth", 2.0)))
 	vegetation.clear_rect(r)
+	var o := Vector2(h.origin)
+	for it: Dictionary in h.garden:
+		var ir := GardenOps.item_rect(it)
+		vegetation.clear_rect(Rect2(ir.position + o, ir.size).grow(0.3))
+
+
+## Puts every house's garden terrain and ground finishes onto the map, over the map's own terrain,
+## and rebuilds the terrain (and the houses standing on it) when anything changed.
+func apply_landscape() -> void:
+	var parts: Array = []
+	for hv in houses:
+		if not hv.data.locked and (not hv.data.terrain.is_empty() or not hv.data.ground.is_empty()):
+			parts.append([hv.data.id, hv.data.origin, hv.data.base_y, hv.data.terrain, hv.data.ground])
+	var sig := JSON.stringify(parts)
+	if sig == _landscape_sig:
+		return
+	var terrain_before := _landscape_sig
+	_landscape_sig = sig
+	var grid := slice.grid
+	grid.heights = _orig_heights.duplicate()
+	grid.ground = _orig_ground.duplicate()
+	for hv2 in houses:
+		var h := hv2.data
+		if h.locked or is_nan(h.base_y):
+			continue
+		for ck: String in h.terrain:
+			var c := HouseData.parse_tile(ck) + h.origin
+			if c.x >= 0 and c.y >= 0 and c.x <= grid.width and c.y <= grid.height:
+				grid.set_corner_height(c.x, c.y, h.base_y + float(h.terrain[ck]))
+		for tk: String in h.ground:
+			var t := HouseData.parse_tile(tk) + h.origin
+			if grid.in_bounds(t.x, t.y):
+				grid.set_ground(t.x, t.y, Ground.from_name(str(h.ground[tk])))
+	terrain.refresh_splat()
+	terrain.rebuild()
+	if terrain_before != "" or not parts.is_empty():
+		for hv3 in houses:
+			if not hv3.data.locked:
+				hv3.rebuild_all()
 
 
 func request_autosave() -> void:

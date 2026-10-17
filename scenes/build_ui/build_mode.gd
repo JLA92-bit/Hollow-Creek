@@ -7,7 +7,8 @@ extends Node
 signal changed
 signal message(text: String, kind: String)
 
-const TOOLS: Array[String] = ["room", "wall", "select", "door", "window", "arch", "floor", "paint", "roof", "verandah", "stairs", "post", "demolish"]
+const TOOLS: Array[String] = ["room", "wall", "select", "door", "window", "arch", "floor", "paint", "roof", "verandah", "stairs", "post", "terrain", "garden", "fence", "demolish"]
+const GARDEN_TOOLS: Array[String] = ["terrain", "garden", "fence"]
 const HINTS := {
 	"room": "Drag to draw a room. Hold Shift (or tap Add to room) to extend the room you start in.",
 	"wall": "Drag along the grid to draw a wall. Drag at 45 degrees for a diagonal.",
@@ -19,6 +20,9 @@ const HINTS := {
 	"paint": "Click a wall to paint that side. Shift paints the whole room, Ctrl the whole house. I picks up a finish.",
 	"roof": "Click the house to roof it. Draw adds a piece; Change lets you drag a roof's pitch or its edges. Chimney goes on a wall.",
 	"verandah": "Click an outside wall for a verandah along it, or drag along the wall for part of it. Steps and Sleep-out work on a verandah.",
+	"terrain": "Click or drag to shape the ground round a house. Paint lays lawn, paths, gravel or garden beds.",
+	"garden": "Click to plant or place it. , and . turn it. Demolish takes things away.",
+	"fence": "Drag along the grid to run a fence. Gate turns a metre of fence into a gate.",
 	"stairs": "Click to place stairs. Turn them with , and . (they rise the way the arrow points).",
 	"post": "Click a grid corner to stand a post.",
 	"demolish": "Click a door, window, post or stairs to remove it. Drag along walls, or click a room to clear it.",
@@ -42,6 +46,8 @@ var options: Dictionary = {
 	"paint_scope": "face", "eyedropper": false,
 	"v_mode": "add", "v_depth": 2.1, "v_shape": "bullnose", "v_post": "timber_post", "v_lace": "none", "v_rail": "none",
 	"v_lattice": false, "v_material": "corrugated_iron", "v_colour": "cream",
+	"terrain_op": "raise", "terrain_radius": 2.5, "ground": "footpath",
+	"garden_cat": "plants", "garden_kind": "rose", "garden_rot": 0.0, "fence_type": "picket", "fence_mode": "build",
 	"roof_mode": "auto", "roof_shape": "hip", "roof_pitch": 28.0, "roof_overhang": 0.45, "roof_material": "corrugated_iron",
 }
 var house: HouseView = null  ## the house being edited
@@ -195,7 +201,7 @@ func pick(screen: Vector2) -> Vector3:
 	var origin := cam.project_ray_origin(screen)
 	var dir := cam.project_ray_normal(screen)
 	var plane_y := 0.0
-	if house != null:
+	if house != null and tool not in GARDEN_TOOLS:
 		plane_y = house.position.y + house.builder.level_y(level)
 	else:
 		var grid: WorldGrid = world.get("slice").grid
@@ -220,7 +226,9 @@ func to_local_2d(p: Vector3, hv: HouseView = house) -> Vector2:
 
 func _house_at(p: Vector3) -> HouseView:
 	for hv: HouseView in world.get("houses") as Array:
-		var b := hv.data.bounds().grow(2)
+		if tool in GARDEN_TOOLS and hv.data.locked:
+			continue
+		var b := hv.data.bounds().grow(GardenOps.LOT_MARGIN if tool in GARDEN_TOOLS else 2)
 		var lp := to_local_2d(p, hv)
 		if Rect2(b).has_point(lp):
 			return hv
@@ -370,6 +378,12 @@ func _move(screen: Vector2, alt: bool = false) -> void:
 			_roof_preview(screen, p)
 		"verandah":
 			_verandah_preview(p)
+		"terrain":
+			_terrain_preview(p)
+		"garden":
+			_garden_preview(p)
+		"fence":
+			_fence_preview(p)
 		"stairs":
 			_stairs_preview(p)
 		"post":
@@ -843,6 +857,12 @@ func _finish_live(a: Dictionary) -> void:
 
 
 func _rotate(dirn: int) -> void:
+	if tool == "garden":
+		options["garden_rot"] = posmod(int(options["garden_rot"]) + dirn * 90, 360)
+		sfx.play("tick")
+		_garden_preview(_hover_world)
+		changed.emit()
+		return
 	if tool == "stairs":
 		var order := ["N", "E", "S", "W"]
 		options["stairs_dir"] = order[(order.find(options["stairs_dir"]) + dirn + 4) % 4]
@@ -1305,6 +1325,14 @@ func _demolish_action(p: Vector3) -> Dictionary:
 		var oid := str(op["id"])
 		return {"label": "Remove %s" % op["kind"], "fn": func(h: HouseData) -> Dictionary: return BuildOps.remove_opening(h, oid)}
 	var lp := to_local_2d(p)
+	var gi := GardenOps.item_at(house.data, lp)
+	if not gi.is_empty():
+		var gid := str(gi["id"])
+		return {"label": "Remove %s" % str(GardenOps.item_def(str(gi["kind"])).get("name", "item")).to_lower(), "fn": func(h: HouseData) -> Dictionary: return GardenOps.remove_item(h, gid)}
+	var fk := GardenOps.fence_at(house.data, lp, 0.25)
+	if fk != "" and _near_edge(p, house, lv) == "":
+		var fpts := HouseData.edge_points(fk)
+		return {"label": "Remove fence", "fn": func(h: HouseData) -> Dictionary: return GardenOps.remove_fence(h, fpts[0], fpts[1])}
 	var ci := BuildOps.chimney_at(house.data, lp.x, lp.y)
 	if ci >= 0:
 		return {"label": "Remove chimney", "fn": func(h: HouseData) -> Dictionary: return BuildOps.remove_chimney(h, ci)}
@@ -1770,6 +1798,186 @@ func set_trim(colour: String) -> void:
 	_commit("Trim colour", func(h: HouseData) -> Dictionary: return BuildOps.set_exterior(h, {"trim": colour}))
 
 
+# --- Terrain, garden and fences ------------------------------------------------------------------------
+
+## Ground height at a lot corner, relative to the house's base (the house's own edits first).
+static func _corner_height(h: HouseData, grid: WorldGrid, cx: int, cy: int) -> float:
+	var key := HouseData.tile_key(cx, cy)
+	if h.terrain.has(key):
+		return float(h.terrain[key])
+	return grid.corner_height(cx + h.origin.x, cy + h.origin.y) - h.base_y
+
+
+func _ring(kit: MeshKit, centre: Vector2, radius: float) -> void:
+	var grid: WorldGrid = world.get("slice").grid
+	var origin := house.position
+	for i in 24:
+		var a0 := TAU * i / 24.0
+		var a1 := TAU * (i + 1) / 24.0
+		var p0 := centre + Vector2(cos(a0), sin(a0)) * radius
+		var p1 := centre + Vector2(cos(a1), sin(a1)) * radius
+		var y0 := grid.height_at(p0.x + origin.x, p0.y + origin.z) - origin.y + 0.06
+		var y1 := grid.height_at(p1.x + origin.x, p1.y + origin.z) - origin.y + 0.06
+		kit.beam("g", Vector3(p0.x, y0, p0.y), Vector3(p1.x, y1, p1.y), 0.06, 0.04)
+
+
+func _ground_y(l: Vector2) -> float:
+	var grid: WorldGrid = world.get("slice").grid
+	return grid.height_at(l.x + house.position.x, l.y + house.position.z) - house.position.y
+
+
+func _terrain_preview(p: Vector3) -> void:
+	if house == null:
+		_clear_preview()
+		return
+	var kit := MeshKit.new()
+	var l := to_local_2d(p)
+	if str(options["terrain_op"]) == "paint":
+		var tiles := _floor_tiles(p) if not _drag.is_empty() else ([_tile(p)] as Array[Vector2i])
+		for t in tiles:
+			var c := Vector2(t) + Vector2(0.5, 0.5)
+			var y := _ground_y(c) + 0.05
+			kit.quad("f", _v3(Vector2(t), y), _v3(Vector2(t.x + 1, t.y), y), _v3(Vector2(t) + Vector2(1, 1), y), _v3(Vector2(t.x, t.y + 1), y), Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
+		_set_preview(kit, true)
+		var gname := str((GardenOps.catalogue()["grounds"] as Dictionary)[options["ground"]]["name"])
+		_show_label(_v3(l, _ground_y(l) + 1.0), "%s · %d m²" % [gname, tiles.size()], true)
+		return
+	_ring(kit, l, float(options["terrain_radius"]))
+	_set_preview(kit, GardenOps.in_lot(house.data, l))
+	_show_label(_v3(l, _ground_y(l) + 1.2), {"raise": "Raise", "lower": "Lower", "flatten": "Flatten", "smooth": "Smooth"}[options["terrain_op"]], GardenOps.in_lot(house.data, l))
+	if not _drag.is_empty():
+		var pts: Array = _drag.get("brush", [])
+		if pts.is_empty() or (pts[pts.size() - 1] as Vector2).distance_to(l) > float(options["terrain_radius"]) * 0.6:
+			pts.append(l)
+			_drag["brush"] = pts
+
+
+func _terrain_action(p: Vector3) -> Dictionary:
+	if house == null:
+		_say("Landscaping goes round a house. Build one first.", "warn")
+		return {}
+	var op := str(options["terrain_op"])
+	if op == "paint":
+		var tiles := _floor_tiles(p)
+		var gname := str(options["ground"])
+		return {"label": "Lay %s" % str((GardenOps.catalogue()["grounds"] as Dictionary)[gname]["name"]).to_lower(),
+			"fn": func(h: HouseData) -> Dictionary: return GardenOps.paint_ground(h, tiles, gname)}
+	var pts: Array = _drag.get("brush", [])
+	if pts.is_empty():
+		pts = [to_local_2d(p)]
+	var radius := float(options["terrain_radius"])
+	var grid: WorldGrid = world.get("slice").grid
+	return {"label": "%s the ground" % op.capitalize(), "fn": func(h: HouseData) -> Dictionary:
+		var total := 0
+		var any_ok := false
+		var last := {}
+		var target := float(_corner_height(h, grid, roundi((pts[0] as Vector2).x), roundi((pts[0] as Vector2).y)))
+		for q: Vector2 in pts:
+			var hf := func(cx: int, cy: int) -> float: return _corner_height(h, grid, cx, cy)
+			if op == "flatten":
+				# A flatten stroke holds the height where it started.
+				hf = func(cx: int, cy: int) -> float:
+					if cx == roundi(q.x) and cy == roundi(q.y):
+						return target
+					return _corner_height(h, grid, cx, cy)
+			last = GardenOps.terrain_brush(h, op, q, radius, hf)
+			if last["ok"]:
+				any_ok = true
+				total += int(last["cost"])
+		return BuildOps.ok(total) if any_ok else last}
+
+
+func garden_def() -> Dictionary:
+	return GardenOps.item_def(str(options["garden_kind"]))
+
+
+func _garden_preview(p: Vector3) -> void:
+	if house == null:
+		_clear_preview()
+		return
+	var l := to_local_2d(p)
+	var it := {"kind": options["garden_kind"], "x": snappedf(l.x, 0.25), "z": snappedf(l.y, 0.25), "rot": float(options["garden_rot"])}
+	var r := GardenOps.item_rect(it)
+	var d := garden_def()
+	var ht := float(d.get("height", 2.2))
+	var y := _ground_y(r.get_center())
+	var kit := MeshKit.new()
+	_ghost_box(kit, r.position, r.end, y, y + ht, -1.0)
+	var msg := GardenOps._item_check(house.data, it, "")
+	_set_preview(kit, msg == "")
+	_show_label(_v3(r.get_center(), y + ht + 0.6), ("%s · £%d" % [d.get("name", ""), int(d.get("cost", 1))]) if msg == "" else msg, msg == "")
+
+
+func _garden_action(p: Vector3) -> Dictionary:
+	if house == null:
+		_say("Gardens go round a house. Build one first.", "warn")
+		return {}
+	var l := to_local_2d(p)
+	var kind := str(options["garden_kind"])
+	var rot := float(options["garden_rot"])
+	return {"label": "Add %s" % str(garden_def().get("name", kind)).to_lower(), "fn": func(h: HouseData) -> Dictionary: return GardenOps.place_item(h, kind, l, rot)}
+
+
+## The fence run a drag makes: from the start corner along the dominant axis.
+func _fence_run(p: Vector3) -> Array[Vector2i]:
+	var a := _corner(_drag.get("start", p))
+	var b := _corner(p)
+	if absi(b.x - a.x) >= absi(b.y - a.y):
+		b.y = a.y
+	else:
+		b.x = a.x
+	return [a, b]
+
+
+func _fence_preview(p: Vector3) -> void:
+	if house == null:
+		_clear_preview()
+		return
+	var kit := MeshKit.new()
+	var l := to_local_2d(p)
+	var mode := str(options["fence_mode"])
+	if mode == "gate":
+		var k := GardenOps.fence_at(house.data, l)
+		if k == "":
+			_show_cursor(p, true)
+			return
+		var pts := HouseData.edge_points(k)
+		var y := _ground_y(Vector2(pts[0]))
+		_ghost_wall(kit, Vector2(pts[0]), Vector2(pts[1]), y, 1.2)
+		_set_preview(kit, true)
+		_show_label(_v3(Vector2(pts[0] + pts[1]) * 0.5, y + 1.8), "Gate", true)
+		return
+	if _drag.is_empty():
+		_show_cursor(p, true)
+		return
+	var run := _fence_run(p)
+	var y2 := _ground_y(Vector2(run[0]))
+	var h := float((GardenOps.catalogue()["fences"] as Dictionary)[options["fence_type"]]["height"])
+	_ghost_wall(kit, Vector2(run[0]), Vector2(run[1]), y2, h)
+	_set_preview(kit, mode == "build")
+	var n := absi(run[1].x - run[0].x) + absi(run[1].y - run[0].y)
+	_show_label(_v3(Vector2(run[0] + run[1]) * 0.5, y2 + h + 0.6), ("%d m · £%d" % [n, n]) if mode == "build" else "Remove %d m" % n, mode == "build")
+
+
+func _fence_action(p: Vector3) -> Dictionary:
+	if house == null:
+		_say("Fences go round a house. Build one first.", "warn")
+		return {}
+	var mode := str(options["fence_mode"])
+	if mode == "gate":
+		var k := GardenOps.fence_at(house.data, to_local_2d(p))
+		if k == "":
+			return {}
+		return {"label": "Gate", "fn": func(h: HouseData) -> Dictionary: return GardenOps.toggle_gate(h, k)}
+	var run := _fence_run(p)
+	if run[0] == run[1]:
+		return {}
+	var type := str(options["fence_type"])
+	if mode == "remove":
+		return {"label": "Remove fence", "fn": func(h: HouseData) -> Dictionary: return GardenOps.remove_fence(h, run[0], run[1])}
+	return {"label": "Build fence", "confirm": true, "fn": func(h: HouseData) -> Dictionary: return GardenOps.set_fence(h, run[0], run[1], type)}
+
+
 # --- Actions ------------------------------------------------------------------------------------------
 
 ## What releasing the pointer here would do, as {label, fn, confirm} or a live edit to finish.
@@ -1789,6 +1997,12 @@ func _action_for(p: Vector3) -> Dictionary:
 			return _roof_action(p)
 		"verandah":
 			return _verandah_action(p)
+		"terrain":
+			return _terrain_action(p)
+		"garden":
+			return _garden_action(p)
+		"fence":
+			return _fence_action(p)
 		"stairs":
 			if house == null:
 				_say("Draw a room first.", "warn")
