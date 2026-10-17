@@ -143,6 +143,13 @@ func rel_label(a: String, b: String) -> String:
 
 
 func log_event(who: String, text: String) -> void:
+	# The same news twice in a day is still the same news.
+	for i in range(events.size() - 1, maxi(-1, events.size() - 30), -1):
+		var e: Dictionary = events[i]
+		if int(e["day"]) != day:
+			break
+		if str(e["who"]) == who and str(e["text"]) == text:
+			return
 	events.append({"day": day, "minute": minute, "who": who, "text": text})
 	if events.size() > 200:
 		events.pop_front()

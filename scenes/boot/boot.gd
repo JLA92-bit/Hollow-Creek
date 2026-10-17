@@ -16,7 +16,8 @@ func _ready() -> void:
 	var scenes := {"look_test": "res://scenes/world/look_test.tscn", "world": "res://scenes/world/world.tscn",
 		"build_demo": "res://scenes/build_ui/build_demo.tscn",
 		"sandbox_demo": "res://scenes/build_ui/sandbox_demo.tscn",
-		"construction_demo": "res://scenes/build_ui/construction_demo.tscn"}
+		"construction_demo": "res://scenes/build_ui/construction_demo.tscn",
+		"residents_demo": "res://scenes/resident_ui/residents_demo.tscn"}
 	if scenes.has(target):
 		_leaving = true
 		get_tree().change_scene_to_file.call_deferred(str(scenes[target]))

@@ -41,6 +41,7 @@ func _load(slot: String) -> void:
 
 func _new_game(mode: String) -> void:
 	GameState.reset()
+	SimHost.reset()
 	GameState.mode = mode
 	Clock.from_dict({"day": 0, "minute": 360})
 	get_tree().change_scene_to_file("res://scenes/world/world.tscn")

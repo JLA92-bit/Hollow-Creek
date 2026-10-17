@@ -45,6 +45,9 @@ jobs:
       - name: Construction demo (M4 furnishing, scores and building stages)
         run: timeout 1200 tools/bin/godot --headless --path . res://scenes/build_ui/construction_demo.tscn
 
+      - name: Residents demo (M5 move-ins, routines, wishes, rent)
+        run: timeout 1200 tools/bin/godot --headless --path . res://scenes/resident_ui/residents_demo.tscn
+
       - name: Export web build
         run: |
           mkdir -p build/web

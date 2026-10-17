@@ -21,6 +21,11 @@ var _toast_t := 0.0
 var _toolbar_panel: PanelContainer
 var _build_panel: BuildPanel
 var _money_label: Label
+var _people_label: Label
+var _trust_bar: ProgressBar
+var _trust_label: Label
+var _residents_list: ResidentsList
+var _resident_panel: ResidentPanel
 
 
 func _ready() -> void:
@@ -31,6 +36,7 @@ func _ready() -> void:
 	_top_bar(root)
 	_view_chips(root)
 	_toolbar(root)
+	_resident_panels(root)
 	_debug_panel(root)
 	_toast_panel(root)
 	EventBus.time_changed.connect(func(_d: int, _m: int) -> void: _refresh_date())
@@ -92,7 +98,9 @@ func _top_bar(root: Control) -> void:
 	var money_chip := _chip_label("£%s" % _money(GameState.money))
 	_money_label = money_chip.get_child(0) as Label
 	row.add_child(money_chip)
-	row.add_child(_chip_label("1 resident"))
+	var people_chip := _chip_label("1 resident")
+	_people_label = people_chip.get_child(0) as Label
+	row.add_child(people_chip)
 	var trust := HBoxContainer.new()
 	trust.add_theme_constant_override("separation", 8)
 	var tl := Label.new()
@@ -104,6 +112,7 @@ func _top_bar(root: Control) -> void:
 	bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	bar.show_percentage = false
 	bar.value = GameState.town_trust
+	_trust_bar = bar
 	var fill := StyleBoxFlat.new()
 	fill.bg_color = GREEN
 	fill.set_corner_radius_all(4)
@@ -111,6 +120,7 @@ func _top_bar(root: Control) -> void:
 	trust.add_child(bar)
 	var tv := Label.new()
 	tv.text = str(GameState.town_trust)
+	_trust_label = tv
 	tv.add_theme_font_size_override("font_size", 15)
 	trust.add_child(tv)
 	row.add_child(_wrap_chip(trust))
@@ -208,7 +218,11 @@ func _toolbar(root: Control) -> void:
 	for t in ["Roads", "Build", "Furnish", "Lights", "Residents", "Case file", "Photo"]:
 		var b := Button.new()
 		b.text = t
-		b.disabled = t not in ["Build", "Photo", "Furnish"]
+		b.disabled = t not in ["Build", "Photo", "Furnish", "Residents"]
+		if t == "Residents":
+			b.disabled = not SimHost.active
+			b.tooltip_text = "Residents (P)"
+			b.pressed.connect(toggle_residents)
 		if t == "Furnish":
 			b.tooltip_text = "Furnish (U in build mode)"
 			b.pressed.connect(func() -> void:
@@ -227,6 +241,51 @@ func _toolbar(root: Control) -> void:
 	_anchor.call_deferred(p, Control.PRESET_CENTER_BOTTOM, 16)
 
 
+## The Residents list (left) and the resident card (right).
+func _resident_panels(root: Control) -> void:
+	_residents_list = ResidentsList.new()
+	_residents_list.visible = false
+	root.add_child(_residents_list)
+	_residents_list.resident_chosen.connect(show_resident)
+	_residents_list.moved_in.connect(func(hid: String, res: Dictionary) -> void:
+		if res.is_empty():
+			return
+		var fam := "The %ss" % str(SimHost.sim.households[hid]["name"])
+		var why: Array = (res.get("pros", []) as Array) + (res.get("cons", []) as Array)
+		show_toast("%s moved in. %s%s" % [fam, HomeLife.VERDICTS[res["verdict"]]["say"], " " + ". ".join(PackedStringArray(why.slice(0, 2))) + "." if not why.is_empty() else ""]))
+	_anchor.call_deferred(_residents_list, Control.PRESET_TOP_LEFT, 16)
+	(func() -> void: _residents_list.offset_top += 86.0; _residents_list.offset_bottom += 86.0).call_deferred()
+	_resident_panel = ResidentPanel.new()
+	_resident_panel.visible = false
+	root.add_child(_resident_panel)
+	_resident_panel.closed.connect(func() -> void: world.call("select_resident", ""))
+	_resident_panel.follow.connect(func(rid: String) -> void: world.call("follow_resident", rid))
+	_anchor.call_deferred(_resident_panel, Control.PRESET_TOP_RIGHT, 16)
+	(func() -> void: _resident_panel.offset_top += 150.0; _resident_panel.offset_bottom += 150.0).call_deferred()
+
+
+## Turns on the buttons that need the town's residents once they're about.
+func _refresh_toolbar() -> void:
+	for b in _toolbar_panel.get_child(0).get_children():
+		if (b as Button).text == "Residents":
+			(b as Button).disabled = not SimHost.active
+
+
+func toggle_residents() -> void:
+	if _residents_list:
+		_residents_list.visible = not _residents_list.visible
+		if _residents_list.visible:
+			_residents_list.refresh()
+
+
+func show_resident(rid: String) -> void:
+	if rid == "":
+		_resident_panel.visible = false
+	else:
+		_resident_panel.show_resident(rid)
+	world.call("select_resident", rid)
+
+
 func _debug_panel(root: Control) -> void:
 	_debug = _panel(root)
 	_debug_label = Label.new()
@@ -239,6 +298,9 @@ func _debug_panel(root: Control) -> void:
 
 func set_build_mode(on: bool) -> void:
 	_toolbar_panel.visible = not on
+	if on:
+		_residents_list.visible = false
+		_resident_panel.visible = false
 	if on and _build_panel == null:
 		_build_panel = BuildPanel.new()
 		_build_panel.build = world.get("build")
@@ -283,6 +345,11 @@ func _refresh_speed() -> void:
 func _process(delta: float) -> void:
 	if _money_label:
 		_money_label.text = "Sandbox" if GameState.is_sandbox() else "£%s" % _money(GameState.money)
+	if _people_label:
+		var n := SimHost.living_count() if SimHost.active else 0
+		_people_label.text = "%d resident%s" % [n, "" if n == 1 else "s"]
+		_trust_bar.value = GameState.town_trust
+		_trust_label.text = str(GameState.town_trust)
 	if _toast.visible:
 		_toast_t -= delta
 		if _toast_t <= 0.0:

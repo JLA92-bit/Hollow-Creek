@@ -14,6 +14,8 @@ var houses: Dictionary = {}
 var construction: Dictionary = {}
 ## Building crews in the town (docs/GAME_DESIGN.md: two to start).
 var crews: int = 2
+## Each home's history card: house id -> [{day, text}] (HomeLife.record).
+var history: Dictionary = {}
 
 
 ## The autosave slot for this kind of game: story and sandbox saves are kept apart.
@@ -31,7 +33,7 @@ static func version() -> String:
 
 func to_dict() -> Dictionary:
 	return {"mode": mode, "money": money, "town_trust": town_trust, "seed": seed_value, "houses": houses.duplicate(true),
-		"construction": construction.duplicate(true), "crews": crews}
+		"construction": construction.duplicate(true), "crews": crews, "history": history.duplicate(true)}
 
 
 func from_dict(d: Dictionary) -> void:
@@ -42,6 +44,7 @@ func from_dict(d: Dictionary) -> void:
 	houses = (d.get("houses", {}) as Dictionary).duplicate(true)
 	construction = (d.get("construction", {}) as Dictionary).duplicate(true)
 	crews = int(d.get("crews", 2))
+	history = (d.get("history", {}) as Dictionary).duplicate(true)
 
 
 func reset() -> void:
@@ -50,4 +53,5 @@ func reset() -> void:
 	town_trust = 50
 	houses.clear()
 	construction.clear()
+	history.clear()
 	crews = 2

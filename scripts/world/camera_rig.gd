@@ -101,6 +101,11 @@ func _update_camera() -> void:
 		view_changed.emit(f)
 
 
+## Glides the focus towards a point (following a resident), keeping the angle and distance.
+func follow_point(p: Vector3) -> void:
+	_t_focus = p
+
+
 func _pan(screen_delta: Vector2) -> void:
 	var ry := deg_to_rad(yaw)
 	var right := Vector3(cos(ry), 0, sin(ry))

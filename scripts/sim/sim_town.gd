@@ -161,17 +161,25 @@ func _add_house_places(h: HouseData) -> void:
 		var pid := "%s:%s" % [h.id, ob.get("id", "o%d" % n)]
 		n += 1
 		var item := Catalogue.id_of(ob)
+		# Where a figure goes to use it (drawing only): lying on a bed, sitting on a seat, standing at the front of anything else.
+		var a := deg_to_rad(float(ob.get("rot", 0.0)))
+		var fwd := Vector2(sin(a), cos(a))
+		var depth := float((it.get("size", [0.5, 0.5]) as Array)[1])
+		var pose := "lie" if int(it.get("sleeps", 0)) > 0 else "sit" if str(it.get("function", "")) == "seating" else "stand"
+		var off := 0.05 if pose != "stand" else depth * 0.5 + 0.3
+		var look := {"pose": pose, "stand": [l, float(at[1]) + fwd.x * off, float(at[2]) + fwd.y * off],
+			"face": a if pose != "stand" else atan2(-fwd.x, -fwd.y)}
 		if int(it.get("sleeps", 0)) > 0:
-			_add_place(pid, "bed", h.id, at, {"energy": 100.0}, 0, int(it["sleeps"]))
+			_add_place(pid, "bed", h.id, at, {"energy": 100.0}, 0, int(it["sleeps"]), look)
 			(home["beds"] as Array).append(pid)
 		elif item == "wood_stove":
-			_add_place(pid, "cook", h.id, at, {"hunger": 70.0}, 40, 2)
+			_add_place(pid, "cook", h.id, at, {"hunger": 70.0}, 40, 2, look)
 		elif item == "icebox":
-			_add_place(pid, "snack", h.id, at, {"hunger": 25.0}, 10, 2)
+			_add_place(pid, "snack", h.id, at, {"hunger": 25.0}, 10, 2, look)
 		elif item == "wireless_set":
-			_add_place(pid, "wireless", h.id, at, {"fun": 35.0, "social": 5.0}, 60, 4)
+			_add_place(pid, "wireless", h.id, at, {"fun": 35.0, "social": 5.0}, 60, 4, look)
 		elif str(it.get("function", "")) == "seating" and int(Catalogue.item(item).get("scores", {}).get("comfort", 0)) >= 3:
-			_add_place(pid, "sit", h.id, at, {"fun": 12.0, "energy": 5.0}, 40, 2)
+			_add_place(pid, "sit", h.id, at, {"fun": 12.0, "energy": 5.0}, 40, 2, look)
 	for f: Dictionary in h.fixtures:
 		if str(f.get("kind", "")) == "stove":
 			_add_place("%s:stove" % h.id, "cook", h.id, [0, float(f["x"]) + o.x, float(f["z"]) + o.y], {"hunger": 70.0}, 40, 2)

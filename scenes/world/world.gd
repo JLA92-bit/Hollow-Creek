@@ -39,6 +39,9 @@ var _orig_ground: PackedByteArray
 var _landscape_sig := ""
 var photo_mode := false
 var _work_cache: Dictionary = {}  ## house id -> Construction work list for its current plan
+var residents: ResidentViews
+var _follow := ""
+var _press_at := Vector2(-1, -1)
 var _photo_layer: CanvasLayer
 var _photo_bar: PanelContainer
 
@@ -113,9 +116,56 @@ func _ready() -> void:
 		Clock.set_minute(9 * 60 + 20)
 	day.apply(Clock.minute_f())
 	_update_house_lighting()
+	if not look_test and not GameState.is_sandbox():
+		_start_residents()
 	ready_to_play.emit()
 	if not look_test and UrlParams.read().get("build", "") == "1":
 		enter_build_mode.call_deferred()
+
+
+## The town's life: the sim gets its walk graph from this valley, and its people are drawn here.
+func _start_residents() -> void:
+	SimHost.start(self)
+	residents = ResidentViews.new()
+	residents.name = "Residents"
+	residents.houses = houses
+	residents.height_fn = slice.grid.height_at
+	residents.lod = 1 if quality == "low" else 0
+	add_child(residents)
+	if hud:
+		hud.call("_refresh_toolbar")
+
+
+func _exit_tree() -> void:
+	SimHost.stop()
+
+
+func select_resident(rid: String) -> void:
+	if residents:
+		residents.selected = rid
+	if rid == "" or rid != _follow:
+		_follow = ""
+
+
+func follow_resident(rid: String) -> void:
+	_follow = rid
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if residents == null or building or photo_mode:
+		return
+	var mb := event as InputEventMouseButton
+	if mb == null or mb.button_index != MOUSE_BUTTON_LEFT:
+		return
+	if mb.pressed:
+		_press_at = mb.position
+		return
+	if _press_at.distance_to(mb.position) > 8.0:
+		return
+	var cam := rig.camera
+	var rid := residents.pick(cam.project_ray_origin(mb.position), cam.project_ray_normal(mb.position))
+	if rid != "" and hud:
+		hud.show_resident(rid)
 
 
 func _build_houses() -> void:
@@ -178,6 +228,7 @@ func remove_house(id: String) -> void:
 	GameState.houses.erase(id)
 	GameState.construction.erase(id)
 	_work_cache.erase(id)
+	SimHost.rebuild_town()
 	apply_landscape()
 	request_autosave()
 
@@ -310,6 +361,8 @@ func _on_minute(day: int, minute: int) -> void:
 			GameState.construction.erase(id)
 			_work_cache.erase(id)
 			hv.refresh_display()
+			HomeLife.record(GameState.history, id, day, "Built by the town's crews (%s work)." % hv.data.quality)
+			SimHost.rebuild_town()
 			if hud:
 				hud.show_toast("%s is finished." % hv.data.name)
 		else:
@@ -384,6 +437,8 @@ func set_quality(name: String) -> void:
 	terrain.set_detail(bool(quality_preset["terrain_detail"]))
 	vegetation.set_detail(bool(quality_preset["tufts"]))
 	rain.set_amount(500 if name == "low" else (1000 if name == "medium" else 1600))
+	if residents:
+		residents.set_lod(1 if name == "low" else 0)
 	_update_house_lighting()
 
 
@@ -425,7 +480,9 @@ func _process(delta: float) -> void:
 	day.apply(Clock.minute_f())
 	terrain.set_rain_wetness(rain.wetness)
 	creek.set_rain(rain.intensity)
-	_sim_ms = (Time.get_ticks_usec() - t0) / 1000.0
+	if _follow != "" and residents:
+		rig.follow_point(residents.position_of(_follow))
+	_sim_ms = (Time.get_ticks_usec() - t0) / 1000.0 + SimHost.tick_ms
 	if _autosave_t > 0.0:
 		_autosave_t -= delta
 		if _autosave_t <= 0.0:
@@ -478,6 +535,9 @@ func _unhandled_key_input(event: InputEvent) -> void:
 				hud.toggle_debug()
 		KEY_F2:
 			toggle_photo_mode()
+		KEY_P:
+			if hud and residents:
+				hud.toggle_residents()
 
 
 # --- Photo mode ----------------------------------------------------------------------------------
