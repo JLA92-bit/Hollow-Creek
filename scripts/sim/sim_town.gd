@@ -17,11 +17,15 @@ var _ids: Dictionary = {}       ## "level,x,z" -> point id (level -1000-based ke
 var places: Array[Dictionary] = []
 var homes: Dictionary = {}      ## house id -> {house_id, door: [level, x, z], living: [..], beds: [place ids]}
 var landmark_tiles: Dictionary = {}  ## landmark id -> [level, x, z]
+var grid: WorldGrid                 ## the valley floor (ground types, for bootprints)
+var sight: SightMap                 ## what blocks the eye, rooms, windows and lamps (memories, light)
 
 
 static func build(grid: WorldGrid, houses: Array, landmarks: Array = [], creek_points: PackedVector2Array = PackedVector2Array()) -> SimTown:
 	var t := SimTown.new()
 	t._build(grid, houses, landmarks, creek_points)
+	t.grid = grid
+	t.sight = SightMap.build(grid, houses)
 	return t
 
 

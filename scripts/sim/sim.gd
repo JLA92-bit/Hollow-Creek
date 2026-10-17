@@ -39,6 +39,12 @@ var secrets: Dictionary = {}
 var home_scores: Dictionary = {}   ## house id -> average home score (0 to 100), for mood
 var events: Array = []             ## recent notable things, newest last: {day, minute, who, text}
 var wishes: Dictionary = {}        ## id -> {owner, household, text, since (day, or -1 while homeless), met (day or -1), nagged}
+var incidents: Array = []          ## {id, tile: [x, y], from, to (ticks), label}: anyone near during the window is notable
+var next_memory: int = 0
+var raining := false               ## set by the host from the weather
+var rain_minutes: int = 0          ## minutes of rain so far (bootprints wash out after 6 hours of it)
+var _light: LightGrid
+var _light_tick := -1
 var collected: int = 0             ## rent paid to the town and not yet banked by the host
 var trust_change: int = 0          ## Town Trust earned or lost and not yet banked by the host
 
@@ -175,6 +181,10 @@ func tick() -> void:
 		_decay(r)
 		_step(r)
 	_socialise(ids)
+	if raining:
+		rain_minutes += 1
+	if town.sight != null:
+		Memories.observe(self)
 
 
 func run_ticks(n: int) -> void:
@@ -460,6 +470,8 @@ func _chat(a: Dictionary, b: Dictionary) -> void:
 	r["friendship"] = q(clampf(float(r["friendship"]) + gain, -100.0, 100.0))
 	if float(r["romance"]) >= 30.0:
 		r["romance"] = q(clampf(float(r["romance"]) + 0.01, 0.0, 100.0))
+	if (a["traits"] as Array).has("gossip"):
+		Memories.gossip(self, a, b)
 
 
 func _grievance_weight(owner: String, target: String) -> float:
@@ -484,6 +496,7 @@ func _new_day() -> void:
 		if float(g["weight"]) > 0.0:
 			keep.append(g)
 	grievances = keep
+	Memories.decay(self)
 	if posmod(day, 7) == 0:
 		weekly_economy()
 
@@ -507,6 +520,33 @@ func weekly_economy() -> void:
 		collected += rent_w
 		h["money"] = q(float(h["money"]) + income - 3.0 - members * 1.5 - rent_w)
 		h["last_week"] = {"income": income, "costs": 3.0 + members * 1.5 + rent_w, "rent": rent_w}
+
+
+# --- Light and incidents ----------------------------------------------------------------------
+
+## The logical light this minute: rooms with their lamps lit where somebody's awake in them.
+func light_now() -> LightGrid:
+	if _light != null and _light_tick == ticks:
+		return _light
+	var occupied := {}
+	var ids := residents.keys()
+	ids.sort()
+	for rid: String in ids:
+		var r: Dictionary = residents[rid]
+		if r["status"] != "living" or (r["pos"] as Array).is_empty() or int(r["pos"][0]) != 0 or not Memories.state(r)["awake"]:
+			continue
+		var room := town.sight.room_at(Memories.tile_of(r))
+		if room != "":
+			occupied[room] = true
+	_light = LightGrid.compute(town.sight, day, minute, raining, occupied)
+	_light_tick = ticks
+	return _light
+
+
+## Something happening at a place for a while (the crime director's doing, or a scripted event):
+## anyone seen within 9 m of it in that time is remembered as being there.
+func add_incident(id: String, tile: Vector2i, minutes: int, label: String) -> void:
+	incidents.append({"id": id, "tile": [tile.x, tile.y], "from": ticks, "to": ticks + minutes, "label": label})
 
 
 # --- Homes -----------------------------------------------------------------------------------------
@@ -579,7 +619,8 @@ func snapshot() -> Dictionary:
 	return {"seed": seed_value, "ticks": ticks, "rng": rng.snapshot(), "day": day, "minute": minute,
 		"residents": residents.duplicate(true), "households": households.duplicate(true), "relationships": relationships.duplicate(true),
 		"grievances": grievances.duplicate(true), "secrets": secrets.duplicate(true), "events": events.duplicate(true), "home_scores": home_scores.duplicate(),
-		"wishes": wishes.duplicate(true), "collected": collected, "trust_change": trust_change}
+		"wishes": wishes.duplicate(true), "collected": collected, "trust_change": trust_change,
+		"incidents": incidents.duplicate(true), "next_memory": next_memory, "raining": raining, "rain_minutes": rain_minutes}
 
 
 func restore(d: Dictionary) -> void:
@@ -598,3 +639,8 @@ func restore(d: Dictionary) -> void:
 	wishes = (d.get("wishes", {}) as Dictionary).duplicate(true)
 	collected = int(d.get("collected", 0))
 	trust_change = int(d.get("trust_change", 0))
+	incidents = (d.get("incidents", []) as Array).duplicate(true)
+	next_memory = int(d.get("next_memory", 0))
+	raining = bool(d.get("raining", false))
+	rain_minutes = int(d.get("rain_minutes", 0))
+	_light = null
