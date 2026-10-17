@@ -3,6 +3,7 @@ extends Node3D
 ## Built from data at runtime so the grid stays the source of truth.
 
 signal ready_to_play
+signal photo_taken(file: String)
 
 const COTTAGE_ID := "lm_agnes_cottage"
 
@@ -36,6 +37,9 @@ var _sim_ms := 0.0
 var _orig_heights: PackedFloat32Array
 var _orig_ground: PackedByteArray
 var _landscape_sig := ""
+var photo_mode := false
+var _photo_layer: CanvasLayer
+var _photo_bar: PanelContainer
 
 
 func _ready() -> void:
@@ -320,7 +324,7 @@ func _process(delta: float) -> void:
 	if _autosave_t > 0.0:
 		_autosave_t -= delta
 		if _autosave_t <= 0.0:
-			SaveSystem.save_slot("autosave")
+			SaveSystem.save_slot(GameState.save_slot())
 	if _benchmarking:
 		_bench_time += delta
 		if _bench_time > 0.5:
@@ -332,6 +336,13 @@ func _process(delta: float) -> void:
 func _unhandled_key_input(event: InputEvent) -> void:
 	var k := event as InputEventKey
 	if k == null or not k.pressed or k.echo:
+		return
+	if photo_mode:
+		if k.keycode == KEY_ESCAPE or k.keycode == KEY_F2:
+			toggle_photo_mode()
+		elif k.keycode == KEY_ENTER or k.keycode == KEY_KP_ENTER:
+			take_photo()
+		get_viewport().set_input_as_handled()
 		return
 	match k.keycode:
 		KEY_B:
@@ -360,6 +371,68 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		KEY_F3:
 			if hud:
 				hud.toggle_debug()
+		KEY_F2:
+			toggle_photo_mode()
+
+
+# --- Photo mode ----------------------------------------------------------------------------------
+
+## Hides the interface for a clean view. Enter or the shutter button takes a picture; Esc returns.
+func toggle_photo_mode() -> void:
+	photo_mode = not photo_mode
+	if hud:
+		hud.visible = not photo_mode
+	if building:
+		build.active = not photo_mode
+		build.call("_clear_preview")
+	if photo_mode:
+		if _photo_layer == null:
+			_photo_layer = CanvasLayer.new()
+			_photo_layer.layer = 5
+			add_child(_photo_layer)
+			var bar := PanelContainer.new()
+			var row := HBoxContainer.new()
+			row.add_theme_constant_override("separation", 8)
+			bar.add_child(row)
+			var snap := Button.new()
+			snap.text = "Take photo"
+			snap.theme_type_variation = &"PrimaryButton"
+			snap.custom_minimum_size = Vector2(130, 46)
+			snap.focus_mode = Control.FOCUS_NONE
+			snap.pressed.connect(take_photo)
+			row.add_child(snap)
+			var back := Button.new()
+			back.text = "Done"
+			back.custom_minimum_size = Vector2(90, 46)
+			back.focus_mode = Control.FOCUS_NONE
+			back.pressed.connect(toggle_photo_mode)
+			row.add_child(back)
+			_photo_layer.add_child(bar)
+			bar.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM, Control.PRESET_MODE_MINSIZE, 16)
+			_photo_bar = bar
+		_photo_layer.visible = true
+	elif _photo_layer:
+		_photo_layer.visible = false
+
+
+## Saves what's on screen, without the interface, as a PNG: downloaded on the web, or written to
+## user://screenshots elsewhere. Returns the file name.
+func take_photo() -> String:
+	if _photo_layer:
+		_photo_layer.visible = false
+	await RenderingServer.frame_post_draw
+	var img := get_viewport().get_texture().get_image()
+	if _photo_layer and photo_mode:
+		_photo_layer.visible = true
+	var stamp := Time.get_datetime_string_from_system().replace(":", "-").replace("T", "_")
+	var file := "hollow-creek_%s.png" % stamp
+	if OS.has_feature("web"):
+		JavaScriptBridge.download_buffer(img.save_png_to_buffer(), file, "image/png")
+	else:
+		DirAccess.make_dir_recursive_absolute("user://screenshots")
+		img.save_png("user://screenshots/%s" % file)
+	photo_taken.emit(file)
+	return file
 
 
 func sim_ms() -> float:

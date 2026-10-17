@@ -64,6 +64,9 @@ var _touches: Dictionary = {}
 var _hover_world := Vector3.ZERO
 var _house_counter := 1
 var _walls_before := ""
+## A design waiting to be placed (from the library or a share code), and its name.
+var placing: HouseData = null
+var placing_name := ""
 
 
 func _ready() -> void:
@@ -289,7 +292,9 @@ func _key(k: InputEventKey) -> void:
 	elif k.ctrl_pressed and k.keycode == KEY_Y:
 		do_redo()
 	elif k.keycode == KEY_ESCAPE:
-		if not _drag.is_empty() or not _pending.is_empty():
+		if placing != null:
+			cancel_placing()
+		elif not _drag.is_empty() or not _pending.is_empty():
 			_cancel()
 		else:
 			selection.clear()
@@ -320,6 +325,9 @@ func _key(k: InputEventKey) -> void:
 func _press(screen: Vector2, shift: bool, alt: bool) -> void:
 	if not _pending.is_empty():
 		_cancel()
+	if placing != null:
+		_drag = {"start": pick(screen), "screen": screen, "shift": false, "alt": false, "moved": false, "ctrl": false}
+		return
 	var p := pick(screen)
 	var target := _house_at(p)
 	if target != null and target.data.locked:
@@ -361,6 +369,9 @@ func _move(screen: Vector2, alt: bool = false) -> void:
 		_drag["moved"] = true
 	if not _drag.is_empty():
 		_drag["last_screen"] = screen
+	if placing != null:
+		_place_preview(p)
+		return
 	match tool:
 		"room":
 			_room_preview(p)
@@ -486,6 +497,7 @@ func _commit(label: String, fn: Callable, new_house: bool = false, origin: Vecto
 	if new_house:
 		house = world.call("add_house", h) as HouseView
 		_house_counter += 1
+		placing = null
 		_apply_view()
 	else:
 		house.replace_data(h, before)
@@ -1798,6 +1810,66 @@ func set_trim(colour: String) -> void:
 	_commit("Trim colour", func(h: HouseData) -> Dictionary: return BuildOps.set_exterior(h, {"trim": colour}))
 
 
+# --- Placing designs ------------------------------------------------------------------------------------
+
+## Starts placing a design from the library or a share code: it follows the pointer until clicked.
+func start_placing(h: HouseData, label: String) -> void:
+	_cancel()
+	selection.clear()
+	placing = h
+	placing_name = label if label != "" else (h.name if h.name != "" else "the design")
+	house = null
+	level = 0
+	_apply_view()
+	_say("Click where %s should go. Esc cancels." % placing_name, "hint")
+	changed.emit()
+
+
+func cancel_placing() -> void:
+	placing = null
+	_clear_preview()
+	_say(HINTS.get(tool, ""), "hint")
+	changed.emit()
+
+
+func _place_origin(p: Vector3) -> Vector2i:
+	var b := placing.bounds()
+	return Vector2i(roundi(p.x), roundi(p.z)) - (b.position + b.size / 2)
+
+
+func _place_preview(p: Vector3) -> void:
+	var b := placing.bounds()
+	var o := _place_origin(p)
+	var rect := Rect2i(o + b.position, b.size)
+	var check := _world_check(rect)
+	var grid: WorldGrid = world.get("slice").grid
+	var y := grid.height_at(rect.get_center().x, rect.get_center().y)
+	var kit := MeshKit.new()
+	_ghost_box(kit, Vector2(rect.position), Vector2(rect.end), y, y + 3.2, -1.0)
+	var lot := Rect2(rect).grow(0.0)
+	for e: Array in [[lot.position, Vector2(lot.end.x, lot.position.y)], [Vector2(lot.end.x, lot.position.y), lot.end], [lot.end, Vector2(lot.position.x, lot.end.y)], [Vector2(lot.position.x, lot.end.y), lot.position]]:
+		_ghost_wall(kit, e[0], e[1], y, 0.1)
+	_set_preview(kit, check == "")
+	var cost := ShareCode.estimate_cost(placing)
+	var text := check if check != "" else ("Place %s%s" % [placing_name, "" if GameState.is_sandbox() else " · about £%d" % cost])
+	_show_label(Vector3(rect.get_center().x, y + 4.0, rect.get_center().y), text, check == "")
+
+
+func _place_action(p: Vector3) -> Dictionary:
+	var b := placing.bounds()
+	var o := _place_origin(p)
+	var check := _world_check(Rect2i(o + b.position, b.size))
+	if check != "":
+		_say(check, "warn")
+		sfx.play("error")
+		return {}
+	var design := placing
+	var cost := ShareCode.estimate_cost(design)
+	return {"label": "Place %s" % placing_name, "confirm": true, "new_house": true, "origin": o, "fn": func(h: HouseData) -> Dictionary:
+		ShareCode.apply_to(h, design)
+		return BuildOps.ok(cost)}
+
+
 # --- Terrain, garden and fences ------------------------------------------------------------------------
 
 ## Ground height at a lot corner, relative to the house's base (the house's own edits first).
@@ -1982,6 +2054,8 @@ func _fence_action(p: Vector3) -> Dictionary:
 
 ## What releasing the pointer here would do, as {label, fn, confirm} or a live edit to finish.
 func _action_for(p: Vector3) -> Dictionary:
+	if placing != null:
+		return _place_action(p)
 	match tool:
 		"room":
 			return _room_action(p)

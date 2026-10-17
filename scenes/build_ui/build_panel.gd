@@ -32,6 +32,9 @@ var _undo_btn: Button
 var _redo_btn: Button
 var _confirm_btn: Button
 var _cancel_btn: Button
+var _dialog: PanelContainer
+var _dialog_box: VBoxContainer
+var _awaiting_file := false
 
 
 func _ready() -> void:
@@ -204,7 +207,9 @@ func _actions() -> void:
 	_undo_btn = _button("Undo", func() -> void: build.do_undo(), 80)
 	_redo_btn = _button("Redo", func() -> void: build.do_redo(), 80)
 	var done := _button("Done", func() -> void: world.call("exit_build_mode"), 90, true)
-	for b in [_cancel_btn, _confirm_btn, _undo_btn, _redo_btn, done]:
+	var photo := _button("Photo", func() -> void: world.call("toggle_photo_mode"), 80)
+	photo.tooltip_text = "Photo mode (F2)"
+	for b in [_cancel_btn, _confirm_btn, _undo_btn, _redo_btn, photo, done]:
 		row.add_child(b)
 
 
@@ -821,7 +826,8 @@ func _fill_house() -> void:
 		l.add_theme_font_size_override("font_size", 22)
 		l.text = "New house"
 		_house_box.add_child(l)
-		_house_box.add_child(_text("Use the Room tool on open ground to start.", 14, SECONDARY))
+		_house_box.add_child(_text("Use the Room tool on open ground to start, or place a design from the library.", 14, SECONDARY))
+		_house_box.add_child(_button("Library", open_library, 120))
 		return
 	var h := hv.data
 	var title := _row()
@@ -861,6 +867,10 @@ func _fill_house() -> void:
 	frow.add_child(_toggle("Slab", f.get("type", "stumps") == "slab", func() -> void:
 		build.call("_commit", "Concrete slab", func(d: HouseData) -> Dictionary: return BuildOps.set_foundation(d, "slab", 0.15)), 70))
 	_house_box.add_child(frow)
+	var share_row := _row()
+	share_row.add_child(_button("Share", open_share, 90))
+	share_row.add_child(_button("Library", open_library, 90))
+	_house_box.add_child(share_row)
 	# Validation hints.
 	var hints := h.validate()
 	if hints.is_empty():
@@ -870,6 +880,194 @@ func _fill_house() -> void:
 			_house_box.add_child(_text(hint, 14, MAROON))
 		if hints.size() > 4:
 			_house_box.add_child(_text("and %d more." % (hints.size() - 4), 13, SECONDARY))
+
+
+# --- Share and library dialogs -------------------------------------------------------------------
+
+func _open_dialog(title: String) -> VBoxContainer:
+	_close_dialog()
+	_dialog = PanelContainer.new()
+	_dialog.custom_minimum_size = Vector2(560, 0)
+	add_child(_dialog)
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 10)
+	_dialog.add_child(box)
+	var head := _row()
+	var tl := Label.new()
+	tl.theme_type_variation = &"HeadingLabel"
+	tl.add_theme_font_size_override("font_size", 24)
+	tl.text = title
+	tl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	head.add_child(tl)
+	head.add_child(_button("Close", _close_dialog, 90))
+	box.add_child(head)
+	_dialog_box = box
+	_center_dialog.call_deferred()
+	return box
+
+
+func _center_dialog() -> void:
+	if _dialog:
+		_dialog.set_anchors_and_offsets_preset(Control.PRESET_CENTER, Control.PRESET_MODE_MINSIZE)
+
+
+func _close_dialog() -> void:
+	if _dialog:
+		_dialog.queue_free()
+		_dialog = null
+
+
+func _code_box(code: String, editable: bool) -> TextEdit:
+	var te := TextEdit.new()
+	te.text = code
+	te.editable = editable
+	te.wrap_mode = TextEdit.LINE_WRAPPING_BOUNDARY
+	te.custom_minimum_size = Vector2(0, 110)
+	te.add_theme_font_override("font", load("res://assets/fonts/CourierPrime-Regular.ttf") as Font)
+	te.add_theme_font_size_override("font_size", 12)
+	return te
+
+
+## Shows the edited house's share code with copy, .hollow download and save-to-library.
+func open_share() -> void:
+	if build.house == null:
+		return
+	var h := build.house.data
+	var code := ShareCode.encode(h)
+	var box := _open_dialog("Share %s" % h.name)
+	box.add_child(_text("Anyone can paste this code into their own Hollow Creek to build a copy, garden and all.", 14, SECONDARY))
+	box.add_child(_code_box(code, false))
+	var row := _row()
+	row.add_child(_button("Copy code", func() -> void:
+		DisplayServer.clipboard_set(code)
+		build.call("_say", "Share code copied (%d characters)." % code.length(), "done"), 130, true))
+	row.add_child(_button("Save .hollow file", func() -> void: _save_hollow(h.name, code), 170))
+	box.add_child(row)
+	_caps_into(box, "Save to your library")
+	var name_row := _row()
+	var name_edit := LineEdit.new()
+	name_edit.text = h.name
+	name_edit.custom_minimum_size = Vector2(300, 44)
+	name_row.add_child(name_edit)
+	name_row.add_child(_button("Save", func() -> void:
+		var file := Blueprints.save(name_edit.text.strip_edges() if name_edit.text.strip_edges() != "" else h.name, h)
+		build.call("_say", "Saved to the library." if file != "" else "Couldn't save that.", "done" if file != "" else "warn")
+		_close_dialog(), 90))
+	box.add_child(name_row)
+
+
+func _caps_into(box: Container, text: String) -> void:
+	box.add_child(_caps(text))
+
+
+func _save_hollow(name: String, code: String) -> void:
+	var file := "%s.%s" % [Blueprints._safe(name), ShareCode.FILE_EXT]
+	if OS.has_feature("web"):
+		JavaScriptBridge.download_buffer(code.to_utf8_buffer(), file, "text/plain")
+		build.call("_say", "Downloading %s." % file, "done")
+		return
+	DirAccess.make_dir_recursive_absolute(Blueprints.DIR)
+	var f := FileAccess.open("%s/%s" % [Blueprints.DIR, file], FileAccess.WRITE)
+	if f:
+		f.store_string(code)
+		f.close()
+		build.call("_say", "Saved %s in %s." % [file, ProjectSettings.globalize_path(Blueprints.DIR)], "done")
+
+
+## The blueprint library: saved designs to place, copy or delete, and importing a code or file.
+func open_library() -> void:
+	var box := _open_dialog("Blueprint library")
+	var entries := Blueprints.list()
+	if entries.is_empty():
+		box.add_child(_text("Nothing saved yet. Use Share on a house to save it here.", 14, SECONDARY))
+	else:
+		var scroll := ScrollContainer.new()
+		scroll.custom_minimum_size = Vector2(0, mini(entries.size(), 4) * 56)
+		scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+		var list := VBoxContainer.new()
+		list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		scroll.add_child(list)
+		for e: Dictionary in entries:
+			var row := _row()
+			var l := _text("%s · %d rooms · %s" % [e["name"], int(e.get("rooms", 0)), e.get("saved", "")], 15)
+			l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			l.autowrap_mode = TextServer.AUTOWRAP_OFF
+			l.clip_text = true
+			row.add_child(l)
+			var file := str(e["file"])
+			var code := str(e["code"])
+			var nm := str(e["name"])
+			row.add_child(_button("Place", func() -> void:
+				var d := ShareCode.decode(code)
+				if d != null:
+					_close_dialog()
+					build.start_placing(d, nm), 80, true))
+			row.add_child(_button("Copy", func() -> void: DisplayServer.clipboard_set(code), 70))
+			row.add_child(_button("Delete", func() -> void:
+				Blueprints.remove(file)
+				open_library(), 80))
+			list.add_child(row)
+		box.add_child(scroll)
+	_caps_into(box, "Import a share code")
+	var te := _code_box("", true)
+	te.placeholder_text = "Paste a HOLLOW1 code here"
+	box.add_child(te)
+	var row2 := _row()
+	row2.add_child(_button("Place it", func() -> void: _import_code(te.text, false), 110, true))
+	row2.add_child(_button("Save to library", func() -> void: _import_code(te.text, true), 150))
+	row2.add_child(_button("Open .hollow file", _open_hollow_file, 170))
+	box.add_child(row2)
+
+
+func _import_code(code: String, keep: bool) -> void:
+	var d := ShareCode.decode(code)
+	if d == null:
+		build.call("_say", "That code doesn't read right. Check it was copied in full.", "warn")
+		return
+	if keep:
+		Blueprints.save(d.name if d.name != "" else "Imported house", d)
+		open_library()
+		return
+	_close_dialog()
+	build.start_placing(d, d.name)
+
+
+func _open_hollow_file() -> void:
+	if OS.has_feature("web"):
+		JavaScriptBridge.eval("""
+			window.hcImport = null;
+			var input = document.createElement('input');
+			input.type = 'file';
+			input.accept = '.hollow,.txt';
+			input.onchange = function (e) {
+				var f = e.target.files[0];
+				if (!f) { return; }
+				var reader = new FileReader();
+				reader.onload = function () { window.hcImport = String(reader.result); };
+				reader.readAsText(f);
+			};
+			input.click();
+		""", true)
+		_awaiting_file = true
+		return
+	var fd := FileDialog.new()
+	fd.file_mode = FileDialog.FILE_MODE_OPEN_FILE
+	fd.access = FileDialog.ACCESS_FILESYSTEM
+	fd.filters = PackedStringArray(["*.hollow ; Hollow Creek designs"])
+	fd.file_selected.connect(func(path: String) -> void:
+		_import_code(FileAccess.get_file_as_string(path), false)
+		fd.queue_free())
+	add_child(fd)
+	fd.popup_centered(Vector2i(800, 500))
+
+
+func _process(_delta: float) -> void:
+	if _awaiting_file and OS.has_feature("web"):
+		var v: Variant = JavaScriptBridge.eval("window.hcImport || ''", true)
+		if v is String and (v as String) != "":
+			_awaiting_file = false
+			JavaScriptBridge.eval("window.hcImport = null;", true)
+			_import_code(v as String, false)
 
 
 func _room_count(h: HouseData) -> int:

@@ -12,6 +12,15 @@ var seed_value: int = 1952
 var houses: Dictionary = {}
 
 
+## The autosave slot for this kind of game: story and sandbox saves are kept apart.
+func save_slot() -> String:
+	return "sandbox" if mode == MODE_SANDBOX else "autosave"
+
+
+func is_sandbox() -> bool:
+	return mode == MODE_SANDBOX
+
+
 static func version() -> String:
 	return str(ProjectSettings.get_setting("application/config/version", "0.0.0"))
 

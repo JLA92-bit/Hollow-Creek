@@ -205,10 +205,13 @@ func _toolbar(root: Control) -> void:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
 	p.add_child(row)
-	for t in ["Roads", "Build", "Furnish", "Lights", "Residents", "Case file"]:
+	for t in ["Roads", "Build", "Furnish", "Lights", "Residents", "Case file", "Photo"]:
 		var b := Button.new()
 		b.text = t
-		b.disabled = t != "Build"
+		b.disabled = t not in ["Build", "Photo"]
+		if t == "Photo":
+			b.tooltip_text = "Photo mode (F2)"
+			b.pressed.connect(func() -> void: world.call("toggle_photo_mode"))
 		b.custom_minimum_size = Vector2(80, 48)
 		b.add_theme_font_size_override("font_size", 15)
 		if t == "Build":
@@ -274,7 +277,7 @@ func _refresh_speed() -> void:
 
 func _process(delta: float) -> void:
 	if _money_label:
-		_money_label.text = "£%s" % _money(GameState.money)
+		_money_label.text = "Sandbox" if GameState.is_sandbox() else "£%s" % _money(GameState.money)
 	if _toast.visible:
 		_toast_t -= delta
 		if _toast_t <= 0.0:
