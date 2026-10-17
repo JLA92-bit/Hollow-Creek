@@ -69,8 +69,40 @@ func _mouse_move(pos: Vector2, shift: bool = false) -> void:
 	_send(ev)
 
 
+## Rectangles of the interface panels that would catch clicks.
+func _panel_rects() -> Array[Rect2]:
+	var out: Array[Rect2] = []
+	var hud: Node = world.get("hud")
+	if hud == null:
+		return out
+	for c in hud.find_children("*", "PanelContainer", true, false):
+		var ctl := c as Control
+		if ctl.is_visible_in_tree():
+			out.append(ctl.get_global_rect().grow(8.0))
+	return out
+
+
+## Like a player would, pull the camera back until the points to click are clear of the panels.
+func _ensure_clear(points: Array[Vector2]) -> void:
+	for attempt in 8:
+		var blocked := false
+		var vp := get_viewport().get_visible_rect()
+		for w in points:
+			var sp := _screen(w)
+			if not vp.grow(-20.0).has_point(sp):
+				blocked = true
+			for r in _panel_rects():
+				if r.has_point(sp):
+					blocked = true
+		if not blocked:
+			return
+		rig.set_view(rig.focus, rig.yaw, rig.pitch, rig.distance * 1.18)
+		await _frames(2)
+
+
 ## Press at a, drag through a few points to b, release. Positions in world tiles (x, z).
 func drag(a: Vector2, b: Vector2, shift: bool = false) -> void:
+	await _ensure_clear([a, b, a.lerp(b, 0.5)] as Array[Vector2])
 	var sa := _screen(a)
 	_mouse_move(sa, shift)
 	await _frames(1)
