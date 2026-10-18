@@ -74,7 +74,8 @@ static func build(sim: Sim, rid: String, incident: Dictionary) -> Array[Dictiona
 		var truth := _tell(sim, m, rid)
 		n += 1
 		var st := {"id": "st_%s_%d" % [rid, n], "owner": rid, "stance": "honest", "kind": str(m["kind"]), "text": truth, "memory_id": str(m["id"]),
-			"truth": truth, "why": ""}
+			"truth": truth, "why": "", "subject": str(m.get("subject", "")), "minute": int(m["minute"]), "day": int(m["day"]),
+			"confidence": float(m.get("confidence", 1.0)), "tile": m.get("tile", [])}
 		if about_culprit and stance == "lie":
 			st["stance"] = "lie"
 			st["why"] = str(decision["why"])
@@ -89,10 +90,11 @@ static func build(sim: Sim, rid: String, incident: Dictionary) -> Array[Dictiona
 	# The culprit (or anyone with something to hide) gives a false whereabouts.
 	var cover: Dictionary = incident.get("cover", {})
 	if rid == culprit and not cover.is_empty():
-		var time_text := Clock.time_label(int(cover.get("minute", incident["minute"])))
+		var time_text := TimeText.label(int(cover.get("minute", incident["minute"])))
 		var text := _pick(templates()["lie"]["false_location"], rid, "cover").format({"place": cover.get("place", "at home"), "time": time_text})
 		out.append({"id": "st_%s_cover" % rid, "owner": rid, "stance": "lie", "kind": "false_location", "text": text, "memory_id": "",
-			"truth": "was away from %s" % cover.get("place", "home"), "why": "protecting themselves"})
+			"truth": "was away from %s" % cover.get("place", "home"), "why": "protecting themselves", "subject": rid, "minute": int(incident["minute"]),
+			"day": int(incident["day"]), "confidence": 1.0, "tile": []})
 	return out
 
 
@@ -104,7 +106,7 @@ static func _tell(sim: Sim, m: Dictionary, rid: String) -> String:
 	var who := "somebody"
 	if str(m.get("subject", "")) != "" and sim.residents.has(m["subject"]):
 		who = "%s %s" % [sim.residents[m["subject"]]["first"], sim.residents[m["subject"]]["last"]]
-	return _pick(t[key], rid, str(m["id"])).format({"who": who, "detail": m["detail"], "place": m["place"], "time": Clock.time_label(int(m["minute"]))})
+	return _pick(t[key], rid, str(m["id"])).format({"who": who, "detail": m["detail"], "place": m["place"], "time": TimeText.label(int(m["minute"]))})
 
 
 static func _pick(options: Array, rid: String, salt: String) -> String:

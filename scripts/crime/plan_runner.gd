@@ -44,8 +44,9 @@ static func step(sim: Sim, st: Dictionary) -> void:
 
 
 ## Run the whole plan on a sim from its current tick (used on a snapshot). Returns the final state.
-static func run(sim: Sim, plan: Dictionary) -> Dictionary:
-	var st := start(sim, plan, sim.ticks)
+## `begin_tick` is when the plan was made (its start offsets count from there); default now.
+static func run(sim: Sim, plan: Dictionary, begin_tick: int = -1) -> Dictionary:
+	var st := start(sim, plan, sim.ticks if begin_tick < 0 else begin_tick)
 	while not finished(st, sim) and sim.ticks - int(st["start_tick"]) < MAX_MINUTES + 120:
 		step(sim, st)
 		sim.tick()

@@ -18,6 +18,7 @@ var places: Array[Dictionary] = []
 var homes: Dictionary = {}      ## house id -> {house_id, door: [level, x, z], living: [..], beds: [place ids]}
 var landmark_tiles: Dictionary = {}  ## landmark id -> [level, x, z]
 var grid: WorldGrid                 ## the valley floor (ground types, for bootprints)
+var origins: Dictionary = {}       ## house id -> its origin tile (the corner the house is drawn from)
 var sight: SightMap                 ## what blocks the eye, rooms, windows and lamps (memories, light)
 
 
@@ -42,6 +43,8 @@ func _build(grid: WorldGrid, houses: Array, landmarks: Array, creek_points: Pack
 	height = grid.height
 	var sorted_houses: Array = houses.duplicate()
 	sorted_houses.sort_custom(func(a: HouseData, b: HouseData) -> bool: return a.id < b.id)
+	for oh: HouseData in sorted_houses:
+		origins[oh.id] = oh.origin
 	# Walls on the ground storey, in world edge keys, and the ones a door lets people through.
 	var walls: Dictionary = {}
 	for h: HouseData in sorted_houses:

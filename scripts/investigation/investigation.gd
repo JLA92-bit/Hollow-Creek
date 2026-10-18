@@ -392,7 +392,9 @@ func link(id: String, answers: Dictionary) -> Dictionary:
 		return {"ok": true, "proven": false, "reason": "no evidence"}
 	var want: Dictionary = d.get("answer", {})
 	for k: String in want:
-		if str(answers.get(k, "")) != str(want[k]):
+		# An answer may list several acceptable values (the same sighting told at slightly different times).
+		var ok: bool = (want[k] as Array).has(str(answers.get(k, ""))) if want[k] is Array else str(answers.get(k, "")) == str(want[k])
+		if not ok:
 			return {"ok": true, "proven": false, "reason": "wrong"}
 	proven[id] = true
 	log.append("Proved: %s" % d["sentence"])
@@ -401,17 +403,45 @@ func link(id: String, answers: Dictionary) -> Dictionary:
 
 # --- Accusation -------------------------------------------------------------------------------------
 
-## The four requirements for the case's culprit: {opportunity, means, motive, lie}.
-func requirements() -> Dictionary:
+## What proves the four requirements against somebody: a case can list a table for each resident
+## (`proof`), which is how generated cases say who the evidence points at. The authored Cash Tin only
+## has the culprit's rules, under `accusation`; everybody else can't be convicted.
+func proof_for(pid: String) -> Dictionary:
+	var table: Dictionary = data.get("proof", {})
+	if table.has(pid):
+		return table[pid]
 	var a: Dictionary = data.get("accusation", {})
+	if pid == str(a.get("culprit", "")):
+		return a
+	return {"opportunity": {"any_fact": []}, "means": {"any_fact": []}, "motive": {"any_fact": []}, "lie": {"broken_by": ""}}
+
+
+## The household a resident belongs to (generated cases list them), for warrants.
+func household_of(pid: String) -> String:
+	return str((data.get("households", {}) as Dictionary).get(pid, ""))
+
+
+func culprit() -> String:
+	return str((data.get("accusation", {}) as Dictionary).get("culprit", data.get("culprit", "")))
+
+
+## The four requirements against `pid` (the culprit if none is given): {opportunity, means, motive, lie}.
+func requirements(pid: String = "") -> Dictionary:
+	var who := pid if pid != "" else culprit()
+	var a := proof_for(who)
 	var out := {}
 	for k: String in ["opportunity", "means", "motive"]:
 		out[k] = _meets(a.get(k, {}))
-	out["lie"] = bool(broken.get(str((a.get("lie", {}) as Dictionary).get("broken_by", "")), false))
+	out["lie"] = bool(broken.get(str((a.get("lie", {}) as Dictionary).get("broken_by", "")), false)) if str((a.get("lie", {}) as Dictionary).get("broken_by", "")) != "" else false
 	return out
 
 
 func _meets(rule: Dictionary) -> bool:
+	if rule.has("or"):
+		for sub: Dictionary in rule["or"]:
+			if _meets(sub):
+				return true
+		return false
 	var any_ok := false
 	var has_any := rule.has("any_deduction") or rule.has("any_fact")
 	for d: Variant in rule.get("any_deduction", []):
@@ -424,8 +454,8 @@ func _meets(rule: Dictionary) -> bool:
 	return any_ok if has_any else true
 
 
-func complete() -> bool:
-	var r := requirements()
+func complete(pid: String = "") -> bool:
+	var r := requirements(pid)
 	return bool(r["opportunity"]) and bool(r["means"]) and bool(r["motive"]) and bool(r["lie"])
 
 
@@ -434,8 +464,8 @@ func accuse(pid: String) -> Dictionary:
 	if accused != "":
 		return {"ok": false}
 	accused = pid
-	var right := pid == str((data.get("accusation", {}) as Dictionary).get("culprit", ""))
-	var done := complete()
+	var right := pid == culprit()
+	var done := complete(pid)
 	var trust := TRUST_WRONG_PERSON
 	var text := "Wrong person. The accused family is furious, and the real culprit breathes easier."
 	if right and done:
@@ -444,10 +474,10 @@ func accuse(pid: String) -> Dictionary:
 	elif right:
 		trust = TRUST_RIGHT_INCOMPLETE
 		text = "It's the right person, but the case has holes. The magistrate may throw it out."
-	outcome = {"right": right, "complete": done, "trust": trust, "text": text, "requirements": requirements()}
+	outcome = {"right": right, "complete": done, "trust": trust, "text": text, "requirements": requirements(pid)}
 	trust_change += trust if not (right and done) else 0
 	log.append("Accused %s" % pid)
-	return {"ok": true, "right": right, "complete": done, "trust": trust, "text": text, "requirements": requirements()}
+	return {"ok": true, "right": right, "complete": done, "trust": trust, "text": text, "requirements": requirements(pid)}
 
 
 func resolutions() -> Array:

@@ -82,7 +82,7 @@ static func waypoint(sim: Sim, a: Array, b: Array, side: float) -> Array:
 
 
 ## All the plans worth trying for one candidate (up to `max_plans`), in a fixed order.
-static func generate(sim: Sim, cand: Dictionary, max_plans: int = 12) -> Array[Dictionary]:
+static func generate(sim: Sim, cand: Dictionary, max_plans: int = 12, salt: int = 0) -> Array[Dictionary]:
 	var culprit := str(cand["culprit"])
 	var target := str(cand["target"])
 	var house := sim.home_of(target)
@@ -116,7 +116,7 @@ static func generate(sim: Sim, cand: Dictionary, max_plans: int = 12) -> Array[D
 				n += 1
 	# Spread the choice across start times and routes rather than taking the first dozen.
 	var picked: Array[Dictionary] = []
-	var rng := SimRng.new(sim.seed_value * 31 + sim.day * 7 + 11)
+	var rng := SimRng.new(sim.seed_value * 31 + sim.day * 7 + 11 + salt * 1013)
 	rng.shuffle(out)
 	for p: Dictionary in out:
 		if picked.size() >= max_plans:
@@ -131,13 +131,12 @@ static func generate(sim: Sim, cand: Dictionary, max_plans: int = 12) -> Array[D
 static func decoy_for(sim: Sim, plan: Dictionary) -> Dictionary:
 	if (absi(hash(str(plan["id"]) + "decoy")) % 4) == 0:
 		return {}
-	var culprit_home := str(sim.residents[str(plan["culprit"])]["household"])
 	var skip := {str(plan["culprit"]): true, str(plan["target"]): true}
 	var ids := sim.residents.keys()
 	ids.sort()
 	var options: Array[Dictionary] = []
 	for rid: String in ids:
-		if skip.has(rid) or sim.residents[rid]["status"] != "living" or str(sim.residents[rid]["household"]) == culprit_home:
+		if skip.has(rid) or sim.residents[rid]["status"] != "living":
 			continue
 		for sid: String in sim.secrets:
 			var sec: Dictionary = sim.secrets[sid]
@@ -148,7 +147,7 @@ static func decoy_for(sim: Sim, plan: Dictionary) -> Dictionary:
 	var pick: Dictionary = options[absi(hash(str(plan["id"]))) % options.size()]
 	var e: Dictionary = plan["entry"]
 	var out_p := [0, float((e["out"] as Array)[0]) + 0.5, float((e["out"] as Array)[1]) + 0.5]
-	var spot := waypoint(sim, sim.residents[str(pick["rid"])]["pos"], out_p, 0.5)
+	var spot := sim.town.walkable_near(Vector2i(floori(float(out_p[1])) + 3, floori(float(out_p[2])) + 3))
 	if spot.is_empty():
 		return {}
 	var home := sim.home_of(str(pick["rid"]))
