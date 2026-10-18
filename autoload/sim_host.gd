@@ -5,14 +5,19 @@ extends Node
 
 signal town_changed  ## somebody moved in, or the town was rebuilt
 signal lights_changed(lit_rooms: Dictionary)  ## the rooms with lamps lit changed (room id -> true)
+signal case_opened(inv: Investigation)  ## an incident alert: a case is open
+signal case_closed(result: Dictionary)
 
 const COTTAGE_ID := "lm_agnes_cottage"
 
 var sim: Sim = Sim.new(1952)
 var active := false
 var tick_ms := 0.0  ## time the last batch of ticks took, for the debug panel
+var investigation: Investigation = null  ## the open case, if any
+var unlocked: Array[String] = []         ## things closed cases have unlocked (footpaths, street_lamps)
 var _world: Node3D = null
 var _lit_sig := ""
+var _closed_cases: Array[String] = []
 
 
 func _ready() -> void:
@@ -24,6 +29,9 @@ func reset() -> void:
 	sim = Sim.new(GameState.seed_value)
 	active = false
 	_world = null
+	investigation = null
+	unlocked.clear()
+	_closed_cases.clear()
 
 
 ## Starts (or picks up, after loading) the town's life in this valley.
@@ -220,3 +228,42 @@ func restore(data: Dictionary) -> void:
 		return
 	sim = Sim.new(int(data.get("seed", GameState.seed_value)))
 	sim.restore(data)
+
+
+# --- Cases -----------------------------------------------------------------------------------------
+
+## An incident alert. Time pauses on the first alert (docs/GAME_DESIGN.md "Investigation").
+func open_case(path: String) -> Investigation:
+	var data := Investigation.load_case(path)
+	if data.is_empty():
+		return null
+	investigation = Investigation.new(data)
+	Clock.set_speed(0)
+	case_opened.emit(investigation)
+	return investigation
+
+
+## Banks the Town Trust the case has earned or lost since the last call, and unlocks what it opened.
+func bank_case() -> int:
+	if investigation == null:
+		return 0
+	var t := investigation.take_trust()
+	GameState.town_trust = clampi(GameState.town_trust + t, 0, 100)
+	for u: String in investigation.unlocked:
+		if not unlocked.has(u):
+			unlocked.append(u)
+	if investigation.closed():
+		var result := {"accused": investigation.accused, "resolution": investigation.resolution, "unlocked": investigation.unlocked.duplicate()}
+		var closed_case := investigation
+		investigation = null
+		_closed_cases.append(str(closed_case.data.get("id", "")))
+		case_closed.emit(result)
+	return t
+
+
+func is_unlocked(feature: String) -> bool:
+	return unlocked.has(feature)
+
+
+func case_done(id: String) -> bool:
+	return _closed_cases.has(id)

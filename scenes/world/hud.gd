@@ -228,6 +228,10 @@ func _toolbar(root: Control) -> void:
 			b.pressed.connect(func() -> void:
 				world.call("enter_build_mode")
 				(world.get("build") as BuildMode).set_tool("buy"))
+		if t == "Case file":
+			b.disabled = SimHost.investigation == null
+			b.tooltip_text = "Case file"
+			b.pressed.connect(func() -> void: world.call("show_case"))
 		if t == "Photo":
 			b.tooltip_text = "Photo mode (F2)"
 			b.pressed.connect(func() -> void: world.call("toggle_photo_mode"))
@@ -269,6 +273,8 @@ func _refresh_toolbar() -> void:
 	for b in _toolbar_panel.get_child(0).get_children():
 		if (b as Button).text == "Residents":
 			(b as Button).disabled = not SimHost.active
+		if (b as Button).text == "Case file":
+			(b as Button).disabled = SimHost.investigation == null
 
 
 func toggle_residents() -> void:

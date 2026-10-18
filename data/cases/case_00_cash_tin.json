@@ -4,107 +4,521 @@
   "victim": "r_frank",
   "culprit": "r_len",
   "deadline_days": 4,
-  "scene": {"id": "sc_store", "name": "Hayward's General Store", "place": "store"},
+  "scene": {
+    "id": "sc_store",
+    "name": "Hayward's General Store",
+    "place": "store",
+    "house": "house_store"
+  },
   "traces": [
-    {"id": "t_window", "area": "store", "pos": [3, 9], "label": "Back window left unlatched", "prompt": "Tap the window", "minutes": 30,
-     "text": "The back window is pushed open. It was never latched."},
-    {"id": "t_tin", "area": "store", "pos": [6, 2], "label": "Cash tin gone from the counter", "prompt": "Tap the counter", "minutes": 30,
-     "text": "The cash tin's gone. Frank says there was over £23 in it."},
-    {"id": "t_prints_in", "area": "store", "pos": [5, 6], "label": "Muddy bootprints", "prompt": "Tap the floor near the window", "minutes": 30,
-     "text": "Mud, still wet. A big work boot with hobnails. Measure it?",
-     "measure": {"fact": "t_prints_in_measured", "label": "Size 10, hobnail sole", "text": "Size 10, hobnail sole. A big man's work boot."}},
-    {"id": "t_prints_out", "area": "outside", "pos": [3, 11], "label": "Hobnail prints outside, towards the creek", "prompt": "Search outside the window", "minutes": 45,
-     "text": "The same hobnail prints, coming from and going back towards the creek."},
-    {"id": "t_mud_track", "area": "creek", "pos": [2, 16], "label": "Smaller prints along the bank", "prompt": "Search the creek track", "minutes": 60,
-     "text": "Smaller prints, size 8, worn tread. They wander along the bank and never come near the store."}
+    {
+      "id": "t_window",
+      "area": "store",
+      "pos": [
+        6,
+        9
+      ],
+      "label": "Back window left unlatched",
+      "prompt": "Tap the window",
+      "minutes": 30,
+      "text": "The back window is pushed open. It was never latched."
+    },
+    {
+      "id": "t_tin",
+      "area": "store",
+      "pos": [
+        3,
+        1
+      ],
+      "label": "Cash tin gone from the counter",
+      "prompt": "Tap the counter",
+      "minutes": 30,
+      "text": "The cash tin's gone. Frank says there was over £23 in it."
+    },
+    {
+      "id": "t_prints_in",
+      "area": "store",
+      "pos": [
+        5,
+        7
+      ],
+      "label": "Muddy bootprints",
+      "prompt": "Tap the floor near the window",
+      "minutes": 30,
+      "text": "Mud, still wet. A big work boot with hobnails. Measure it?",
+      "measure": {
+        "fact": "t_prints_in_measured",
+        "label": "Size 10, hobnail sole",
+        "text": "Size 10, hobnail sole. A big man's work boot."
+      }
+    },
+    {
+      "id": "t_prints_out",
+      "area": "outside",
+      "pos": [
+        6,
+        11
+      ],
+      "label": "Hobnail prints outside, towards the creek",
+      "prompt": "Search outside the window",
+      "minutes": 45,
+      "text": "The same hobnail prints, coming from and going back towards the creek."
+    },
+    {
+      "id": "t_mud_track",
+      "area": "creek",
+      "pos": [
+        4,
+        15
+      ],
+      "label": "Smaller prints along the bank",
+      "prompt": "Search the creek track",
+      "minutes": 60,
+      "text": "Smaller prints, size 8, worn tread. They wander along the bank and never come near the store."
+    }
   ],
   "records": [
-    {"id": "rec_ledger", "name": "Credit ledger", "short": "Pike refused", "via": "r_frank", "minutes": 30,
-     "text": "PIKE, L. Owes £11 4s. Credit STOPPED Thursday. (in Frank's hand)"},
-    {"id": "rec_exchange", "name": "Exchange log", "short": "10:40 pm call", "via": "r_edna", "minutes": 30,
-     "text": "Only one call after 7:30 pm: 10:40 pm. Doyle residence to Ballarat 2214. Trunk call, 6 minutes."}
+    {
+      "id": "rec_ledger",
+      "name": "Credit ledger",
+      "short": "Pike refused",
+      "via": "r_frank",
+      "minutes": 30,
+      "text": "PIKE, L. Owes £11 4s. Credit STOPPED Thursday. (in Frank's hand)"
+    },
+    {
+      "id": "rec_exchange",
+      "name": "Exchange log",
+      "short": "10:40 pm call",
+      "via": "r_edna",
+      "minutes": 30,
+      "text": "Only one call after 7:30 pm: 10:40 pm. Doyle residence to Ballarat 2214. Trunk call, 6 minutes."
+    }
   ],
   "people": {
-    "r_frank": {"role": "victim", "pressure": false, "note": "Owner of the store. Half the town owes him money.",
+    "r_frank": {
+      "role": "victim",
+      "pressure": false,
+      "note": "Owner of the store. Half the town owes him money.",
       "statements": [
-        {"id": "st_frank_1", "text": "Locked the front door at half seven, went to the dance with Edna and June. Came back at twenty-five to eleven and the window was wide open.",
-         "press": {"text": "Who'd do it? Half the town owes me money. Len Pike's the worst of them. Here, have a look at the ledger.", "gives": ["rec_ledger"]}}
-      ]},
-    "r_edna": {"role": "witness", "pressure": false, "note": "Runs the exchange. Hears everything and says little.",
+        {
+          "id": "st_frank_1",
+          "text": "Locked the front door at half seven, went to the dance with Edna and June. Came back at twenty-five to eleven and the window was wide open.",
+          "press": {
+            "text": "Who'd do it? Half the town owes me money. Len Pike's the worst of them. Here, have a look at the ledger.",
+            "gives": [
+              "rec_ledger"
+            ]
+          }
+        }
+      ]
+    },
+    "r_edna": {
+      "role": "witness",
+      "pressure": false,
+      "note": "Runs the exchange. Hears everything and says little.",
       "statements": [
-        {"id": "st_edna_1", "text": "Exchange closed for the dance. Only one call all night, after we got home. Have a look at the log.", "gives": ["rec_exchange"],
-         "press": {"text": "Mrs Doyle rang her sister. Sounded upset. I didn't listen in. Well, a little. She said, 'I don't know what to do, Win.'", "gives": []}}
-      ]},
-    "r_agnes": {"role": "witness", "pressure": true, "note": "Neighbour. Her kitchen window faces the store. Close to Marge Pike. Protecting someone?",
+        {
+          "id": "st_edna_1",
+          "text": "Exchange closed for the dance. Only one call all night, after we got home. Have a look at the log.",
+          "gives": [
+            "rec_exchange"
+          ],
+          "press": {
+            "text": "Mrs Doyle rang her sister. Sounded upset. I didn't listen in. Well, a little. She said, 'I don't know what to do, Win.'",
+            "gives": []
+          }
+        }
+      ]
+    },
+    "r_agnes": {
+      "role": "witness",
+      "pressure": true,
+      "note": "Neighbour. Her kitchen window faces the store. Close to Marge Pike. Protecting someone?",
       "statements": [
-        {"id": "st_agnes_1", "text": "I didn't go to the dance. My knees aren't what they were.",
-         "press": {"text": "I had my tea and listened to the wireless.", "gives": []}, "contradicted_by": []},
-        {"id": "st_agnes_2", "text": "I was in bed by nine, dear. I didn't hear a thing all night.",
-         "contradicted_by": [{"fact": "rec_exchange", "composure": 40,
-           "result": "All right. I was up. I... saw someone behind the store. A man in a hat, just after nine.", "gives": []}]},
-        {"id": "st_agnes_3", "text": "It was dark. I couldn't say who.",
-         "contradicted_by": [{"fact": "t_prints_in_measured", "composure": 60,
-           "result": "Big work boots... He walked like Len. God forgive me, Marge is my dearest friend.", "gives": ["st_agnes_saw_len"]}]}
-      ]},
-    "r_halina": {"role": "witness", "pressure": false, "note": "Dancing with her husband all evening. Notices things.",
+        {
+          "id": "st_agnes_1",
+          "text": "I didn't go to the dance. My knees aren't what they were.",
+          "press": {
+            "text": "I had my tea and listened to the wireless.",
+            "gives": []
+          },
+          "contradicted_by": []
+        },
+        {
+          "id": "st_agnes_2",
+          "text": "I was in bed by nine, dear. I didn't hear a thing all night.",
+          "contradicted_by": [
+            {
+              "fact": "rec_exchange",
+              "composure": 40,
+              "result": "All right. I was up. I... saw someone behind the store. A man in a hat, just after nine.",
+              "gives": []
+            }
+          ]
+        },
+        {
+          "id": "st_agnes_3",
+          "text": "It was dark. I couldn't say who.",
+          "contradicted_by": [
+            {
+              "fact": "t_prints_in_measured",
+              "composure": 60,
+              "result": "Big work boots... He walked like Len. God forgive me, Marge is my dearest friend.",
+              "gives": [
+                "st_agnes_saw_len"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "r_halina": {
+      "role": "witness",
+      "pressure": false,
+      "note": "Dancing with her husband all evening. Notices things.",
       "statements": [
-        {"id": "st_halina_1", "text": "We were at the dance all evening. Tomasz danced with me twice, which is a miracle.",
-         "press": {"text": "Len? He went out around ten to nine. When he came back his trousers were muddy to here.", "gives": ["st_halina_mud"]}}
-      ]},
-    "r_davey": {"role": "suspect", "pressure": true, "note": "Len's son. Sneaks off to smoke. Hiding something small.",
+        {
+          "id": "st_halina_1",
+          "text": "We were at the dance all evening. Tomasz danced with me twice, which is a miracle.",
+          "press": {
+            "text": "Len? He went out around ten to nine. When he came back his trousers were muddy to here.",
+            "gives": [
+              "st_halina_mud"
+            ]
+          }
+        }
+      ]
+    },
+    "r_davey": {
+      "role": "suspect",
+      "pressure": true,
+      "note": "Len's son. Sneaks off to smoke. Hiding something small.",
       "statements": [
-        {"id": "st_davey_1", "text": "I was at the dance the whole time.",
-         "contradicted_by": [{"fact": "t_mud_track", "composure": 50, "result": "Fine. I went down the creek for a smoke. Don't tell Mum.", "gives": []}]},
-        {"id": "st_davey_2", "text": "I never went near the store.",
-         "press": {"text": "Saw Dad on the track, actually. Heading back to the shed. Said to mind my business.", "gives": ["st_davey_saw_dad"]}}
-      ]},
-    "r_len": {"role": "suspect", "pressure": true, "note": "Mill hand. Owes Frank money and hasn't told his wife.",
+        {
+          "id": "st_davey_1",
+          "text": "I was at the dance the whole time.",
+          "contradicted_by": [
+            {
+              "fact": "t_mud_track",
+              "composure": 50,
+              "result": "Fine. I went down the creek for a smoke. Don't tell Mum.",
+              "gives": []
+            }
+          ]
+        },
+        {
+          "id": "st_davey_2",
+          "text": "I never went near the store.",
+          "press": {
+            "text": "Saw Dad on the track, actually. Heading back to the shed. Said to mind my business.",
+            "gives": [
+              "st_davey_saw_dad"
+            ]
+          }
+        }
+      ]
+    },
+    "r_len": {
+      "role": "suspect",
+      "pressure": true,
+      "note": "Mill hand. Owes Frank money and hasn't told his wife.",
       "statements": [
-        {"id": "st_len_1", "text": "I was at the dance all night. Ask anyone.",
-         "contradicted_by": [
-           {"fact": "st_halina_mud", "composure": 30, "result": "Went out for a smoke. Ten minutes.", "gives": []},
-           {"fact": "st_davey_saw_dad", "composure": 30, "result": "Went out for a smoke. Ten minutes.", "gives": []}]},
-        {"id": "st_len_2", "text": "Ten minutes, I was back by nine.",
-         "contradicted_by": [{"fact": "st_agnes_saw_len", "composure": 35, "result": "She's an old woman, she sees things.", "gives": []}]},
-        {"id": "st_len_3", "text": "I don't owe Hayward a penny he won't get back.",
-         "contradicted_by": [{"fact": "rec_ledger", "composure": 35, "result": "", "gives": []}]}
+        {
+          "id": "st_len_1",
+          "text": "I was at the dance all night. Ask anyone.",
+          "contradicted_by": [
+            {
+              "fact": "st_halina_mud",
+              "composure": 30,
+              "result": "Went out for a smoke. Ten minutes.",
+              "gives": []
+            },
+            {
+              "fact": "st_davey_saw_dad",
+              "composure": 30,
+              "result": "Went out for a smoke. Ten minutes.",
+              "gives": []
+            }
+          ]
+        },
+        {
+          "id": "st_len_2",
+          "text": "Ten minutes, I was back by nine.",
+          "contradicted_by": [
+            {
+              "fact": "st_agnes_saw_len",
+              "composure": 35,
+              "result": "She's an old woman, she sees things.",
+              "gives": []
+            }
+          ]
+        },
+        {
+          "id": "st_len_3",
+          "text": "I don't owe Hayward a penny he won't get back.",
+          "contradicted_by": [
+            {
+              "fact": "rec_ledger",
+              "composure": 35,
+              "result": "",
+              "gives": []
+            }
+          ]
+        }
       ],
-      "confession": {"text": "He shamed me in front of my wife. In front of the whole town. I've got debts Marge doesn't know about. I just... I was going to put it back.",
-        "gives": ["confession_len"]}}
+      "confession": {
+        "text": "He shamed me in front of my wife. In front of the whole town. I've got debts Marge doesn't know about. I just... I was going to put it back.",
+        "gives": [
+          "confession_len"
+        ]
+      }
+    }
   },
-  "warrant": {"target": "h_pike", "trust_cost": 5, "label": "the Pike house",
-    "finds": [{"id": "t_tin_woodpile", "label": "Cash tin and size 10 hobnail boots under the woodpile",
-      "text": "The cash tin, £23 10s intact, under the woodpile, and Len's hobnail boots, size 10, still muddy."}]},
+  "warrant": {
+    "target": "h_pike",
+    "trust_cost": 5,
+    "label": "the Pike house",
+    "finds": [
+      {
+        "id": "t_tin_woodpile",
+        "label": "Cash tin and size 10 hobnail boots under the woodpile",
+        "text": "The cash tin, £23 10s intact, under the woodpile, and Len's hobnail boots, size 10, still muddy."
+      }
+    ]
+  },
   "deductions": [
-    {"id": "d_entry", "sentence": "The thief came in through the [entry].", "slots": [{"key": "entry", "options": ["front door", "back window", "side gate", "roof"]}],
-     "proven_by": ["t_window", "t_prints_in"], "answer": {"entry": "back window"}},
-    {"id": "d_size", "sentence": "The bootprints belong to someone with size [size] [sole] boots.",
-     "slots": [{"key": "size", "options": ["8", "10", "12"]}, {"key": "sole", "options": ["hobnail", "worn tread", "gumboot"]}],
-     "proven_by": ["t_prints_in_measured"], "answer": {"size": "10", "sole": "hobnail"}},
-    {"id": "d_agnes_awake", "sentence": "[person] was awake at [time].",
-     "slots": [{"key": "person", "options": ["Agnes Doyle", "Edna Hayward", "Marge Pike"]}, {"key": "time", "options": ["9:00 pm", "10:40 pm", "11:30 pm"]}],
-     "proven_by": ["rec_exchange"], "answer": {"person": "Agnes Doyle", "time": "10:40 pm"}},
-    {"id": "d_len_out", "sentence": "Len Pike left the dance between [from] and [to].",
-     "slots": [{"key": "from", "options": ["7:30 pm", "8:50 pm", "9:35 pm"]}, {"key": "to", "options": ["9:05 pm", "9:35 pm", "10:35 pm"]}],
-     "proven_by_any": [["st_halina_mud"], ["st_davey_saw_dad"]], "answer": {"from": "8:50 pm", "to": "9:35 pm"}},
-    {"id": "d_davey_cleared", "sentence": "The size 8 prints never reached the store.", "slots": [], "optional": true,
-     "proven_by": ["t_mud_track", "t_prints_out"], "answer": {}},
-    {"id": "d_motive", "sentence": "Len Pike had reason: [motive].",
-     "slots": [{"key": "motive", "options": ["refused credit and in debt", "an old feud", "jealousy"]}],
-     "proven_by": ["rec_ledger"], "answer": {"motive": "refused credit and in debt"}}
+    {
+      "id": "d_entry",
+      "sentence": "The thief came in through the [entry].",
+      "slots": [
+        {
+          "key": "entry",
+          "options": [
+            "front door",
+            "back window",
+            "side gate",
+            "roof"
+          ]
+        }
+      ],
+      "proven_by": [
+        "t_window",
+        "t_prints_in"
+      ],
+      "answer": {
+        "entry": "back window"
+      }
+    },
+    {
+      "id": "d_size",
+      "sentence": "The bootprints belong to someone with size [size] [sole] boots.",
+      "slots": [
+        {
+          "key": "size",
+          "options": [
+            "8",
+            "10",
+            "12"
+          ]
+        },
+        {
+          "key": "sole",
+          "options": [
+            "hobnail",
+            "worn tread",
+            "gumboot"
+          ]
+        }
+      ],
+      "proven_by": [
+        "t_prints_in_measured"
+      ],
+      "answer": {
+        "size": "10",
+        "sole": "hobnail"
+      }
+    },
+    {
+      "id": "d_agnes_awake",
+      "sentence": "[person] was awake at [time].",
+      "slots": [
+        {
+          "key": "person",
+          "options": [
+            "Agnes Doyle",
+            "Edna Hayward",
+            "Marge Pike"
+          ]
+        },
+        {
+          "key": "time",
+          "options": [
+            "9:00 pm",
+            "10:40 pm",
+            "11:30 pm"
+          ]
+        }
+      ],
+      "proven_by": [
+        "rec_exchange"
+      ],
+      "answer": {
+        "person": "Agnes Doyle",
+        "time": "10:40 pm"
+      }
+    },
+    {
+      "id": "d_len_out",
+      "sentence": "Len Pike left the dance between [from] and [to].",
+      "slots": [
+        {
+          "key": "from",
+          "options": [
+            "7:30 pm",
+            "8:50 pm",
+            "9:35 pm"
+          ]
+        },
+        {
+          "key": "to",
+          "options": [
+            "9:05 pm",
+            "9:35 pm",
+            "10:35 pm"
+          ]
+        }
+      ],
+      "proven_by_any": [
+        [
+          "st_halina_mud"
+        ],
+        [
+          "st_davey_saw_dad"
+        ]
+      ],
+      "answer": {
+        "from": "8:50 pm",
+        "to": "9:35 pm"
+      }
+    },
+    {
+      "id": "d_davey_cleared",
+      "sentence": "The size 8 prints never reached the store.",
+      "slots": [],
+      "optional": true,
+      "proven_by": [
+        "t_mud_track",
+        "t_prints_out"
+      ],
+      "answer": {}
+    },
+    {
+      "id": "d_motive",
+      "sentence": "Len Pike had reason: [motive].",
+      "slots": [
+        {
+          "key": "motive",
+          "options": [
+            "refused credit and in debt",
+            "an old feud",
+            "jealousy"
+          ]
+        }
+      ],
+      "proven_by": [
+        "rec_ledger"
+      ],
+      "answer": {
+        "motive": "refused credit and in debt"
+      }
+    }
   ],
   "accusation": {
     "culprit": "r_len",
-    "opportunity": {"any_deduction": ["d_len_out"], "any_fact": ["st_agnes_saw_len"]},
-    "means": {"all_deduction": ["d_size"], "any_fact": ["t_tin_woodpile", "boots_seen"]},
-    "motive": {"all_deduction": ["d_motive"]},
-    "lie": {"broken_by": "r_len"}
+    "opportunity": {
+      "any_deduction": [
+        "d_len_out"
+      ],
+      "any_fact": [
+        "st_agnes_saw_len"
+      ]
+    },
+    "means": {
+      "all_deduction": [
+        "d_size"
+      ],
+      "any_fact": [
+        "t_tin_woodpile",
+        "boots_seen"
+      ]
+    },
+    "motive": {
+      "all_deduction": [
+        "d_motive"
+      ]
+    },
+    "lie": {
+      "broken_by": "r_len"
+    }
   },
   "resolutions": [
-    {"id": "charge", "label": "Charge Len", "text": "Len goes to the district court for 4 weeks. The Pikes' income drops.",
-     "trust": 10, "grievances": [{"from": "r_marge", "to": "player", "weight": 30}], "unlocks": ["footpaths", "street_lamps"]},
-    {"id": "restitution", "label": "Restitution", "text": "Len repays from his wages and does a month of community work.",
-     "trust": 6, "grievances": [{"from": "r_frank", "to": "player", "weight": 30}], "unlocks": ["footpaths", "street_lamps"]}
+    {
+      "id": "charge",
+      "label": "Charge Len",
+      "text": "Len goes to the district court for 4 weeks. The Pikes' income drops.",
+      "trust": 10,
+      "grievances": [
+        {
+          "from": "r_marge",
+          "to": "player",
+          "weight": 30
+        }
+      ],
+      "unlocks": [
+        "footpaths",
+        "street_lamps"
+      ]
+    },
+    {
+      "id": "restitution",
+      "label": "Restitution",
+      "text": "Len repays from his wages and does a month of community work.",
+      "trust": 6,
+      "grievances": [
+        {
+          "from": "r_frank",
+          "to": "player",
+          "weight": 30
+        }
+      ],
+      "unlocks": [
+        "footpaths",
+        "street_lamps"
+      ]
+    }
   ],
-  "tip": "Residents have started latching their windows. A lamp behind the store wouldn't hurt either."
+  "tip": "Residents have started latching their windows. A lamp behind the store wouldn't hurt either.",
+  "facts": {
+    "st_halina_mud": {
+      "short": "Len came back muddy",
+      "label": "Halina: Len went out about ten to nine and came back with muddy trousers"
+    },
+    "st_davey_saw_dad": {
+      "short": "Davey saw Len",
+      "label": "Davey: saw his dad on the creek track, heading back to the shed"
+    },
+    "st_agnes_saw_len": {
+      "short": "Agnes saw Len",
+      "label": "Agnes: a man in a hat behind the store, who walked like Len"
+    },
+    "confession_len": {
+      "short": "Len's confession",
+      "label": "Len Pike confessed"
+    },
+    "boots_seen": {
+      "short": "Len's boots",
+      "label": "Len's size 10 hobnail boots"
+    }
+  }
 }

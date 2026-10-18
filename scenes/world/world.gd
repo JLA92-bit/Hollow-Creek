@@ -41,6 +41,8 @@ var photo_mode := false
 var _work_cache: Dictionary = {}  ## house id -> Construction work list for its current plan
 var residents: ResidentViews
 var overlays: DebugOverlays
+var case_screen: InvestigationScreen
+var _walls_before := HouseView.WALLS_UP
 var _follow := ""
 var _press_at := Vector2(-1, -1)
 var _photo_layer: CanvasLayer
@@ -127,6 +129,8 @@ func _ready() -> void:
 ## The town's life: the sim gets its walk graph from this valley, and its people are drawn here.
 func _start_residents() -> void:
 	SimHost.lights_changed.connect(_on_lights_changed)
+	SimHost.case_opened.connect(_on_case_opened)
+	SimHost.case_closed.connect(_on_case_closed)
 	SimHost.start(self)
 	residents = ResidentViews.new()
 	residents.name = "Residents"
@@ -143,6 +147,58 @@ func _start_residents() -> void:
 		hud.call("_refresh_toolbar")
 
 
+## An incident alert opened a case: go to the scene.
+func _on_case_opened(_inv: Investigation) -> void:
+	show_case()
+
+
+func _on_case_closed(_result: Dictionary) -> void:
+	if hud:
+		hud.call("_refresh_toolbar")
+
+
+## Opens the investigation screen on the open case: walls down, the camera over the scene.
+func show_case() -> void:
+	var inv := SimHost.investigation
+	if inv == null or hud == null:
+		return
+	var hid := str((inv.data.get("scene", {}) as Dictionary).get("house", ""))
+	var origin := Vector2i.ZERO
+	for hv in houses:
+		if hv.data.id == hid:
+			origin = hv.data.origin
+	var base := slice.grid.height_at(origin.x, origin.y)
+	var anchor := Vector3(origin.x, base, origin.y)
+	if case_screen == null or not is_instance_valid(case_screen):
+		case_screen = InvestigationScreen.new()
+		var layer := CanvasLayer.new()
+		layer.layer = 20
+		layer.add_child(case_screen)
+		add_child(layer)
+		case_screen.open(inv, anchor)
+		case_screen.closed.connect(_on_case_screen_closed)
+		case_screen.finished.connect(func(_r: Dictionary) -> void: _on_case_screen_closed())
+		_walls_before = walls_mode
+	else:
+		case_screen.visible = true
+	hud.visible = false
+	set_walls_mode(HouseView.WALLS_DOWN)
+	rig.set_view(anchor + Vector3(2.0, 0.0, 8.5), 180.0, 66.0, 30.0, false)
+	if hud:
+		hud.call("_refresh_toolbar")
+
+
+func _on_case_screen_closed() -> void:
+	set_walls_mode(_walls_before)
+	if hud:
+		hud.visible = true
+	if SimHost.investigation == null and case_screen != null:
+		case_screen.get_parent().queue_free()
+		case_screen = null
+	if hud:
+		hud.call("_refresh_toolbar")
+
+
 ## Cycles the debug overlays: light, sightlines, routes, prints, off. Returns the new mode.
 func cycle_overlay() -> String:
 	return overlays.cycle() if overlays else "off"
@@ -152,6 +208,10 @@ func _exit_tree() -> void:
 	SimHost.stop()
 	if SimHost.lights_changed.is_connected(_on_lights_changed):
 		SimHost.lights_changed.disconnect(_on_lights_changed)
+	for sig: Signal in [SimHost.case_opened, SimHost.case_closed]:
+		for c in sig.get_connections():
+			if (c["callable"] as Callable).get_object() == self:
+				sig.disconnect(c["callable"])
 
 
 ## Lamps burn only in rooms where somebody's up (the light grid), so what's drawn is what's seen.

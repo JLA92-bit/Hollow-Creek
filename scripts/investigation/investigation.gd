@@ -134,6 +134,9 @@ func evidence() -> Array[String]:
 
 ## Short label for anything in the case file: "Muddy bootprints" or "Exchange log".
 func label_of(fact: String) -> String:
+	var known: Dictionary = (data.get("facts", {}) as Dictionary).get(fact, {})
+	if known.has("label"):
+		return str(known["label"])
 	var t := trace(fact)
 	if not t.is_empty():
 		return str(t["label"])
@@ -148,6 +151,11 @@ func label_of(fact: String) -> String:
 		if tr.has("measure") and str(tr["measure"]["fact"]) == fact:
 			return str(tr["measure"]["label"])
 	return fact
+
+
+## A chip-sized name for a fact, if the case gives it one.
+func short_of(fact: String) -> String:
+	return str(((data.get("facts", {}) as Dictionary).get(fact, {}) as Dictionary).get("short", ""))
 
 
 # --- Records ----------------------------------------------------------------------------------------
