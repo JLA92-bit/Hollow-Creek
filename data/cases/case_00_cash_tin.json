@@ -520,5 +520,13 @@
       "short": "Len's boots",
       "label": "Len's size 10 hobnail boots"
     }
+  },
+  "households": {
+    "r_frank": "h_hayward",
+    "r_edna": "h_hayward",
+    "r_agnes": "h_doyle",
+    "r_halina": "h_kowalski",
+    "r_davey": "h_pike",
+    "r_len": "h_pike"
   }
 }
