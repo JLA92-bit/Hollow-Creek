@@ -2,9 +2,29 @@
 
 Newest milestone first. Build sizes are raw bytes, with gzip -9 in brackets.
 
-## M6 - Light, sightlines and memories (in progress)
+## M6 - Light, sightlines and memories (done)
 
-Core done: light grid, sight map, memories, noises, gossip, bootprints, records, debug overlays, night demo (12 of 12 headless). 168 GUT tests pass. Browser run and write-up still to do; see `docs/HANDOVER.md`.
+**What works**
+- **Light grid (`scripts/world/light_grid.gd`):** daylight, night and moonlight. From dusk, lamps are lit in rooms where somebody is awake. Window spill reaches 3 m (1.5 m through curtains), verandah lamps 4 m. Drawn lamps follow the logic through `SimHost.lights_changed`.
+- **Sight map (`scripts/world/sight_map.gd`):** walls, doors, windows with curtains, fences, trees and tall furniture block lines. `look()` gives range and confidence.
+- **Memories (`scripts/sim/memories.gd`):** notable sightings, lights on at odd hours, noises, decay, gossip and a 200 cap. The resident card shows the newest memories with a confidence word.
+- **Traces and records:** bootprints by ground and wetness, muddy floors, fading. The town's records: mill time cards, store ledger, telephone exchange.
+- **Debug overlays (F4):** light, sightlines from the selected resident, routes, prints.
+- **Night demo:** Agnes is up at 12:20 am and sees Frank with a cash tin at 3 m (confidence 0.71, "high"). A crash in the night wakes three residents. After a wet morning there are bootprints all over town, and every mill hand has a time card for the day.
+
+**Tests and demos**
+- 168 GUT tests pass.
+- Night demo headless: 12 of 12. Its time card check was a demo bug (the run stopped at 1 pm, shifts end at 3:30 pm).
+- Browser run (`node tools/look_test.mjs --scene night_demo --out docs/screens/m6 --dpr 1.5`): 12 of 12, no console errors, 5 screenshots in `docs/screens/m6/`. About 12 minutes on SwiftShader.
+- Web smoke test: loads with no console errors (`docs/screens/smoke-2026-10-18T11-03-04-648Z.png`).
+
+**Build sizes (gzipped):** `index.wasm` 10.1 MB, `index.pck` 28.1 MB, 38.2 MB in all against the 40 MB budget. Very little headroom left.
+
+**Known issues**
+- Lonely Agnes visits Marge every day, so the event log repeats. It is de-duplicated within a day only.
+- Sightlines and light cover the ground storey only.
+- Under SwiftShader the demo runs at about 1 fps, so desktop frame rates are not measured here.
+- Other M5 rows in `docs/BACKLOG.md`.
 
 ## M5 - Residents (done)
 

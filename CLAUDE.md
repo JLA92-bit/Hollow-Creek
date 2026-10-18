@@ -46,6 +46,8 @@ tools/cache/blender-venv/bin/python tools/characters/make_mannequins.py      # p
 bash tools/characters/setup_mpfb.sh && tools/cache/blender-venv/bin/python tools/characters/make_agnes.py   # Agnes through the MPFB pipeline
 tools/bin/godot --headless --path . res://scenes/resident_ui/residents_demo.tscn   # M5 residents demo: move-ins, routines, wishes, rent
 tools/bin/godot --headless --path . res://scenes/resident_ui/night_demo.tscn       # M6 night demo: light, sightlines, a remembered sighting, noise, prints
+node tools/look_test.mjs --scene residents_demo --out docs/screens/m5 --dpr 1.5   # M5 residents demo in the browser (about 25 min)
+node tools/look_test.mjs --scene night_demo --out docs/screens/m6 --dpr 1.5       # M6 night demo in the browser (about 12 min)
 xvfb-run -a tools/bin/godot --path . --rendering-driver opengl3 -s tools/previews/people_preview.gd -- out.png   # every resident's look side by side
 xvfb-run -a tools/bin/godot --path . --rendering-driver opengl3 -s tools/previews/roof_preview.gd -- out.png   # quick desktop render of roof shapes (also exterior_preview, garden_preview)
 python3 tools/textures/make_wallpapers.py; python3 tools/textures/make_lace.py; python3 tools/textures/make_garden.py   # wallpaper masks, lace and lattice, plant cards
