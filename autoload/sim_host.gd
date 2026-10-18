@@ -13,6 +13,8 @@ const COTTAGE_ID := "lm_agnes_cottage"
 var sim: Sim = Sim.new(1952)
 var active := false
 var tick_ms := 0.0  ## time the last batch of ticks took, for the debug panel
+var director: Director = Director.new(0)  ## plans incidents (scripts/crime/director.gd)
+var director_enabled := false             ## off until the prologue case is done (M9) or a test turns it on
 var investigation: Investigation = null  ## the open case, if any
 var unlocked: Array[String] = []         ## things closed cases have unlocked (footpaths, street_lamps)
 var _world: Node3D = null
@@ -27,6 +29,9 @@ func _ready() -> void:
 ## A fresh town for a new game.
 func reset() -> void:
 	sim = Sim.new(GameState.seed_value)
+	director = Director.new(GameState.seed_value)
+	director.last_incident_day = 0   # no incident in the first week
+	director_enabled = false
 	active = false
 	_world = null
 	investigation = null
@@ -85,8 +90,14 @@ func _on_time_changed(_day: int, _minute: int) -> void:
 	var n := 0
 	var day_before := sim.day
 	while sim.day * 1440 + sim.minute < target and n < 1440:
+		if director_enabled:
+			director.before_tick(sim)
 		sim.tick()
 		n += 1
+	if director_enabled and investigation == null:
+		var alert := director.take_alert()
+		if not alert.is_empty():
+			open_case_data(alert)
 	if sim.day != day_before:
 		review_homes()
 	_check_lights()
@@ -220,7 +231,10 @@ func living_count() -> int:
 
 
 func snapshot() -> Dictionary:
-	return sim.snapshot()
+	var d := sim.snapshot()
+	d["director"] = director.snapshot()
+	d["director_enabled"] = director_enabled
+	return d
 
 
 func restore(data: Dictionary) -> void:
@@ -228,6 +242,9 @@ func restore(data: Dictionary) -> void:
 		return
 	sim = Sim.new(int(data.get("seed", GameState.seed_value)))
 	sim.restore(data)
+	director = Director.new(int(data.get("seed", GameState.seed_value)))
+	director.restore(data.get("director", {}))
+	director_enabled = bool(data.get("director_enabled", false))
 
 
 # --- Cases -----------------------------------------------------------------------------------------
@@ -237,6 +254,14 @@ func open_case(path: String) -> Investigation:
 	var data := Investigation.load_case(path)
 	if data.is_empty():
 		return null
+	investigation = Investigation.new(data)
+	Clock.set_speed(0)
+	case_opened.emit(investigation)
+	return investigation
+
+
+## An incident alert from the director: a generated case (already checked solvable) opens.
+func open_case_data(data: Dictionary) -> Investigation:
 	investigation = Investigation.new(data)
 	Clock.set_speed(0)
 	case_opened.emit(investigation)
@@ -257,6 +282,8 @@ func bank_case() -> int:
 		var closed_case := investigation
 		investigation = null
 		_closed_cases.append(str(closed_case.data.get("id", "")))
+		if bool(closed_case.data.get("generated", false)):
+			director.apply_outcome(sim, closed_case.data, result)
 		case_closed.emit(result)
 	return t
 

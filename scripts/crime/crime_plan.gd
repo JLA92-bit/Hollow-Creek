@@ -151,7 +151,7 @@ static func decoy_for(sim: Sim, plan: Dictionary) -> Dictionary:
 	if spot.is_empty():
 		return {}
 	var home := sim.home_of(str(pick["rid"]))
-	var legs: Array[Dictionary] = [{"do": "walk", "at": spot, "house": "", "minutes": int(pick["minutes"])}]
+	var legs: Array[Dictionary] = [{"do": "walk", "at": spot, "house": "", "minutes": int(pick["minutes"]), "leave_item": true}]
 	var back := outside_house(sim, home)
 	if not back.is_empty():
 		legs.append({"do": "walk", "at": back, "house": "", "minutes": 0})

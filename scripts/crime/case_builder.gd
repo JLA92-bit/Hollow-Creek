@@ -23,7 +23,8 @@ static func build(sim: Sim, plan: Dictionary, st: Dictionary) -> Dictionary:
 	var crime_min := crime_abs % 1440
 	var decoy: Dictionary = plan.get("decoy", {})
 	var touches: Array = [str(decoy["secret"])] if not decoy.is_empty() and str((st["decoy"] as Dictionary).get("state", "")) == "done" else []
-	var incident := {"culprit": culprit, "victim": victim, "day": crime_day, "minute": crime_min, "touches": touches, "window": WINDOW,
+	var decoy_rid := str(decoy["rid"]) if not touches.is_empty() else ""
+	var incident := {"culprit": culprit, "victim": victim, "day": crime_day, "minute": crime_min, "touches": touches, "window": WINDOW, "decoy": decoy_rid,
 		"cover": {"place": "at home", "minute": crime_min}}
 	var c := {"id": "gen:%s" % str(plan["id"]), "title": _title(plan), "victim": victim, "culprit": culprit, "generated": true, "plan": str(plan["id"]),
 		"deadline_days": 4, "scene": {"id": "sc_%s" % house, "name": str(sim.town.sight.house_names.get(house, house)), "house": house},
@@ -81,14 +82,23 @@ static func build(sim: Sim, plan: Dictionary, st: Dictionary) -> Dictionary:
 		traces.append({"id": "t_prints_other_%d" % other_i, "area": "outside", "pos": _rel(_tile(str(o["key"])), origin), "label": "Other prints nearby",
 			"prompt": "Search around outside", "minutes": 45, "text": "A different set of prints, going somewhere else. Measure them?",
 			"measure": {"fact": "t_prints_other_%d_measured" % other_i, "label": lab, "text": "%s." % lab}, "made_by": oid})
-	var item_drop: Dictionary = {}
+	var item_drop: Dictionary = {}          # the culprit's, if any
+	var decoy_drop: Dictionary = {}         # the decoy's, if any
 	for d: Dictionary in sim.dropped:
-		if int(d["tick"]) >= since and str(d["owner"]) == culprit:
-			item_drop = d
-	if not item_drop.is_empty():
-		var dt := Vector2i(int((item_drop["tile"] as Array)[0]), int((item_drop["tile"] as Array)[1]))
-		traces.append({"id": "t_item", "area": "store", "pos": _rel(dt, origin), "label": "A %s on the floor" % str(item_drop["item"]), "prompt": "Look around the floor",
-			"minutes": 30, "text": "A %s, dropped by the %s. It's somebody's." % [str(item_drop["item"]), str(plan["loot_place"]).trim_prefix("the ")]})
+		if int(d["tick"]) >= since:
+			if str(d["owner"]) == culprit:
+				item_drop = d
+			elif decoy_rid != "" and str(d["owner"]) == decoy_rid:
+				decoy_drop = d
+	var item_facts: Dictionary = {}         # owner -> trace id
+	for pair: Array in [[item_drop, "t_item", "store"], [decoy_drop, "t_item_decoy", "outside"]]:
+		var drop: Dictionary = pair[0]
+		if drop.is_empty():
+			continue
+		var dt := Vector2i(int((drop["tile"] as Array)[0]), int((drop["tile"] as Array)[1]))
+		item_facts[str(drop["owner"])] = str(pair[1])
+		traces.append({"id": str(pair[1]), "area": str(pair[2]), "pos": _rel(dt, origin), "label": "A %s on the ground" % str(drop["item"]), "prompt": "Look around the ground",
+			"minutes": 30, "text": "A %s, left lying there. It's somebody's." % str(drop["item"])})
 
 	# --- Statements ---------------------------------------------------------------------------------
 	var ids := sim.residents.keys()
@@ -139,7 +149,7 @@ static func build(sim: Sim, plan: Dictionary, st: Dictionary) -> Dictionary:
 				continue
 			var entry_s := {"id": str(s["id"]), "text": str(s["text"])}
 			if str(s["stance"]) == "lie":
-				entry_s["contradicted_by"] = _contradictions(s, rid, statements, sightings, item_drop, culprit, lie_n)
+				entry_s["contradicted_by"] = _contradictions(s, rid, sightings, item_facts, lie_n)
 				entry_s["_truth"] = str(s["truth"])
 			else:
 				if str(s.get("subject", "")) != "" and str(s["kind"]) == "saw_person" and float(s.get("confidence", 1.0)) >= 0.5:
@@ -209,10 +219,11 @@ static func build(sim: Sim, plan: Dictionary, st: Dictionary) -> Dictionary:
 		deductions.append({"id": "d_size", "sentence": "The bootprints belong to someone with size [size] [sole] boots.",
 			"slots": [{"key": "size", "options": sizes}, {"key": "sole", "options": soles}], "proven_by": ["t_prints_measured"],
 			"answer": {"size": str(crime_boot.get("size", "")), "sole": str(crime_boot.get("sole", ""))}})
-	if not item_drop.is_empty():
-		var owner_name := _name(sim, str(item_drop["owner"]))
-		deductions.append({"id": "d_item", "sentence": "The [item] on the floor belongs to [person].", "slots": [{"key": "item", "options": _all_items(sim)}, {"key": "person", "options": all_names}],
-			"proven_by": ["t_item"], "answer": {"item": str(item_drop["item"]), "person": owner_name}})
+	for owner: String in item_facts:
+		var did := "d_item" if owner == culprit else "d_item_decoy"
+		var dd: Dictionary = item_drop if owner == culprit else decoy_drop
+		deductions.append({"id": did, "sentence": "The [item] on the ground belongs to [person].", "slots": [{"key": "item", "options": _all_items(sim)}, {"key": "person", "options": all_names}],
+			"proven_by": [str(item_facts[owner])], "answer": {"item": str(dd["item"]), "person": _name(sim, owner)}})
 	var times := _times(crime_min)
 	for subj: String in sightings:
 		var srcs: Array = sightings[subj]
@@ -245,8 +256,8 @@ static func build(sim: Sim, plan: Dictionary, st: Dictionary) -> Dictionary:
 		var opp: Array = []
 		if sightings.has(rid):
 			opp.append("d_saw_%s" % rid)
-		if not item_drop.is_empty() and str(item_drop["owner"]) == rid:
-			opp.append("d_item")
+		if item_facts.has(rid):
+			opp.append("d_item" if rid == culprit else "d_item_decoy")
 		var means_rules: Array = []
 		if rid == culprit:
 			means_rules.append({"any_fact": ["t_loot"]})
@@ -339,7 +350,7 @@ static func _lies(list: Array) -> bool:
 
 ## What breaks a lie: the honest sightings of the same subject by other people, and the dropped item
 ## if it's the culprit's. Each takes composure so that breaking every lie someone tells leaves them at 0.
-static func _contradictions(s: Dictionary, rid: String, statements: Dictionary, sightings: Dictionary, item_drop: Dictionary, culprit: String, lie_n: int) -> Array:
+static func _contradictions(s: Dictionary, rid: String, sightings: Dictionary, item_facts: Dictionary, lie_n: int) -> Array:
 	var subject := str(s.get("subject", ""))
 	var out: Array = []
 	var per := int(ceil(100.0 / float(maxi(1, lie_n))))
@@ -347,8 +358,8 @@ static func _contradictions(s: Dictionary, rid: String, statements: Dictionary, 
 		for o: Dictionary in sightings[subject]:
 			if not str(o["id"]).begins_with("st_%s_" % rid):
 				out.append({"fact": str(o["id"]), "composure": per})
-	if rid == culprit and not item_drop.is_empty():
-		out.append({"fact": "t_item", "composure": per})
+	if item_facts.has(rid) and subject == rid:
+		out.append({"fact": str(item_facts[rid]), "composure": per})
 	return out
 
 

@@ -29,7 +29,8 @@ bash tools/setup_godot.sh                          # install Godot + web templat
 WITH_ANDROID=1 bash tools/setup_godot.sh           # also Android templates (M12, optional)
 tools/bin/godot --headless --path . --import       # import assets after adding or changing files
 tools/bin/godot --headless --path . -s addons/gut/gut_cmdln.gd -gdir=res://tests -ginclude_subdirs -gexit
-tools/bin/godot --headless --path . -s tools/director_soak.gd -- --seeds 500     # from M8
+tools/bin/godot --headless --path . -s tools/director_soak.gd -- --seeds 500     # M8 soak: 500 seeds x 28 days, solver bot on every case (about 40 min on 4 cores if split with --from)
+tools/bin/godot --headless --path . res://scenes/investigation/director_demo.tscn    # M8 demo: the director plans an incident, the bot solves it
 mkdir -p build/web && tools/bin/godot --headless --path . --export-release "Web" build/web/index.html
 node tools/web_smoke_test.mjs --viewport 1280x720  # load the build in headless Chromium, screenshot
 python3 -I tools/assets/fetch_polyhaven.py && python3 -I tools/assets/write_credits.py   # assets from data/asset_manifest.json
@@ -57,7 +58,7 @@ node tools/look_test.mjs --scene build_demo --out docs/screens/m2           # sa
 python3 -I tools/audio/make_ui_sfx.py              # regenerate the build-mode UI sounds
 ```
 
-URL hooks for previews and tests: `?scene=world` opens the valley directly, `?scene=look_test` runs the look test (options in `scenes/world/look_test.gd`), `?scene=build_demo` runs the M2 build demo, `?scene=sandbox_demo` the M3 sandbox demo, `?scene=construction_demo` the M4 story demo, `?scene=residents_demo` the M5 residents demo, `?scene=night_demo` the M6 night demo, `?scene=investigation_demo` the M7 Cash Tin demo.
+URL hooks for previews and tests: `?scene=world` opens the valley directly, `?scene=look_test` runs the look test (options in `scenes/world/look_test.gd`), `?scene=build_demo` runs the M2 build demo, `?scene=sandbox_demo` the M3 sandbox demo, `?scene=construction_demo` the M4 story demo, `?scene=residents_demo` the M5 residents demo, `?scene=night_demo` the M6 night demo, `?scene=investigation_demo` the M7 Cash Tin demo, `?scene=director_demo` the M8 director demo.
 
 `tools/bin/`, `tools/cache/` and `build/` are git-ignored. Run `--import` before tests or exports in a fresh checkout. The engine is about 9.6 MB gzipped on its own (`index.wasm`, 4.7.2).
 

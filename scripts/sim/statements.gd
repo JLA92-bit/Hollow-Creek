@@ -89,6 +89,11 @@ static func build(sim: Sim, rid: String, incident: Dictionary) -> Array[Dictiona
 		out.append(st)
 	# The culprit (or anyone with something to hide) gives a false whereabouts.
 	var cover: Dictionary = incident.get("cover", {})
+	if rid != culprit and rid == str(incident.get("decoy", "")) and not cover.is_empty():
+		var dtext := _pick(templates()["lie"]["false_location"], rid, "cover").format({"place": "at home", "time": TimeText.label(int(incident["minute"]))})
+		out.append({"id": "st_%s_cover" % rid, "owner": rid, "stance": "lie", "kind": "false_location", "text": dtext, "memory_id": "",
+			"truth": "was out by the creek", "why": "protecting a secret", "subject": rid, "minute": int(incident["minute"]),
+			"day": int(incident["day"]), "confidence": 1.0, "tile": []})
 	if rid == culprit and not cover.is_empty():
 		var time_text := TimeText.label(int(cover.get("minute", incident["minute"])))
 		var text := _pick(templates()["lie"]["false_location"], rid, "cover").format({"place": cover.get("place", "at home"), "time": time_text})

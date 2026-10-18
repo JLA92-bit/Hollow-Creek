@@ -103,6 +103,11 @@ static func _issue(sim: Sim, a: Dictionary, r: Dictionary, i: int) -> void:
 ## What happens on arrival: taking the loot (and perhaps being careless), hiding it.
 static func _arrive(sim: Sim, a: Dictionary, r: Dictionary, leg: Dictionary, plan: Dictionary, is_main: bool) -> void:
 	if not is_main:
+		if bool(leg.get("leave_item", false)):
+			var items: Array = (sim.data["residents"] as Dictionary)[str(r["id"])].get("items", [])
+			if not items.is_empty():
+				var dt := Memories.tile_of(r)
+				sim.dropped.append({"item": str(items[0]), "owner": str(r["id"]), "tile": [dt.x, dt.y], "day": sim.day, "minute": sim.minute, "tick": sim.ticks})
 		return
 	if leg.has("take"):
 		a["carrying"] = str(leg["take"])

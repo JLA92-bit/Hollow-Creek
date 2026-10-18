@@ -600,7 +600,7 @@ func _filled(d: Dictionary) -> String:
 	var s := str(d["sentence"])
 	var ans: Dictionary = d.get("answer", {})
 	for k: String in ans:
-		s = s.replace("[%s]" % k, str(ans[k]))
+		s = s.replace("[%s]" % k, str((ans[k] as Array)[0]) if ans[k] is Array else str(ans[k]))
 	return s
 
 

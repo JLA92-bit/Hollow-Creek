@@ -9,7 +9,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
 
@@ -50,6 +50,15 @@ jobs:
 
       - name: Night demo (M6 light, sightlines, memories, traces)
         run: timeout 1200 tools/bin/godot --headless --path . res://scenes/resident_ui/night_demo.tscn
+
+      - name: Investigation demo (M7 The Cash Tin solved with scripted taps)
+        run: timeout 900 tools/bin/godot --headless --path . res://scenes/investigation/investigation_demo.tscn
+
+      - name: Director demo (M8 a generated incident, solved by the bot)
+        run: timeout 1200 tools/bin/godot --headless --path . res://scenes/investigation/director_demo.tscn
+
+      - name: Director soak (M8 fair cases only, solver bot, determinism)
+        run: timeout 1500 tools/bin/godot --headless --path . -s tools/director_soak.gd -- --seeds 30 --days 28 --det-every 15
 
       - name: Export web build
         run: |

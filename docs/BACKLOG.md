@@ -51,3 +51,11 @@ Work deliberately deferred to keep milestones tight. Each item notes where it ca
 - Anchor scene traces to real pieces (window, counter) instead of tile offsets from the house origin.
 - Wire the case deadline: Town Trust slipping, culprit hiding evidence, unsolved outcome.
 - Feed `Statements` into the interview screen once the director (M8) makes cases.
+
+## M8 rows
+- Only theft is planned so far (minor severity). Vandalism, poaching, threats and the major crimes need their own plan templates and case builders (the director, runner and solver are generic).
+- Generated cases don't yet use the exchange log or mill time cards as records; only the credit ledger and what the victim says.
+- Authored-case mode supports a fixed day, candidate and plan features (`Director.authored`). Required beats, authored clues and fallback clues (docs/CRIME_DIRECTOR.md section 6) arrive with M9 and M11.
+- The director only runs once `SimHost.director_enabled` is on; M9 turns it on when the prologue case closes.
+- Weather is read from the world's rain; the director doesn't pick rainy nights on purpose (the plan search does find them, since prints make cases easier).
+- Pubs, church rosters and a busier main street don't yet make crimes harder; only latched windows do (for two weeks after a case).

@@ -120,3 +120,15 @@ For each seed: generate a random small town from the slice templates, run 28 day
 | Determinism (same seed twice) | Identical |
 
 Also write a **solver bot** that plays investigations using only discoverable facts and the deduction rules. The bot must solve every shipped case, and must fail to convict the red herring when it plays honestly. Run it in CI.
+
+
+## Implementation notes (M8)
+
+Where the code differs from the plan above, and why.
+
+- **Planning happens at nightfall.** At 06:00 the director only finds who's under pressure and whether the drama budget allows an incident (`Director.morning`). At 21:00 it generates plans, tries them on snapshots, and starts the best fair one (`Director.nightfall`). This is the "re-plan at the start of the night" step, and it means the town the plan was tested on is the town it runs in. The trial and the live run use the same `PlanRunner`, so they match exactly (tested).
+- **Shared prefix.** Plans start at 23:30, 1:00 or 2:30. The quiet hours before each start are simulated once and snapshotted, so 12 plans cost about 2 hours of simulation instead of 12 nights.
+- **Fairness is decided by playing the case.** `CaseBuilder` turns what really happened into an investigation case with a `proof` table for every resident, and `Solvability` has the solver bot play it with only discoverable facts. Solvable means the culprit meets all four requirements, nobody else can, and there are 5 to 24 discoverable facts. Interesting means somebody else meets two or three (a red herring).
+- **Where red herrings come from.** In three plans out of four a resident with a night-time secret (`night_out` in `data/residents.json`) is out near the scene, leaves a personal item, and lies about it. They meet opportunity and a broken lie, and motive if they bear the victim a grudge, but not means.
+- **Plan variety:** careless plans drop a personal item and make a noise; others rely on whoever happens to be awake. On dry nights most plans leave nothing to find and are discarded, which is correct; the director then tries 12 more, and if none is fair the night passes quietly and the culprit's pressure drops by 10.
+- **Consequences** are in `Director.apply_outcome`: charged residents go away for the weeks in `data/crime_types.json` and come back, families grieve, restitution resets the grudge, a wrong accusation gives the accused a grievance and eases the real culprit, and the town latches half its windows for 14 days.
