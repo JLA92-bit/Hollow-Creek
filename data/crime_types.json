@@ -1,0 +1,19 @@
+{
+  "_comment": "Crime types the director can plan (docs/CRIME_DIRECTOR.md). Thresholds are motive pressure; minor 60, major 85.",
+  "thresholds": {"minor": 60, "major": 85},
+  "honest_veto": 90,
+  "drama": {"min_gap_days": 7, "max_gap_days": 10},
+  "theft": {
+    "severity": "minor",
+    "motives": ["money", "grievance", "cover_up"],
+    "loot": {"shop": "the cash tin", "living": "a tin of savings"},
+    "loot_place": {"shop": "the counter", "living": "the bedroom"},
+    "charge_weeks": 4
+  },
+  "motive_text": {
+    "money": "refused credit and in debt",
+    "grievance": "an old grudge",
+    "cover_up": "something to hide",
+    "jealousy": "jealousy"
+  }
+}

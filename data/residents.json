@@ -67,8 +67,8 @@
     "s_frank_land": {"owner": "r_frank", "kind": "illegal_activity", "involves": [], "exposure_risk": 15, "consequence": "Inside information from the Lands Department.", "chapter": 1},
     "s_june_piotr": {"owner": "r_june", "kind": "affair", "involves": ["r_piotr"], "exposure_risk": 25, "consequence": "Both families would object."},
     "s_len_debts": {"owner": "r_len", "kind": "debt", "involves": [], "exposure_risk": 20, "consequence": "Owes a bookmaker in the next town."},
-    "s_davey_smoking": {"owner": "r_davey", "kind": "family_scandal", "involves": [], "exposure_risk": 30, "consequence": "Out smoking and fishing at night."},
-    "s_tomasz_yabbies": {"owner": "r_tomasz", "kind": "illegal_activity", "involves": [], "exposure_risk": 20, "consequence": "Unlicensed yabby traps in the creek."}
+    "s_davey_smoking": {"owner": "r_davey", "kind": "family_scandal", "involves": [], "exposure_risk": 30, "consequence": "Out smoking and fishing at night.", "night_out": {"what": "out smoking by the creek", "minutes": 40}},
+    "s_tomasz_yabbies": {"owner": "r_tomasz", "kind": "illegal_activity", "involves": [], "exposure_risk": 20, "consequence": "Unlicensed yabby traps in the creek.", "night_out": {"what": "out after yabbies in the creek", "minutes": 45}}
   },
   "wishes": [
     {"id": "w_halina_sewing", "owner": "r_halina", "text": "A sewing room with good morning light", "needs": {"room_with": ["surfaces"], "east_window": true}},

@@ -131,6 +131,11 @@ func _door_on(h: HouseData, level: int, k: String) -> bool:
 	return false
 
 
+## The nearest walkable spot to a tile, as a position [level, x, z] (or [] if none).
+func walkable_near(c: Vector2i) -> Array:
+	return _nearest_walkable(c)
+
+
 func _nearest_walkable(c: Vector2i) -> Array:
 	for r in 12:
 		for dz in range(-r, r + 1):

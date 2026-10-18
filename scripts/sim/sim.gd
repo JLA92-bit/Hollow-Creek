@@ -48,6 +48,8 @@ var traces: Dictionary = {}        ## "x,y" -> bootprints (Traces)
 var records: Dictionary = {"time_cards": [], "ledger": [], "exchange": []}  ## the town's paperwork
 var _light: LightGrid
 var _light_tick := -1
+var dropped: Array = []            ## things dropped where they shouldn't be: {item, owner, tile: [x, y], day, minute, tick}
+var latch_until_day: int = -1      ## after a crime the town latches its windows until this day (docs/CRIME_DIRECTOR.md "Consequences")
 var collected: int = 0             ## rent paid to the town and not yet banked by the host
 var trust_change: int = 0          ## Town Trust earned or lost and not yet banked by the host
 
@@ -699,7 +701,7 @@ func snapshot() -> Dictionary:
 		"grievances": grievances.duplicate(true), "secrets": secrets.duplicate(true), "events": events.duplicate(true), "home_scores": home_scores.duplicate(),
 		"wishes": wishes.duplicate(true), "collected": collected, "trust_change": trust_change,
 		"incidents": incidents.duplicate(true), "next_memory": next_memory, "raining": raining, "rain_minutes": rain_minutes,
-		"last_rain_tick": last_rain_tick, "traces": traces.duplicate(true), "records": records.duplicate(true)}
+		"last_rain_tick": last_rain_tick, "latch_until_day": latch_until_day, "dropped": dropped.duplicate(true), "traces": traces.duplicate(true), "records": records.duplicate(true)}
 
 
 func restore(d: Dictionary) -> void:
@@ -723,6 +725,8 @@ func restore(d: Dictionary) -> void:
 	raining = bool(d.get("raining", false))
 	rain_minutes = int(d.get("rain_minutes", 0))
 	last_rain_tick = int(d.get("last_rain_tick", -100000))
+	latch_until_day = int(d.get("latch_until_day", -1))
+	dropped = (d.get("dropped", []) as Array).duplicate(true)
 	traces = (d.get("traces", {}) as Dictionary).duplicate(true)
 	records = (d.get("records", {"time_cards": [], "ledger": [], "exchange": []}) as Dictionary).duplicate(true)
 	_light = null

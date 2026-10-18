@@ -85,10 +85,11 @@ func _add_house(h: HouseData) -> void:
 			var b := Vector2i(int(sides[1][0]), int(sides[1][1])) + o
 			var ra := str(room_of.get("%d,%d" % [a.x, a.y], ""))
 			var rb := str(room_of.get("%d,%d" % [b.x, b.y], ""))
+			var latched := bool(op2.get("latched", false))
 			if ra != "" and rb == "":
-				(rooms[ra]["windows"] as Array).append({"edge": world_edge(h, k3), "out": b})
+				(rooms[ra]["windows"] as Array).append({"edge": world_edge(h, k3), "out": b, "in": a, "latched": latched})
 			elif rb != "" and ra == "":
-				(rooms[rb]["windows"] as Array).append({"edge": world_edge(h, k3), "out": a})
+				(rooms[rb]["windows"] as Array).append({"edge": world_edge(h, k3), "out": a, "in": b, "latched": latched})
 	for ob: Dictionary in h.objects:
 		if int(ob.get("level", 0)) != 0:
 			continue
