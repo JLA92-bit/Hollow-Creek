@@ -2,6 +2,40 @@
 
 Newest milestone first. Build sizes are raw bytes, with gzip -9 in brackets.
 
+## M8 - The crime director (done)
+
+**What works** (`scripts/crime/`, design notes in `docs/CRIME_DIRECTOR.md` "Implementation notes")
+- **Motives (`motives.gd`):** money worry (hidden debts, short household), grievance (x1.5 Hot-headed, x1.3 Proud) and cover-up pressure per resident and target; thresholds from `data/crime_types.json` (minor 60); Honest residents need 90.
+- **Plans (`crime_plan.gd`, `plan_runner.gd`):** up to 12 plans per candidate, varying start (23:30, 1:00, 2:30), way in (windows nobody has latched), route (direct or round one side), a careless variant (drops a personal item, makes a noise) and a decoy (a resident with a night-time secret is out near the scene). Plans are plain data, run through `Sim.direct()` leg by leg, so everything is real: prints, sightings, noises, the incident marker.
+- **Case builder (`case_builder.gd`):** turns what really happened into an investigation case in the M7 format: scene traces (entry, missing loot, prints, dropped items), the victim's account and grudges, a credit ledger, every resident's statements from `Statements` (honest, omit or lie, with lies breakable by other residents' honest sightings), deductions, a warrant that finds the loot, and a `proof` table per resident.
+- **Solvability and the solver bot (`solvability.gd`, `solver_bot.gd`):** the bot plays the case with only discoverable facts. Solvable means the culprit meets all four requirements, nobody else can, and there are 5 to 24 facts. Interesting means a red herring meets two or three. The bot also solves the hand-written Cash Tin.
+- **Director (`director.gd`):** 06:00 finds who's under pressure and checks the drama budget (a gap of 7 to 10 days); 21:00 re-plans with tonight's town, tries plans on snapshots (sharing the quiet hours before each start), keeps the best fair one and starts it for real; the case is built from the live run and opens when the victim finds out in the morning. If no plan is fair the night passes and the culprit's pressure drops. Authored mode fixes the day, candidate and plan features. Consequences: charge (away for weeks, family grieves), restitution, wrong accusation, windows latched for 14 days.
+- **In the game:** `SimHost` runs the director each minute (off until the prologue is done, M9), opens the alert on the investigation screen, applies consequences when the case closes, and saves its state.
+
+**Soak test (`tools/director_soak.gd`, results in `docs/soak/m8_soak.json`):** 500 seeds x 28 days (each its own town: grievances, money and secrets perturbed, rain on a quarter of nights), 1,878 incidents, every one played by the solver bot.
+
+| Target | Result |
+|---|---|
+| Unsolvable cases shipped: 0 | **0** |
+| Solver bot convicts the culprit | **1,878 of 1,878** |
+| Red herring convicted: never | **0** |
+| Determinism (same seed twice) | **identical** on 10 repeat runs |
+| Avg discoverable facts per case: 6 to 9 | **7.5** |
+| Cases with a red herring: 80% or more | **94.1%** |
+| Director time per planning day: under 300 ms | **75 ms** per day on average; 555 ms on a planning night |
+| Plans discarded as unsolvable (report only) | 18,311 of 23,484 (78%); 10 nights cancelled because no plan was fair |
+
+**Tests and runs:** 227 GUT tests (10 plans, 10 director, 8 solver bot, plus earlier). Director demo headless 12 of 12 and in the browser (`node tools/look_test.mjs --scene director_demo --out docs/screens/m8 --dpr 1.5`, about 9 minutes) 12 of 12, no console errors, 2 screenshots in `docs/screens/m8/`; planning took 559 ms even on SwiftShader. Earlier demos still pass (residents 20/20, night 12/12, investigation 57/57). Smoke test: no console errors (`docs/screens/smoke-2026-10-18T23-01-38-888Z.png`). CI now runs the M7 and M8 demos and a 30-seed soak.
+
+**Build sizes (gzipped):** `index.wasm` 10.1 MB, `index.pck` 28.2 MB, 38.4 MB in all against the 40 MB budget (1.6 MB left).
+
+**Known issues** (also in `docs/BACKLOG.md`)
+- Only theft is planned. Other crime types need their own templates (the rest is generic).
+- Generated cases use the ledger and the victim's account; the exchange log and time cards aren't used yet.
+- Authored cases: only the fixed day, candidate and plan features; required beats, authored clues and fallbacks come with M9 and M11.
+- The director is off until the prologue case closes (M9).
+- On dry nights most plans leave nothing to find and are discarded (78% overall), so incidents lean on witnesses, dropped items and rain.
+
 ## M7 - Investigation tools (done)
 
 **What works**

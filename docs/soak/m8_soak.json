@@ -1,0 +1,19 @@
+{
+  "seeds": 500,
+  "days": 14000,
+  "incidents": 1878,
+  "seeds_with_incident": 500,
+  "unsolvable_shipped": 0,
+  "bot_failed": 0,
+  "herring_convicted": 0,
+  "plans_tried": 23484,
+  "plans_discarded_unsolvable": 18311,
+  "cancelled": 10,
+  "determinism_checked": 10,
+  "determinism_failed": 0,
+  "avg_facts": 7.53,
+  "pct_with_herring": 94.1,
+  "ms_per_day_all": 75.0,
+  "ms_per_planning_night": 555.4,
+  "command": "tools/bin/godot --headless --path . -s tools/director_soak.gd -- --seeds 125 --from {0,125,250,375} --days 28 --det-every 50 (4 workers)"
+}
