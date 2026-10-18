@@ -2,6 +2,30 @@
 
 Newest milestone first. Build sizes are raw bytes, with gzip -9 in brackets.
 
+## M7 - Investigation tools (done)
+
+**What works**
+- **Rules (`scripts/investigation/investigation.gd`):** a plain class, no scenes, no RNG, exact snapshots. Traces (searched by tapping, 30 to 60 minutes each), measuring, records handed over in interviews, interviews with Composure and Pressure, Press and Present, warrants, deductions, accusation, outcomes and the charge or restitution choice. Town Trust is banked through `SimHost.bank_case()`. Every fact is a string, so one rule covers a trace, a record, a measurement or a statement.
+- **Cases are data** (`data/cases/case_00_cash_tin.json`): traces, records, each person's statements and what contradicts them, the warrant, deductions with their blanks, the four requirements and the resolutions. No case-specific code.
+- **Statements from memories (`scripts/sim/statements.gd`, templates in `data/dialogue/statements.json`):** memories inside the case window are told honestly, omitted or lied about. Protects self (culprit, or a secret the truth would expose), family, or a close friend if Loyal (friendship 60+); omits if afraid of the culprit. Lies keep a link to the true memory and `contradictions()` finds honest witnesses who disprove them.
+- **Investigation screen (`scenes/investigation/`):** laid out like `docs/mockups/ui-layout-investigation.png`. The left is the real 3D world with walls down and tap-targets that turn into numbered markers. The right has the people row, a **live 3D portrait** (`PortraitView`: own world, key, fill and rim lights; the mannequin leans back, droops and turns away as Composure falls and Pressure rises), the statement card, Press and Present, the case file, deductions with fill-in blanks, the warrant picker and the accusation.
+- **Incident flow:** `SimHost.open_case()` pauses time, the world opens the screen on the scene (walls down, camera over the store), time spent moves the clock, and the HUD's Case file button reopens it. Closing a case unlocks footpaths and street lamps.
+- **Acceptance demo (`scenes/investigation/investigation_demo.tscn`):** The Cash Tin solved by pressing the real buttons: search five places, measure the bootprints, interview all six, break Agnes, Davey and Len, link five deductions, search the Pike house, accuse Len, choose restitution (Town Trust +6).
+
+**Tests and runs**
+- 199 GUT tests pass (22 investigation rules, 9 statements).
+- Demo headless: 57 of 57. In the browser (`node tools/look_test.mjs --scene investigation_demo --out docs/screens/m7 --dpr 1.5`, about 11 minutes on SwiftShader): 57 of 57, no console errors, 5 screenshots in `docs/screens/m7/`.
+- Web smoke test: no console errors (`docs/screens/smoke-2026-10-18T12-50-03-203Z.png`).
+
+**Build sizes (gzipped):** `index.wasm` 10.1 MB, `index.pck` 28.2 MB, 38.3 MB in all against the 40 MB budget. Only 1.7 MB of headroom; the next content should go in background packs.
+
+**Known issues**
+- The mannequins have no faces, so expressions are body language only. Real facial expressions wait for the MPFB face rig (added to `docs/BACKLOG.md`).
+- Trace positions are tile offsets from the store's origin, so they don't follow the actual window and counter pieces if the player moves them. M9's authored case should anchor traces to pieces.
+- The demo's statements are authored for the Cash Tin. The generator in `statements.gd` isn't driving the interview screen yet; the crime director (M8) will feed it.
+- No Case file board with drawn links yet, only the deduction list (`docs/BACKLOG.md`).
+- The deadline, Town Trust slipping with time and evidence hiding aren't wired.
+
 ## M6 - Light, sightlines and memories (done)
 
 **What works**

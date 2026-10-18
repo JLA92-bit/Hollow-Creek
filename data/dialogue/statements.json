@@ -1,0 +1,17 @@
+{
+  "_comment": "Templates for generated statements (docs/SIMULATION.md 'Statements in interviews'). Variables: {who} {detail} {place} {time}. Australian English, 1950s country voice.",
+  "honest": {
+    "saw_person": ["I saw {who} {detail}, {place}, about {time}.", "That'd be {who}, {detail}, {place}. Round about {time}."],
+    "heard_noise": ["I heard {detail}, {place}, about {time}.", "Round {time} I heard {detail}, {place}."],
+    "saw_light": ["I saw {detail}, about {time}."],
+    "saw_object": ["I noticed {detail}, {place}, about {time}."],
+    "was_told": ["I was told {detail}. Only hearsay, mind."],
+    "whereabouts": ["I was {place} at {time}, as I told you."]
+  },
+  "lie": {
+    "denial": ["I saw nothing, dear. Not a thing.", "I didn't see a soul.", "Can't say I noticed anything."],
+    "false_location": ["I was {place} all night.", "Home all evening. Ask anyone."],
+    "false_time": ["I was back by {time}. Not a minute after."]
+  },
+  "omit": ["I can't help you there.", "I don't know anything about that."]
+}

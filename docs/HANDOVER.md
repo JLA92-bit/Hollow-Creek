@@ -9,11 +9,12 @@ Branch: `claude/compassionate-fermat-5ldlj5`. No PR has been opened; don't open 
 | Milestone | State |
 |---|---|
 | M0 to M6 | Done: tests, demos, browser runs, screenshots and docs committed (`docs/screens/m0` to `m6`) |
-| M7 Investigation tools | Not started. Next up, per `docs/PLAN.md` |
+| M7 Investigation tools | Done: rules, statements from memories, investigation screen with live portrait, Cash Tin demo (57 of 57 headless and in the browser) |
+| M8 The crime director | Not started. Next up, per `docs/PLAN.md` |
 
-168 GUT tests pass. Night demo 12 of 12, residents demo 20 of 20, both also in the browser. First download is 38.2 MB gzipped (budget 40 MB), so new content must go into background packs.
+199 GUT tests pass. Night demo 12 of 12, residents demo 20 of 20, investigation demo 57 of 57, all also in the browser. First download is 38.3 MB gzipped (budget 40 MB), so new content must go into background packs.
 
-Josh needs his M5 and M6 updates (five lines each at most: what works, what to try, what's needed).
+Josh needs his M5, M6 and M7 updates (five lines each at most: what works, what to try, what's needed).
 
 ## Environment notes
 

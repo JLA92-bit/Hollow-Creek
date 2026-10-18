@@ -44,3 +44,10 @@ Work deliberately deferred to keep milestones tight. Each item notes where it ca
 | Walking speed versus clock speed | M5 | People walk at 1.2 m/s of game time, so at 1x a 60 m trip takes under a second of real time and the walk animation runs fast. Fine for a town sim; a slower "follow" speed could help when watching one person |
 | Bed orientation | M5 | Sleepers lie along the bed's own direction, but the head end isn't checked against pillows on every model |
 | Moving a family out | M5 | Families can move in but not out or between houses, and demolishing a lived-in house isn't blocked yet |
+
+## M7 rows
+- Facial expressions on the live portrait need the MPFB face rig (the placeholder mannequins have no faces).
+- Case board with drawn links between facts (only the deduction list exists).
+- Anchor scene traces to real pieces (window, counter) instead of tile offsets from the house origin.
+- Wire the case deadline: Town Trust slipping, culprit hiding evidence, unsolved outcome.
+- Feed `Statements` into the interview screen once the director (M8) makes cases.
