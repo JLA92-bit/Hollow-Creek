@@ -128,6 +128,7 @@ func _run_night() -> void:
 	world.call("set_walls_mode", HouseView.WALLS_UP)
 	await look(Vector3(70.0, grid.height_at(70, 40), 40.0), 210.0, 62.0, 48.0)
 	await shot("m6_04_routes")
+	await run_to(2, 7 * 60)
 	world.call("set_raining", true)
 	await run_to(2, 12 * 60)
 	world.call("set_raining", false)
@@ -136,6 +137,7 @@ func _run_night() -> void:
 	for k: String in sim.traces:
 		prints += (sim.traces[k] as Array).size()
 	_check(prints > 50, "bootprints all over town after a wet day (%d)" % prints)
+	await run_to(2, 16 * 60)  # mill shifts end at 3:30 pm
 	var cards := 0
 	for c: Dictionary in sim.records["time_cards"]:
 		if int(c["day"]) == 2 and int(c["out"]) > 0:
