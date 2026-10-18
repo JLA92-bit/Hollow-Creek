@@ -42,4 +42,18 @@ Click each link, which downloads a 1K JPG zip. About 5 to 8 MB each.
 
 ## Later
 
-- **Before M9:** Mixamo animations (needs an Adobe login). The exact list will be added here at M8.
+- **Before M9: animations.** The M5 to M8 residents use three placeholder animations (idle, walk, sit) keyed by hand in Blender. M9 needs real ones, either from Mixamo (needs an Adobe login, so Josh downloads) or the **Quaternius Universal Animation Library** (CC0, no login). Either source works; Quaternius alone is the simpler route and covers most of the list.
+
+  What the simulation and the investigation actually use, in priority order:
+
+  | Needed for | Animation | Used by |
+  |---|---|---|
+  | Everyday life | idle (standing, relaxed), walk, sit down, sit idle, stand up | every resident, all day |
+  | Home | sleep (lying), cook (stirring), sweep, eat, listen to the wireless (seated), garden (dig / weed) | `sleep`, `cook`, `snack`, `wireless`, `garden` actions |
+  | Work | hammer or saw (mill), serve at a counter (store), switchboard (exchange), carry a box | `work` at the mill, store and exchange |
+  | People | talk (gesturing), listen, wave, argue (pointing), laugh | chats, visits, interviews |
+  | Investigation | nervous idle (shifting, hand wringing), look down / away, arms crossed | the live portrait (composure and pressure) |
+  | Crime | sneak (crouched walk), climb through a window, crouch and pick up | the director's plans (`sneak` legs) |
+  | Town life | dance (a simple two-step), carry (arms full) | the welcome dance, shopping |
+
+  Download as FBX or GLB, **with skin**, at 30 fps, in place (no root motion), and put them in `assets/incoming/animations/`. Claude Code retargets them onto the MPFB rig in the character pipeline. For Mixamo please download the "Y Bot" or "X Bot" version of each so the rig is consistent. Facial expressions don't come from either library; they are blend shapes made in the MPFB pipeline.
