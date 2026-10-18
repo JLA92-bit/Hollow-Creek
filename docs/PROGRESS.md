@@ -4,9 +4,9 @@ Newest milestone first. Build sizes are raw bytes, with gzip -9 in brackets.
 
 ## M6 - Light, sightlines and memories (in progress)
 
-Core done: light grid, sight map, memories, noises, gossip, bootprints, records, debug overlays, night demo (11 of 12 headless). 168 GUT tests pass. Status and next steps in `docs/HANDOVER.md`.
+Core done: light grid, sight map, memories, noises, gossip, bootprints, records, debug overlays, night demo (12 of 12 headless). 168 GUT tests pass. Browser run and write-up still to do; see `docs/HANDOVER.md`.
 
-## M5 - Residents (done, browser run to finish)
+## M5 - Residents (done)
 
 **What works**
 - **Simulation (`scripts/sim/`):** deterministic, plain classes, all randomness from `SimRng`.
@@ -57,7 +57,7 @@ Core done: light grid, sight map, memories, noises, gossip, bootprints, records,
 | index.pck | 34,616,200 | 28,066,461 |
 | **First download** | | **about 38.2 MB** (budget 40 MB) |
 
-**Browser run:** unfinished at handover. 6 of 7 screenshots are in `docs/screens/m5/` with every check passing so far and no console errors; re-run to finish (`docs/HANDOVER.md`). The web smoke test passed with no console errors (`docs/screens/smoke-2026-10-17T10-30-28-065Z.png`).
+**Browser run:** `node tools/look_test.mjs --scene residents_demo --out docs/screens/m5 --dpr 1.5` passed 20 of 20 checks in headless Chromium (SwiftShader) with no console errors. Seven screenshots are in `docs/screens/m5/` (`m5_01_agnes` to `m5_07_marge`). It takes about 25 minutes. The web smoke test is still to run.
 
 **Performance** (headless desktop): a game hour of all ten residents (60 ticks) takes about 0.2 to 0.3 ms per tick batch; building the town's walk graph takes a fraction of a second. Agnes adds one skinned mesh of 9,000 triangles at Medium.
 
