@@ -21,6 +21,14 @@ Every external file in the game, with its author, source and licence. Shown in-g
 | Courier Prime | Alan Dague-Greene (Quote-Unquote Apps) | https://github.com/google/fonts/tree/main/ofl/courierprime | SIL OFL 1.1 |
 | Caveat | Impallari Type | https://github.com/google/fonts/tree/main/ofl/caveat | SIL OFL 1.1 |
 
+## Animations (`assets/characters/animations.glb`)
+
+| Item | Author | Source | Licence |
+|---|---|---|---|
+| Universal Animation Library [Standard] | Quaternius | https://quaternius.com (Patreon: https://www.patreon.com/quaternius) | CC0 1.0 |
+
+Retargeted onto the MPFB rig by `tools/characters/retarget_ual.py`. The source file stays in `assets/incoming/animations/ual/` and isn't shipped.
+
 ## Our own work
 
 | Item | Notes |
