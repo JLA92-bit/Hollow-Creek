@@ -54,3 +54,9 @@ Steps: re-export web, `bash tools/build_packs.sh`, upload `build/web/` including
 ## Open issues
 
 See "Known issues" in the M6 entry of `docs/PROGRESS.md` and the M5 rows in `docs/BACKLOG.md`.
+
+## Josh's requests, 19 October 2026 (not started)
+
+- **Android APK that checks for updates:** native Godot export (`WITH_ANDROID=1 bash tools/setup_godot.sh`, needs the Android SDK hosts allowed and a signing key Josh backs up). Content updates via downloaded `.pck` packs, engine updates via a version file on the site and an install prompt.
+- **A controllable player character:** the Administrator and Constable should walk where the player directs (tap to move or a stick). Design needed first: camera, how it interacts with build mode and sightlines (what the player is seen doing).
+- **Phone layout:** UI scale now uses CSS pixels, upright phones get a turn-sideways cover, and build mode has a compact layout (tool and House buttons, prologue pill). Verified on a desktop renderer at 844x390, 667x375 and 932x430 and in headless Chromium with a 3x phone; not yet on a real phone.
