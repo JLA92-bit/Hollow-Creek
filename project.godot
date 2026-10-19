@@ -7,7 +7,7 @@ config_version=5
 
 config/name="Hollow Creek"
 config/description="Country Victoria, 1952. Build a town, watch it live, solve what goes wrong."
-config/version="0.0.1"
+config/version="0.0.2"
 run/main_scene="res://scenes/boot/boot.tscn"
 config/features=PackedStringArray("4.7")
 boot_splash/bg_color=Color(1, 1, 1, 1)
@@ -25,6 +25,7 @@ SimHost="*res://autoload/sim_host.gd"
 ContentPacks="*res://autoload/content_packs.gd"
 OrientationGate="*res://autoload/orientation_gate.gd"
 UpdateChecker="*res://autoload/update_checker.gd"
+LoadingScreen="*res://autoload/loading_screen.gd"
 
 [debug]
 

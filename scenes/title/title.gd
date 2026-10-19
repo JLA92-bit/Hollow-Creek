@@ -37,7 +37,7 @@ func _ready() -> void:
 	settings.disabled = false
 	settings.pressed.connect(func() -> void:
 		var s := SettingsScreen.new()
-		s.loaded.connect(func() -> void: get_tree().change_scene_to_file("res://scenes/world/world.tscn"))
+		s.loaded.connect(_open_world)
 		add_child(s))
 	_status.text = "Press Build (or B) to build. Right-drag or two fingers to look around, R for rain, F2 for photos."
 
@@ -60,12 +60,29 @@ func _start_music() -> void:
 	_music.play()
 
 
+## Shows the loading screen first and lets it draw, so the player sees something happening while the
+## valley builds instead of a frozen title.
+func _open_world() -> void:
+	LoadingScreen.show_loading("Opening the valley")
+	await get_tree().process_frame
+	await get_tree().process_frame
+	get_tree().change_scene_to_file("res://scenes/world/world.tscn")
+
+
 func _load(slot: String) -> void:
+	LoadingScreen.show_loading("Reading your saved game")
+	await get_tree().process_frame
+	await get_tree().process_frame
 	if SaveSystem.load_slot(slot):
 		get_tree().change_scene_to_file("res://scenes/world/world.tscn")
+	else:
+		LoadingScreen.hide_loading()
 
 
 func _new_game(mode: String) -> void:
+	LoadingScreen.show_loading("Starting a new game")
+	await get_tree().process_frame
+	await get_tree().process_frame
 	GameState.reset()
 	SimHost.reset()
 	GameState.mode = mode

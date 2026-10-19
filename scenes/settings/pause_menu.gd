@@ -46,7 +46,11 @@ func _ready() -> void:
 	settings_button = _button(v, "Settings and saves", func() -> void:
 		var s := SettingsScreen.new()
 		s.in_game = true
-		s.loaded.connect(func() -> void: get_tree().change_scene_to_file("res://scenes/world/world.tscn"))
+		s.loaded.connect(func() -> void:
+			LoadingScreen.show_loading("Reading your saved game")
+			await get_tree().process_frame
+			await get_tree().process_frame
+			get_tree().change_scene_to_file("res://scenes/world/world.tscn"))
 		add_child(s))
 	title_button = _button(v, "Quit to title", func() -> void:
 		SaveSystem.save_slot("autosave" if not GameState.is_sandbox() else "sandbox")

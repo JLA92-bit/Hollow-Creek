@@ -53,7 +53,19 @@ var _photo_layer: CanvasLayer
 var _photo_bar: PanelContainer
 
 
+var _loaded := false   ## false while _ready is still building (it spreads over frames behind the loading screen)
+
+
+## One step of the build: tells the loading screen, then (only when it is showing) lets a frame draw so
+## the bar moves. Without the screen (demos and tests) it costs nothing and the build stays in one go.
+func _stage(fraction: float, message: String) -> void:
+	LoadingScreen.set_progress(fraction, message)
+	if LoadingScreen.is_showing():
+		await get_tree().process_frame
+
+
 func _ready() -> void:
+	await _stage(0.04, "Surveying the valley")
 	slice = MapSlice.load_default()
 	_orig_heights = slice.grid.heights.duplicate()
 	_orig_ground = slice.grid.ground.duplicate()
@@ -72,22 +84,27 @@ func _ready() -> void:
 	day.name = "DayNight"
 	add_child(day)
 	day.setup(env, sun)
+	await _stage(0.12, "Shaping the land")
 	terrain = TerrainView.new()
 	terrain.name = "Terrain"
 	add_child(terrain)
 	terrain.setup(slice.grid)
+	await _stage(0.28, "Running the creek")
 	creek = CreekView.new()
 	creek.name = "Creek"
 	add_child(creek)
 	creek.setup(slice)
+	await _stage(0.36, "Planting the gum trees")
 	vegetation = Vegetation.new()
 	vegetation.name = "Vegetation"
 	add_child(vegetation)
 	vegetation.setup(slice, terrain.skirt_height)
+	await _stage(0.58, "Raising the siding and the store")
 	landmarks = Landmarks.new()
 	landmarks.name = "Landmarks"
 	add_child(landmarks)
 	landmarks.setup(slice)
+	await _stage(0.68, "Building the houses")
 	_build_houses()
 	rig = CameraRig.new()
 	rig.name = "CameraRig"
@@ -97,23 +114,29 @@ func _ready() -> void:
 	var c := cottage_centre()
 	rig.set_view(c, 212.0, 26.0, 30.0)
 	rig.view_changed.connect(_on_view_changed)
+	await _stage(0.72, "Furnishing the cottages")
 	for id: String in GameState.houses:
 		add_house(HouseData.from_dict(GameState.houses[id]), false)
+	await _stage(0.74, "Settling the ground")
 	apply_landscape()
+	await _stage(0.8, "Letting the weather in")
 	rain = Rain.new()
 	rain.name = "Rain"
 	add_child(rain)
 	day.lamps_changed.connect(func(_l: float) -> void: _update_house_lighting())
 	EventBus.time_changed.connect(_on_minute)
+	await _stage(0.83, "Laying out the building tools")
 	build = BuildMode.new()
 	build.name = "BuildMode"
 	build.world = self
 	build.rig = rig
 	add_child(build)
+	await _stage(0.86, "Hanging the signs")
 	if not look_test:
 		hud = Hud.new()
 		hud.world = self
 		add_child(hud)
+	await _stage(0.86, "Setting the light")
 	var q := str(Settings.get_value("quality"))
 	if q == "" and not look_test:
 		_start_benchmark()
@@ -123,11 +146,25 @@ func _ready() -> void:
 		Clock.set_minute(9 * 60 + 20)
 	day.apply(Clock.minute_f())
 	_update_house_lighting()
+	await _stage(0.92, "Waking the town")
 	if not look_test and not GameState.is_sandbox():
 		_start_residents()
+	_loaded = true
+	LoadingScreen.set_progress(1.0, "Ready")
 	ready_to_play.emit()
+	_finish_loading_screen()
 	if not look_test and UrlParams.read().get("build", "") == "1":
 		enter_build_mode.call_deferred()
+
+
+## Takes the loading cover down once the first frames have drawn (the first draw is when the browser
+## compiles shaders, which would otherwise freeze the screen with nothing on it).
+func _finish_loading_screen() -> void:
+	if not LoadingScreen.is_showing():
+		return
+	for i in 3:
+		await get_tree().process_frame
+	LoadingScreen.hide_loading()
 
 
 ## The town's life: the sim gets its walk graph from this valley, and its people are drawn here.
@@ -682,6 +719,8 @@ func _update_house_lighting() -> void:
 
 
 func _process(delta: float) -> void:
+	if not _loaded:
+		return
 	var t0 := Time.get_ticks_usec()
 	rain.step(delta, rig.focus)
 	vegetation.update_occlusion(rig.camera.global_position, rig.focus)
@@ -705,6 +744,8 @@ func _process(delta: float) -> void:
 
 
 func _unhandled_key_input(event: InputEvent) -> void:
+	if not _loaded:
+		return
 	var k := event as InputEventKey
 	if k == null or not k.pressed or k.echo:
 		return
