@@ -2,6 +2,15 @@
 
 Newest milestone first. Build sizes are raw bytes, with gzip -9 in brackets.
 
+## 19 October 2026 - Phones, loading and first-steps guidance (post-M9)
+
+- **Phone scale:** the auto UI scale now measures the screen in CSS pixels (a 3x phone is 390 tall, not 1170), so buttons are finger sized. Upright touch screens get a "turn your phone sideways" cover.
+- **Compact build mode (phones held sideways):** a Room (current tool) button opens the tool list, a House button opens the house panel, the prologue card is a pill, the clock bar drops its extras. Checked at 844x390, 667x375 and 932x430 with `tools/previews/build_overlap_check.tscn`.
+- **Loading screen:** New game, Continue, Sandbox and loading from settings show a cover with a bar and a message for each of 14 steps while the valley builds one step per frame (`autoload/loading_screen.gd`, staged `_ready` in `scenes/world/world.gd`; demos and tests still build in one go). `tools/previews/loading_check.tscn` prints the steps.
+- **First-steps guidance:** every prologue step has numbered how-to lines and a flashing button (`point_at`), the road step swings the camera over the yellow dots and flashes Follow the ghost path in the Roads panel, and a warning shows when the player is in Build mode but needs another tool. On phones the card shows one instruction at a time with an All steps button. `tools/previews/coach_check.tscn` takes the screenshots.
+- **Android app 0.0.1 to 0.0.3:** signed APK with an update check (see HANDOVER).
+- Known: nothing yet tested on a real phone by Claude; the first run on a real phone is Josh's.
+
 ## M9 - Prologue and The Cash Tin (done, with art still to come)
 
 **What works**

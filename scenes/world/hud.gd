@@ -12,6 +12,9 @@ var _date: Label
 var _speed_buttons: Array[Button] = []
 var _walls_btn: Button
 var _chips_panel: PanelContainer
+var _toolbar_buttons: Dictionary = {}
+var _pointed := ""
+var _pulse: Tween
 var _people_chip: Control
 var _trust_title: Label
 var _chips_hidden_in_build := false
@@ -260,6 +263,7 @@ func _toolbar(root: Control) -> void:
 			b.pressed.connect(func() -> void: world.call("toggle_photo_mode"))
 		b.custom_minimum_size = Vector2(80, 48)
 		b.add_theme_font_size_override("font_size", 15)
+		_toolbar_buttons[t] = b
 		if t == "Build":
 			b.theme_type_variation = &"PrimaryButton"
 			b.tooltip_text = "Build (B)"
@@ -292,6 +296,18 @@ func _resident_panels(root: Control) -> void:
 
 
 ## Turns on the buttons that need the town's residents once they're about.
+## Makes one toolbar button flash ("" for none): the prologue uses it to show what to press next.
+func point_at(button_name: String) -> void:
+	if button_name == _pointed:
+		return
+	if _pointed != "" and _toolbar_buttons.has(_pointed):
+		Pulse.stop(_toolbar_buttons[_pointed] as Button, _pulse)
+	_pulse = null
+	_pointed = button_name
+	if button_name != "" and _toolbar_buttons.has(button_name):
+		_pulse = Pulse.start(_toolbar_buttons[button_name] as Button, self)
+
+
 func _refresh_toolbar() -> void:
 	for b in _toolbar_panel.get_child(0).get_children():
 		if (b as Button).text == "Residents":

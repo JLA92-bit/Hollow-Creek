@@ -104,11 +104,20 @@ func open() -> void:
 	visible = true
 	points.clear()
 	ghost_button.visible = SimHost.prologue != null and SimHost.prologue.current_id() == "road"
-	say("Tap the ground to add points along your road, then Lay road.")
+	lay_button.theme_type_variation = &"PrimaryButton"
+	if ghost_button.visible:
+		ghost_button.theme_type_variation = &"PrimaryButton"
+		lay_button.theme_type_variation = &""
+		_ghost_pulse = Pulse.start(ghost_button, self)
+		say("Tap Follow the ghost path and the road is laid along the yellow dots for you. Or tap the ground to place your own points, then Lay road.")
+	else:
+		say("Tap the ground to add points along your road, then Lay road.")
 	_redraw()
 
 
 func close() -> void:
+	Pulse.stop(ghost_button, _ghost_pulse)
+	_ghost_pulse = null
 	active = false
 	visible = false
 	points.clear()
@@ -132,7 +141,9 @@ func follow_ghost() -> void:
 	if SimHost.prologue == null:
 		return
 	var r: Dictionary = world.call("lay_road", (SimHost.prologue.data["road"] as Dictionary)["points"], kind if kind != "footpath" else "dirt")
-	say(str(r["msg"]))
+	say("%s Tap Done to close this panel." % str(r["msg"]) if bool(r.get("ok", false)) else str(r["msg"]))
+	Pulse.stop(ghost_button, _ghost_pulse)
+	_ghost_pulse = null
 	SimHost.refresh_story()
 
 
@@ -179,6 +190,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 var _press := Vector2.ZERO
+var _ghost_pulse: Tween
 
 
 func _redraw() -> void:
