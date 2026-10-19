@@ -31,6 +31,10 @@ func _ready() -> void:
 	add_child(_tag)
 	SimHost.town_changed.connect(refresh_floors)
 	refresh_floors()
+	# The residents' own bodies come in the characters pack; until it lands they stand in as mannequins.
+	if not ContentPacks.is_loaded("characters"):
+		ContentPacks.pack_loaded.connect(func(n: String) -> void: set_lod(lod, true) if n == "characters" else null)
+		ContentPacks.request("characters")
 
 
 ## Floor heights of every house tile, so people stand on floors indoors and the ground outside.
@@ -45,8 +49,8 @@ func refresh_floors() -> void:
 					_floors["%d:%d,%d" % [l, t.x + h.origin.x, t.y + h.origin.y]] = y
 
 
-func set_lod(level: int) -> void:
-	if level == lod:
+func set_lod(level: int, force: bool = false) -> void:
+	if level == lod and not force:
 		return
 	lod = level
 	for rid: String in _views:
@@ -58,6 +62,8 @@ func _make(rid: String) -> Dictionary:
 	var sim := SimHost.sim
 	var d: Dictionary = (sim.data["residents"] as Dictionary).get(rid, {})
 	var look := ResidentLook.for_resident(rid, d)
+	if not ResourceLoader.exists("res://assets/characters/%s.glb" % look["model"]):
+		look["model"] = "mannequin_f" if str(d.get("sex", "m")) == "f" else "mannequin_m"   # the pack hasn't arrived yet
 	var path := "res://assets/characters/%s.glb" % look["model"]
 	if lod > 0 and ResourceLoader.exists("res://assets/characters/%s_lod1.glb" % look["model"]):
 		path = "res://assets/characters/%s_lod1.glb" % look["model"]

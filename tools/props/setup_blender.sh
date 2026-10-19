@@ -3,6 +3,7 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 VENV="$ROOT/tools/cache/blender-venv"
+mkdir -p "$ROOT/tools/cache" && touch "$ROOT/tools/cache/.gdignore"   # Godot must not scan the Python venv
 if [ ! -x "$VENV/bin/python" ]; then
   python3 -m venv "$VENV"
 fi

@@ -118,11 +118,12 @@ def sit(f):
             "lowerarm_l": (-40,), "lowerarm_r": (-40,)}
 
 
-def build(lod: int) -> Path:
+def build(lod: int, name: str = "agnes", macros: dict = MACROS, skirt: bool = True, bun: bool = True) -> Path:
+    """One resident as a GLB. `skirt` makes the dress (women); without it the tights helper is trousers. `bun` adds the hair bun."""
     bpy.ops.wm.read_factory_settings(use_empty=True)
     bpy.context.scene.render.fps = FPS
     hs = mpfb()
-    body = hs.create_human(macro_detail_dict=MACROS)
+    body = hs.create_human(macro_detail_dict=macros)
     rig = hs.add_builtin_rig(body, "game_engine")
     # Bake the targets into the mesh, then keep the body and the skirt helper and drop the rest.
     bpy.context.view_layer.objects.active = body
@@ -159,7 +160,10 @@ def build(lod: int) -> Path:
         groups = {g.group: g.weight for g in v.groups}
         part = next((name for name, i in group.items() if i in groups), "")
         if part == "helper-skirt":
-            vert_slot[v.index] = "bottom"
+            if skirt:
+                vert_slot[v.index] = "bottom"
+            else:
+                drop.append(v.index)
             continue
         bone_w = [(w, bones[g]) for g, w in groups.items() if g in bones]
         bone = max(bone_w)[1] if bone_w else "pelvis"
@@ -198,16 +202,17 @@ def build(lod: int) -> Path:
     bmesh.ops.delete(bm, geom=[bm.verts[i] for i in drop], context="VERTS")
     bm.to_mesh(body.data)
     bm.free()
-    # A bun at the back of the head.
-    bpy.ops.mesh.primitive_uv_sphere_add(segments=12, ring_count=8, radius=0.055, location=(0, head.y + 0.1, head.z + 0.6 * (top - head.z)))
-    bun = bpy.context.active_object
-    bun.data.materials.append(bpy.data.materials["hair"])
-    bun.vertex_groups.new(name="head").add(list(range(len(bun.data.vertices))), 1.0, "REPLACE")
-    bpy.ops.object.select_all(action="DESELECT")
-    bun.select_set(True)
-    body.select_set(True)
-    bpy.context.view_layer.objects.active = body
-    bpy.ops.object.join()
+    if bun:
+        # A bun at the back of the head.
+        bpy.ops.mesh.primitive_uv_sphere_add(segments=12, ring_count=8, radius=0.055, location=(0, head.y + 0.1, head.z + 0.6 * (top - head.z)))
+        bun_obj = bpy.context.active_object
+        bun_obj.data.materials.append(bpy.data.materials["hair"])
+        bun_obj.vertex_groups.new(name="head").add(list(range(len(bun_obj.data.vertices))), 1.0, "REPLACE")
+        bpy.ops.object.select_all(action="DESELECT")
+        bun_obj.select_set(True)
+        body.select_set(True)
+        bpy.context.view_layer.objects.active = body
+        bpy.ops.object.join()
     # Down to the triangle budget: under 10,000 at LOD0 and 3,000 at LOD1.
     tris_now = sum(len(p.vertices) - 2 for p in body.data.polygons)
     target = 9000 if lod == 0 else 2800
@@ -219,7 +224,7 @@ def build(lod: int) -> Path:
     make_action(rig, "walk", list(range(1, 26, 2)), walk)
     make_action(rig, "sit", [1, 10], sit)
     OUT.mkdir(parents=True, exist_ok=True)
-    path = OUT / ("agnes.glb" if lod == 0 else "agnes_lod1.glb")
+    path = OUT / (f"{name}.glb" if lod == 0 else f"{name}_lod1.glb")
     bpy.ops.object.select_all(action="DESELECT")
     body.select_set(True)
     rig.select_set(True)
