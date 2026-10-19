@@ -12,6 +12,9 @@ var _body: VBoxContainer
 var _t := 0.0
 var _sig := ""
 var continue_button: Button
+var _expanded := false   ## on a compact screen in build mode the card is a one line pill until tapped
+var _pill_mode := false
+var _pill_width := 170.0
 
 
 func _ready() -> void:
@@ -34,10 +37,32 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	_avoid_build_palette()
 	_t -= delta
 	if _t <= 0.0:
 		_t = 0.4
 		_refresh()
+
+
+## In build mode the tool palette takes the top left corner, so the card moves to its right. On a
+## compact screen (a phone held sideways) it shrinks to a one line pill that opens when tapped.
+func _avoid_build_palette() -> void:
+	var x := 16.0
+	var y := 128.0
+	var pill := false
+	var panel := get_tree().get_first_node_in_group(&"build_panel") as BuildPanel
+	if panel != null and panel.is_visible_in_tree():
+		x = panel.palette_right() + 16.0
+		if Settings.is_compact(get_viewport().get_visible_rect().size.y):
+			x = panel.pill_rect().position.x
+			y = panel.pill_rect().position.y
+			_pill_width = panel.pill_rect().size.x - 28.0
+			pill = true
+	if pill != _pill_mode:
+		_pill_mode = pill
+		_sig = ""
+	if not is_equal_approx(_card.position.x, x) or not is_equal_approx(_card.position.y, y):
+		_card.position = Vector2(x, y)
 
 
 func _refresh() -> void:
@@ -47,16 +72,32 @@ func _refresh() -> void:
 		return
 	var s := p.current()
 	var list := p.checklist()
-	var sig := "%s|%s|%s" % [p.current_id(), str(list), Settings.get_value("hints")]
+	var sig := "%s|%s|%s|%s|%s" % [p.current_id(), str(list), Settings.get_value("hints"), _pill_mode, _expanded]
 	if sig == _sig:
 		return
 	_sig = sig
 	_card.visible = not s.is_empty()
 	for c in _body.get_children():
+		_body.remove_child(c)
 		c.queue_free()
 	continue_button = null
 	if s.is_empty():
 		return
+	if _pill_mode and not _expanded:
+		_card.custom_minimum_size = Vector2(0, 0)
+		_card.reset_size()
+		var pill := Button.new()
+		pill.text = "%d/%d  %s  \u25BE" % [p.step + 1, p.steps().size(), str(s["title"])]
+		pill.clip_text = true
+		pill.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		pill.custom_minimum_size = Vector2(_pill_width, 44)
+		pill.add_theme_font_size_override("font_size", 15)
+		pill.pressed.connect(func() -> void:
+			_expanded = true
+			_sig = "")
+		_body.add_child(pill)
+		return
+	_card.custom_minimum_size = Vector2(340, 0)
 	var head := Label.new()
 	head.text = "PROLOGUE  ·  %d OF %d" % [p.step + 1, p.steps().size()]
 	head.add_theme_font_size_override("font_size", 13)
@@ -83,6 +124,14 @@ func _refresh() -> void:
 			SimHost.refresh_story()
 			_sig = "")
 		_body.add_child(continue_button)
+	if _pill_mode:
+		var hide := Button.new()
+		hide.text = "Hide"
+		hide.custom_minimum_size = Vector2(0, 44)
+		hide.pressed.connect(func() -> void:
+			_expanded = false
+			_sig = "")
+		_body.add_child(hide)
 
 
 func _para(t: String, c: Color, size: int) -> Label:

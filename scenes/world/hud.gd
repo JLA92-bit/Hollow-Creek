@@ -11,6 +11,10 @@ var world: Node3D
 var _date: Label
 var _speed_buttons: Array[Button] = []
 var _walls_btn: Button
+var _chips_panel: PanelContainer
+var _people_chip: Control
+var _trust_title: Label
+var _chips_hidden_in_build := false
 var _quality_btn: Button
 var _rain_btn: Button
 var _debug: PanelContainer
@@ -39,6 +43,8 @@ func _ready() -> void:
 	_resident_panels(root)
 	_debug_panel(root)
 	_toast_panel(root)
+	get_viewport().size_changed.connect(_fit_top_bar)
+	_fit_top_bar.call_deferred()
 	EventBus.time_changed.connect(func(_d: int, _m: int) -> void: _refresh_date())
 	EventBus.speed_changed.connect(func(_s: int) -> void: _refresh_speed())
 	_refresh_date()
@@ -101,10 +107,12 @@ func _top_bar(root: Control) -> void:
 	var people_chip := _chip_label("1 resident")
 	_people_label = people_chip.get_child(0) as Label
 	row.add_child(people_chip)
+	_people_chip = people_chip
 	var trust := HBoxContainer.new()
 	trust.add_theme_constant_override("separation", 8)
 	var tl := Label.new()
 	tl.text = "Town trust"
+	_trust_title = tl
 	tl.add_theme_font_size_override("font_size", 15)
 	trust.add_child(tl)
 	var bar := ProgressBar.new()
@@ -138,6 +146,14 @@ func _chip_label(text: String) -> Control:
 	return _wrap_chip(l)
 
 
+## On a narrow screen (a phone held sideways) the clock bar drops its least useful parts to stay on screen.
+func _fit_top_bar() -> void:
+	var narrow := get_viewport().get_visible_rect().size.x < 860.0
+	_people_chip.visible = not narrow
+	_trust_title.visible = not narrow
+	_update_chips_visibility()
+
+
 func _wrap_chip(c: Control) -> PanelContainer:
 	var p := PanelContainer.new()
 	var sb := StyleBoxFlat.new()
@@ -164,6 +180,7 @@ func _money(v: int) -> String:
 
 func _view_chips(root: Control) -> void:
 	var p := _panel(root)
+	_chips_panel = p
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
 	p.add_child(row)
@@ -316,6 +333,8 @@ func _debug_panel(root: Control) -> void:
 
 func set_build_mode(on: bool) -> void:
 	_toolbar_panel.visible = not on
+	_chips_hidden_in_build = on
+	_update_chips_visibility()
 	if on:
 		_residents_list.visible = false
 		_resident_panel.visible = false
@@ -327,6 +346,11 @@ func set_build_mode(on: bool) -> void:
 	if _build_panel:
 		_build_panel.visible = on
 	_refresh_view_chips()
+
+
+## On a phone held sideways the view chips would sit on the build panels, so they hide while building.
+func _update_chips_visibility() -> void:
+	_chips_panel.visible = not (_chips_hidden_in_build and Settings.is_compact(get_viewport().get_visible_rect().size.y))
 
 
 func toggle_debug() -> void:

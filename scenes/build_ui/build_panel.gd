@@ -23,9 +23,17 @@ var _options: VBoxContainer
 var _options_panel: PanelContainer
 var _options_scroll: ScrollContainer
 var _palette_panel: PanelContainer
+var _palette_scroll: ScrollContainer
+var _palette_grid: GridContainer
+var _house_btn: Button
+var _tool_btn: Button
+var _stack_panel: PanelContainer
+var _house_open := false
+var _palette_open := false
 var _house_panel: PanelContainer
 var _actions_panel: PanelContainer
 var _house_box: VBoxContainer
+var _house_scroll: ScrollContainer
 var _status: Label
 var _status_panel: PanelContainer
 var _undo_btn: Button
@@ -38,12 +46,14 @@ var _awaiting_file := false
 
 
 func _ready() -> void:
+	add_to_group(&"build_panel")
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_palette()
 	_options_area()
 	_house_area()
 	_actions()
+	_compact_stack()
 	_status_line()
 	build.changed.connect(refresh)
 	build.message.connect(_on_message)
@@ -152,11 +162,15 @@ func _palette() -> void:
 	var p := PanelContainer.new()
 	_palette_panel = p
 	add_child(p)
+	_palette_scroll = ScrollContainer.new()
+	_palette_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	p.add_child(_palette_scroll)
 	var grid := GridContainer.new()
+	_palette_grid = grid
 	grid.columns = 4
 	grid.add_theme_constant_override("h_separation", 6)
 	grid.add_theme_constant_override("v_separation", 6)
-	p.add_child(grid)
+	_palette_scroll.add_child(grid)
 	for t: String in BuildMode.TOOLS:
 		var b := Button.new()
 		b.text = TOOL_LABELS[t]
@@ -164,7 +178,10 @@ func _palette() -> void:
 		b.focus_mode = Control.FOCUS_NONE
 		b.custom_minimum_size = Vector2(78, 44)
 		b.add_theme_font_size_override("font_size", 14)
-		b.pressed.connect(func() -> void: build.set_tool(t))
+		b.pressed.connect(func() -> void:
+			build.set_tool(t)
+			_palette_open = false
+			_layout.call_deferred())
 		grid.add_child(b)
 		_tools[t] = b
 	for t2: String in []:
@@ -194,7 +211,10 @@ func _house_area() -> void:
 	_house_box = VBoxContainer.new()
 	_house_box.add_theme_constant_override("separation", 6)
 	_house_box.custom_minimum_size = Vector2(290, 0)
-	_house_panel.add_child(_house_box)
+	_house_scroll = ScrollContainer.new()
+	_house_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_house_panel.add_child(_house_scroll)
+	_house_scroll.add_child(_house_box)
 
 
 func _actions() -> void:
@@ -211,6 +231,25 @@ func _actions() -> void:
 	photo.tooltip_text = "Photo mode (F2)"
 	for b in [_cancel_btn, _confirm_btn, _undo_btn, _redo_btn, photo, done]:
 		row.add_child(b)
+
+
+## Compact screens only: the current tool (tap for the full palette) and the House button, stacked.
+func _compact_stack() -> void:
+	_stack_panel = PanelContainer.new()
+	add_child(_stack_panel)
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 6)
+	_stack_panel.add_child(col)
+	_tool_btn = _button("Room", func() -> void:
+		_palette_open = not _palette_open
+		_house_open = false
+		_layout(), 150)
+	_house_btn = _button("House", func() -> void:
+		_house_open = not _house_open
+		_palette_open = false
+		_layout(), 150)
+	col.add_child(_tool_btn)
+	col.add_child(_house_btn)
 
 
 func _status_line() -> void:
@@ -237,20 +276,63 @@ func _on_message(text: String, kind: String) -> void:
 	_layout.call_deferred()
 
 
-## Places each panel from its measured size: palette top left, options top right (scrolling when
-## tall), house panel bottom left, actions bottom right, status bottom centre.
+## Places each panel from its measured size. Roomy screens: palette top left, options top right
+## (scrolling when tall), house panel bottom left, actions bottom right, status bottom centre.
+## Compact screens (a phone held sideways) have no room for all of that. The left shows a stack with
+## the current tool and a House button (each opens its panel over the view), the prologue pill and
+## the status line; the options keep the right, and the actions keep the bottom right.
 func _layout() -> void:
 	var vp := get_viewport_rect().size
-	_place(_palette_panel, Vector2(16, 128), false, false)
+	var compact := Settings.is_compact(vp.y)
+	if not compact:
+		_palette_open = false
+		_house_open = false
+	var top := 98.0 if compact else 128.0
+	_stack_panel.visible = compact
 	var act := _actions_panel.get_combined_minimum_size()
 	_place(_actions_panel, Vector2(16, 16), true, true)
-	var house := _house_panel.get_combined_minimum_size()
-	_place(_house_panel, Vector2(16, 16), false, true)
-	var avail := vp.y - 176.0 - act.y - 40.0
+	# palette: always there on roomy screens, an overlay on compact ones
+	_palette_panel.visible = _palette_open or not compact
+	var want_cols := 2 if compact else 4
+	if _palette_grid.columns != want_cols:
+		_palette_grid.columns = want_cols   # the grid's size settles next frame, then we lay out again
+		_layout.call_deferred()
+	_palette_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO if compact else ScrollContainer.SCROLL_MODE_DISABLED
+	var pal := _palette_grid.get_combined_minimum_size()
+	var pal_top := top + 8.0 if not compact else top + _stack_panel.get_combined_minimum_size().y + 6.0
+	var pal_avail := vp.y - pal_top - 16.0 - 24.0
+	_palette_scroll.custom_minimum_size = Vector2(pal.x, minf(pal.y, maxf(pal_avail, 60.0)) if compact else pal.y)
+	_place(_palette_panel, Vector2(16, pal_top if compact else top), false, false)
+	# options
+	var opt_top := top if compact else 176.0
+	var avail := vp.y - opt_top - act.y - 40.0
 	var want := _options.get_combined_minimum_size().y + 28.0
 	_options_scroll.custom_minimum_size = Vector2(OPTIONS_W - 28, clampf(want - 28.0, 60.0, maxf(avail - 28.0, 60.0)))
-	_place(_options_panel, Vector2(16, 176), true, false)
+	_place(_options_panel, Vector2(16, opt_top), true, false)
+	# house panel
+	_house_panel.visible = _house_open or not compact
+	if compact:
+		_house_scroll.custom_minimum_size = Vector2(_house_box.get_combined_minimum_size().x, minf(_house_box.get_combined_minimum_size().y, vp.y - top - 16.0 - 24.0))
+		_place(_house_panel, Vector2(16.0 + _stack_panel.get_combined_minimum_size().x + 8.0, top), false, false)
+		_place(_stack_panel, Vector2(16, top), false, false)
+	else:
+		_house_scroll.custom_minimum_size = _house_box.get_combined_minimum_size()
+		_place(_house_panel, Vector2(16, 16), false, true)
+	# status line
+	var house := _house_panel.get_combined_minimum_size()
+	_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART if compact else TextServer.AUTOWRAP_OFF
+	_status.custom_minimum_size = Vector2(_stack_panel.get_combined_minimum_size().x - 24.0 if compact else 420.0, 0)
 	var st := _status_panel.get_combined_minimum_size()
+	if compact:
+		_status_panel.anchor_left = 0.0
+		_status_panel.anchor_right = 0.0
+		_status_panel.anchor_top = 0.0
+		_status_panel.anchor_bottom = 0.0
+		_status_panel.offset_left = 16.0
+		_status_panel.offset_right = 16.0 + st.x
+		_status_panel.offset_top = pill_bottom() + 6.0
+		_status_panel.offset_bottom = pill_bottom() + 6.0 + st.y
+		return
 	_status_panel.anchor_left = 0.5
 	_status_panel.anchor_right = 0.5
 	_status_panel.anchor_top = 1.0
@@ -260,6 +342,21 @@ func _layout() -> void:
 	_status_panel.offset_right = st.x * 0.5
 	_status_panel.offset_bottom = bottom
 	_status_panel.offset_top = bottom - st.y
+
+
+## Right edge of the tool palette, so other top-left cards (the prologue card) can sit beside it.
+func palette_right() -> float:
+	return _palette_panel.offset_right if _palette_panel != null else 0.0
+
+
+## Compact screens: where the prologue pill goes (under the tool and House buttons) and how wide it is.
+func pill_rect() -> Rect2:
+	var sz := _stack_panel.get_combined_minimum_size()
+	return Rect2(16.0, 98.0 + sz.y + 6.0, sz.x, 72.0)   # 44 for the button, 28 for the card margins
+
+
+func pill_bottom() -> float:
+	return pill_rect().end.y
 
 
 func _place(c: Control, margin: Vector2, right: bool, bottom: bool) -> void:
@@ -287,6 +384,7 @@ func _place(c: Control, margin: Vector2, right: bool, bottom: bool) -> void:
 func refresh() -> void:
 	for t: String in _tools:
 		(_tools[t] as Button).set_pressed_no_signal(t == build.tool)
+	_tool_btn.text = "%s  \u25BE" % TOOL_LABELS.get(build.tool, build.tool)
 	_undo_btn.disabled = not build.undo.can_undo()
 	_redo_btn.disabled = not build.undo.can_redo()
 	_undo_btn.tooltip_text = "Undo %s (Ctrl+Z)" % build.undo.next_undo_label()

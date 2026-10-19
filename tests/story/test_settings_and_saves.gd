@@ -15,7 +15,7 @@ func after_each() -> void:
 
 
 func test_text_size_scales_the_whole_ui() -> void:
-	var auto := Settings.auto_scale(get_tree().root.size.y)
+	var auto := Settings.auto_scale(Settings.css_height(get_tree().root.size.y, DisplayServer.screen_get_scale()))
 	Settings.set_value("text_scale", 1.25)
 	assert_almost_eq(get_tree().root.content_scale_factor, 1.25 * auto, 0.001)
 	Settings.set_value("text_scale", 5.0)
@@ -102,3 +102,20 @@ func test_short_screens_get_a_bigger_ui() -> void:
 	assert_almost_eq(Settings.auto_scale(390.0), 1.68, 0.01, "a phone held sideways")
 	assert_eq(Settings.auto_scale(300.0), 1.8, "capped")
 	assert_eq(Settings.auto_scale(0.0), 1.0)
+	assert_eq(Settings.css_height(1170.0, 3.0), 390.0, "a 3x phone is 390 CSS pixels tall")
+	assert_eq(Settings.css_height(720.0, 0.0), 720.0, "a bad ratio is ignored")
+
+
+func test_compact_screens_are_phones_held_sideways() -> void:
+	assert_true(Settings.is_compact(429.0))
+	assert_true(Settings.is_compact(412.5))
+	assert_false(Settings.is_compact(720.0))
+	assert_false(Settings.is_compact(480.0))
+
+
+func test_the_turn_your_phone_cover_only_shows_upright_on_touch_screens() -> void:
+	var gate := load("res://autoload/orientation_gate.gd")
+	assert_true(gate.should_show(Vector2(390, 844), true), "upright phone")
+	assert_false(gate.should_show(Vector2(844, 390), true), "landscape phone")
+	assert_false(gate.should_show(Vector2(700, 900), false), "narrow desktop window")
+
