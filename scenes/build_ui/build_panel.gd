@@ -349,6 +349,13 @@ func palette_right() -> float:
 	return _palette_panel.offset_right if _palette_panel != null else 0.0
 
 
+## Roomy screens: the left column (palette) as a rectangle, so a card can sit under it.
+func palette_rect() -> Rect2:
+	if _palette_panel == null:
+		return Rect2()
+	return Rect2(_palette_panel.offset_left, _palette_panel.offset_top, _palette_panel.offset_right - _palette_panel.offset_left, _palette_panel.offset_bottom - _palette_panel.offset_top)
+
+
 ## Compact screens: where the prologue pill goes (under the tool and House buttons) and how wide it is.
 func pill_rect() -> Rect2:
 	var sz := _stack_panel.get_combined_minimum_size()

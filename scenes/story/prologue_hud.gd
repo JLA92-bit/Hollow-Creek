@@ -17,6 +17,7 @@ var _pill_mode := false
 var _coach_mode := false   ## compact screen outside build mode: title and the next instruction only
 var _last_step := ""
 var _pill_width := 170.0
+var _coach_width := 250.0
 
 
 func _ready() -> void:
@@ -61,12 +62,18 @@ func _avoid_build_palette() -> void:
 	var compact := Settings.is_compact(get_viewport().get_visible_rect().size.y)
 	var panel := get_tree().get_first_node_in_group(&"build_panel") as BuildPanel
 	if panel != null and panel.is_visible_in_tree():
-		x = panel.palette_right() + 16.0
 		if compact:
 			x = panel.pill_rect().position.x
 			y = panel.pill_rect().position.y
 			_pill_width = panel.pill_rect().size.x - 28.0
 			pill = true
+		else:
+			# Under the tool palette: the middle of the screen is where the player clicks to build.
+			var pr := panel.palette_rect()
+			x = pr.position.x
+			y = pr.end.y + 8.0
+			_coach_width = maxf(pr.size.x - 28.0, 250.0)
+			coach = true
 	elif compact:
 		y = 98.0
 		coach = true
@@ -115,7 +122,7 @@ func _refresh() -> void:
 		elif bool(Settings.get_value("hints")) and not how_now.is_empty():
 			next_line = "%s" % how_now[mini(_how_done(s), how_now.size() - 1)]
 		var nl := _para(next_line, MAROON if warn != "" else Color("#2A2A2A"), 15)
-		nl.custom_minimum_size = Vector2(250, 0)
+		nl.custom_minimum_size = Vector2(_coach_width, 0)
 		_body.add_child(nl)
 		if str(s["check"]) == "ack":
 			continue_button = Button.new()
