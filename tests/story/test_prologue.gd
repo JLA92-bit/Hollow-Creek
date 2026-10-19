@@ -45,16 +45,16 @@ func test_the_week_runs_until_the_dance_on_saturday() -> void:
 	p.acknowledge()
 	p.update({"road": true, "store": {"door": true, "window": true, "exchange": true}, "houses": 3, "families": 3})
 	assert_eq(p.current_id(), "week")
-	p.update({"day": 5, "minute": 1000})
+	p.update({"day": 5, "minute": 1000, "dance_at": 5 * 1440 + 1170})
 	assert_eq(p.current_id(), "week", "not yet 7:30 pm Saturday")
-	p.update({"day": 5, "minute": 1170})
+	p.update({"day": 5, "minute": 1170, "dance_at": 5 * 1440 + 1170})
 	assert_eq(p.current_id(), "alert")
 
 
 func test_the_case_closing_unlocks_the_lesson_and_then_the_town() -> void:
 	var p := _p()
 	p.acknowledge()
-	p.update({"road": true, "store": {"door": true, "window": true, "exchange": true}, "houses": 3, "families": 3, "day": 5, "minute": 1200, "case_open": true})
+	p.update({"road": true, "store": {"door": true, "window": true, "exchange": true}, "houses": 3, "families": 3, "day": 5, "minute": 1200, "dance_at": 5 * 1440 + 1170, "case_open": true})
 	assert_eq(p.current_id(), "solve")
 	assert_true(p.is_locked("footpaths") and p.is_locked("street_lamps"))
 	p.update({"case_done": true})

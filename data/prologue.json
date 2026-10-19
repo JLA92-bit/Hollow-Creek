@@ -2,13 +2,12 @@
   "_comment": "The prologue (docs/CASE_00_CASH_TIN.md 'Tutorial building steps'). Each step has a check the Prologue class evaluates against the game; they complete in order.",
   "road": {
     "label": "The main road",
-    "points": [[12, 33], [26, 36], [40, 39], [52, 42], [64, 44], [74, 46]],
+    "points": [[12, 31], [26, 33], [40, 36], [52, 39], [64, 41], [74, 42]],
     "width": 3,
     "needed": 0.85
   },
   "store_plot": "plot_store",
   "locked": ["footpaths", "street_lamps"],
-  "welcome_dance": {"day": 5, "from": 1170, "to": 1380},
   "steps": [
     {"id": "arrive", "check": "ack", "title": "Arrival",
      "text": "A truck drops you at the siding. Agnes Doyle's cottage is the only building in the valley. You are the Administrator, and the Constable. Have a look round.",

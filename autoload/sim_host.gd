@@ -10,6 +10,7 @@ signal case_closed(result: Dictionary)
 signal prologue_progressed(done: Array)  ## ids of the prologue steps just completed
 
 const COTTAGE_ID := "lm_agnes_cottage"
+const PROLOGUE_CREWS := 8  ## builders during the prologue, so it plays in under an hour at 4x
 
 var sim: Sim = Sim.new(1952)
 var active := false
@@ -326,6 +327,7 @@ func case_done(id: String) -> bool:
 ## Starts the guided opening (a new story game). The director stays off until The Cash Tin is solved.
 func begin_prologue() -> void:
 	prologue = Prologue.new()
+	GameState.crews = PROLOGUE_CREWS   # the Department sends a work gang to get the town started
 	night = {}
 	director_enabled = false
 
@@ -370,10 +372,17 @@ func refresh_story() -> void:
 				offer_home("h_hayward", store_id)
 		else:
 			night["store"] = store_id
+	if not night.is_empty() and int(night.get("anchor", -1)) >= 0:
+		story_ctx["dance_at"] = int(night["anchor"]) * 1440 + CashTinNight.DANCE_FROM
 	var done := prologue.update(story_ctx)
+	if done.has("families") and not night.is_empty() and int(night.get("anchor", -1)) < 0:
+		# The week starts now: the dance is on the first Saturday that leaves time to live it.
+		night["anchor"] = CashTinNight.saturday_after(sim.day)
+		story_ctx["dance_at"] = int(night["anchor"]) * 1440 + CashTinNight.DANCE_FROM
 	if not done.is_empty():
 		prologue_progressed.emit(done)
 	if prologue.finished:
+		GameState.crews = 2
 		director_enabled = true
 		director.last_incident_day = sim.day
 		prologue = null

@@ -146,6 +146,16 @@ func _start_residents() -> void:
 	add_child(overlays)
 	if hud:
 		hud.call("_refresh_toolbar")
+	road = RoadMode.new()
+	road.world = self
+	add_child(road)
+	if SimHost.prologue != null:
+		var guides := PrologueGuides.new()
+		guides.name = "PrologueGuides"
+		guides.grid = slice.grid
+		add_child(guides)
+		add_child(PrologueHud.new())
+		SimHost.refresh_story()
 
 
 ## An incident alert opened a case: go to the scene.
@@ -198,16 +208,6 @@ func _on_case_screen_closed() -> void:
 		case_screen = null
 	if hud:
 		hud.call("_refresh_toolbar")
-	road = RoadMode.new()
-	road.world = self
-	add_child(road)
-	if SimHost.prologue != null:
-		var guides := PrologueGuides.new()
-		guides.name = "PrologueGuides"
-		guides.grid = slice.grid
-		add_child(guides)
-		add_child(PrologueHud.new())
-		SimHost.refresh_story()
 
 
 func open_roads() -> void:

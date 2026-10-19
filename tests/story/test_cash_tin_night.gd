@@ -29,7 +29,7 @@ func _run_to(day: int, minute: int) -> void:
 func before_each() -> void:
 	sim = Sim.new(1952)
 	sim.setup(_town, Sim.load_data(), DemoTown.homes(), 3, 16 * 60 + 30)
-	st = CashTinNight.new_state("house_store")
+	st = CashTinNight.new_state("house_store", 5)
 	discovered_at = -1
 
 
@@ -100,8 +100,23 @@ func test_the_script_is_deterministic() -> void:
 	var snap_a := sim.snapshot()
 	var other := Sim.new(1952)
 	other.setup(_town, Sim.load_data(), DemoTown.homes(), 3, 16 * 60 + 30)
-	var st2 := CashTinNight.new_state("house_store")
+	var st2 := CashTinNight.new_state("house_store", 5)
 	while other.day * 1440 + other.minute < 5 * 1440 + 23 * 60:
 		CashTinNight.step(other, st2)
 		other.tick()
 	assert_eq(other.snapshot(), snap_a)
+
+
+func test_the_dance_is_the_first_saturday_with_three_days_to_spare() -> void:
+	assert_eq(CashTinNight.saturday_after(0), 5, "Monday: this Saturday")
+	assert_eq(CashTinNight.saturday_after(3), 12, "Thursday: not this Saturday, the next")
+	assert_eq(CashTinNight.saturday_after(2), 5, "Wednesday: Saturday is three days off")
+	assert_eq(posmod(CashTinNight.saturday_after(17), 7), 5)
+
+
+func test_nothing_happens_until_the_week_has_started() -> void:
+	var idle := CashTinNight.new_state("house_store")
+	for i in 3000:
+		CashTinNight.step(sim, idle)
+		sim.tick()
+	assert_true((idle["fired"] as Dictionary).is_empty())

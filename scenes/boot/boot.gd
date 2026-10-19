@@ -20,7 +20,8 @@ func _ready() -> void:
 		"residents_demo": "res://scenes/resident_ui/residents_demo.tscn",
 		"night_demo": "res://scenes/resident_ui/night_demo.tscn",
 		"investigation_demo": "res://scenes/investigation/investigation_demo.tscn",
-		"director_demo": "res://scenes/investigation/director_demo.tscn"}
+		"director_demo": "res://scenes/investigation/director_demo.tscn",
+		"prologue_demo": "res://scenes/story/prologue_demo.tscn"}
 	if scenes.has(target):
 		_leaving = true
 		get_tree().change_scene_to_file.call_deferred(str(scenes[target]))

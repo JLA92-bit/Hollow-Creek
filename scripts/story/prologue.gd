@@ -5,7 +5,7 @@ extends RefCounted
 ## gives it a context each minute and it works out which steps are done. Steps finish in order.
 ##
 ## Context keys: road (bool), store {door, window, exchange: bool}, houses (int), families (int),
-## day, minute, case_open (bool), case_done (bool). "ack" steps wait for acknowledge().
+## day, minute, dance_at (the minute the welcome dance starts, once the week is under way), case_open (bool), case_done (bool). "ack" steps wait for acknowledge().
 
 const PATH := "res://data/prologue.json"
 
@@ -92,8 +92,7 @@ func _met(check: String, s: Dictionary, ctx: Dictionary) -> bool:
 		"families":
 			return int(ctx.get("families", 0)) >= 3
 		"dance":
-			var d: Dictionary = data["welcome_dance"]
-			return int(ctx.get("day", 0)) * 1440 + int(ctx.get("minute", 0)) >= int(d["day"]) * 1440 + int(d["from"])
+			return int(ctx.get("dance_at", -1)) >= 0 and int(ctx.get("day", 0)) * 1440 + int(ctx.get("minute", 0)) >= int(ctx["dance_at"])
 		"case_open":
 			return bool(ctx.get("case_open", false)) or bool(ctx.get("case_done", false))
 		"case_done":

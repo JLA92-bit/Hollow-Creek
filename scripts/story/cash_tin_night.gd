@@ -16,36 +16,51 @@ const CASE_PATH := "res://data/cases/case_00_cash_tin.json"
 const DANCERS: Array[String] = ["r_frank", "r_edna", "r_june", "r_len", "r_marge", "r_davey", "r_tomasz", "r_halina", "r_piotr"]
 const HAYWARDS: Array[String] = ["r_frank", "r_edna", "r_june"]
 
-## (day, minute) -> event id, in the order they happen.
+## (days from the dance's Saturday, minute) -> event id, in the order they happen.
 const TIMELINE: Array = [
-	[3, 16 * 60 + 40, "refusal"],
-	[5, 19 * 60 + 30, "dance"],
-	[5, 20 * 60 + 5, "agnes_up"],
-	[5, 20 * 60 + 30, "davey_out"],
-	[5, 20 * 60 + 50, "len_out"],
-	[5, 22 * 60, "davey_home"],
-	[5, 22 * 60 + 30, "haywards_home"],
-	[5, 22 * 60 + 35, "discovery"],
-	[5, 22 * 60 + 40, "agnes_rings"],
+	[-2, 16 * 60 + 40, "refusal"],
+	[0, 19 * 60 + 30, "dance"],
+	[0, 20 * 60 + 5, "agnes_up"],
+	[0, 20 * 60 + 30, "davey_out"],
+	[0, 20 * 60 + 50, "len_out"],
+	[0, 22 * 60, "davey_home"],
+	[0, 22 * 60 + 30, "haywards_home"],
+	[0, 22 * 60 + 35, "discovery"],
+	[0, 22 * 60 + 40, "agnes_rings"],
 ]
+const DANCE_FROM := 19 * 60 + 30
 
 
-static func new_state(store_house: String) -> Dictionary:
-	return {"fired": {}, "store": store_house, "runner": {}, "discovered": false}
+## `anchor` is the day of the welcome dance (a Saturday), or -1 until the player has approved the
+## families and the week starts.
+static func new_state(store_house: String, anchor: int = -1) -> Dictionary:
+	return {"fired": {}, "store": store_house, "runner": {}, "discovered": false, "anchor": anchor}
+
+
+## The first Saturday at least three days after `today` (day 0 is a Monday), so there's a week to live.
+static func saturday_after(today: int) -> int:
+	var d := today + 3
+	while posmod(d, 7) != 5:
+		d += 1
+	return d
 
 
 ## One minute of the script. Returns "discovery" on the minute the Haywards find the window open.
 static func step(sim: Sim, st: Dictionary) -> String:
 	var result := ""
+	var anchor := int(st.get("anchor", -1))
+	if anchor < 0:
+		return ""
 	var now := sim.day * 1440 + sim.minute
 	for e: Array in TIMELINE:
 		var id := str(e[2])
 		if bool((st["fired"] as Dictionary).get(id, false)):
 			continue
-		if now >= int(e[0]) * 1440 + int(e[1]):
+		var at := (anchor + int(e[0])) * 1440 + int(e[1])
+		if now >= at:
 			st["fired"][id] = true
 			# A save loaded long after an event shouldn't replay it.
-			if now - (int(e[0]) * 1440 + int(e[1])) > 60:
+			if now - at > 60:
 				continue
 			if _fire(sim, st, id) and id == "discovery":
 				result = "discovery"
