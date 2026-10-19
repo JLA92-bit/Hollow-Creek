@@ -190,7 +190,7 @@ func _view_chips(root: Control) -> void:
 	(func() -> void: p.offset_top += 92.0; p.offset_bottom += 92.0).call_deferred()
 
 
-func _text_button(text: String, cb: Callable) -> Button:
+func _text_button(text: String, cb: Callable) -> Button:  # (44 px tall at least, for fingers)
 	var b := Button.new()
 	b.text = text
 	b.custom_minimum_size = Vector2(0, 44)

@@ -130,6 +130,62 @@ EXPRESSION_KEYS = ["eyebrows-left-up", "eyebrows-right-up", "eyebrows-left-down"
                    "eye-left-slit", "eye-right-slit", "mouth-open", "mouth-compression", "mouth-corner-puller", "mouth-elevation", "mouth-depression",
                    "mouth-depression-retraction", "mouth-pursing", "mouth-upward-retraction"]
 PORTRAIT_FROM = 1.30   # metres: the portrait keeps everything above the chest
+FACE_TRIS = 2500       # the head is decimated to about this many triangles
+# The few expressions the interview portrait mixes (portrait_view.gd), each a blend of action units.
+COMPOSITES = {
+    "worried": {"eyebrows-left-inner-up": 0.9, "eyebrows-right-inner-up": 0.9, "mouth-depression": 0.6, "eye-left-opened-up": 0.2, "eye-right-opened-up": 0.2,
+                "eye-left-closure": 0.1, "eye-right-closure": 0.1},
+    "stern": {"eyebrows-left-down": 0.8, "eyebrows-right-down": 0.8, "mouth-compression": 0.7, "eye-left-slit": 0.4, "eye-right-slit": 0.4},
+    "afraid": {"eyebrows-left-up": 0.7, "eyebrows-right-up": 0.7, "eyebrows-left-inner-up": 0.4, "eyebrows-right-inner-up": 0.4,
+               "eye-left-opened-up": 0.7, "eye-right-opened-up": 0.7, "mouth-open": 0.35},
+    "broken": {"eyebrows-left-inner-up": 1.0, "eyebrows-right-inner-up": 1.0, "mouth-depression": 0.9, "mouth-depression-retraction": 0.3,
+               "eye-left-closure": 0.5, "eye-right-closure": 0.5},
+    "smile": {"mouth-corner-puller": 0.8, "mouth-elevation": 0.3, "mouth-upward-retraction": 0.2},
+}
+
+
+def _make_composites(body) -> None:
+    """Bakes the action units into the few composite expressions, then drops the units."""
+    blocks = body.data.shape_keys.key_blocks
+    for name, mix in COMPOSITES.items():
+        for k, w in mix.items():
+            blocks[k].value = w
+        body.shape_key_add(name=name, from_mix=True)
+        for k in mix:
+            blocks[k].value = 0.0
+    for key in EXPRESSION_KEYS:
+        body.shape_key_remove(blocks[key])
+
+
+def _decimate_face(face, target_tris: int):
+    """A lighter copy of the head that carries the same expressions, found by nearest original vertex."""
+    from mathutils.kdtree import KDTree
+    src = face.data
+    basis = src.shape_keys.key_blocks[0]
+    names = [kb.name for kb in src.shape_keys.key_blocks[1:]]
+    deltas = {n: [src.shape_keys.key_blocks[n].data[i].co - basis.data[i].co for i in range(len(src.vertices))] for n in names}
+    tree = KDTree(len(src.vertices))
+    for i, v in enumerate(src.vertices):
+        tree.insert(basis.data[i].co, i)
+    tree.balance()
+    low = face.copy()
+    low.data = face.data.copy()
+    bpy.context.scene.collection.objects.link(low)
+    bpy.context.view_layer.objects.active = low
+    low.select_set(True)
+    bpy.ops.object.shape_key_remove(all=True)
+    tris = sum(len(p.vertices) - 2 for p in low.data.polygons)
+    dec = low.modifiers.new("lower", "DECIMATE")
+    dec.ratio = min(1.0, target_tris / max(1, tris))
+    bpy.ops.object.modifier_apply(modifier="lower")
+    low.shape_key_add(name="Basis")
+    for n in names:
+        key = low.shape_key_add(name=n)
+        for i, v in enumerate(low.data.vertices):
+            _, idx, _ = tree.find(v.co)
+            key.data[i].co = v.co + deltas[n][idx]
+    bpy.data.objects.remove(face, do_unlink=True)
+    return low
 
 
 def _eyelid_centre(body, key: str) -> Vector:
@@ -177,13 +233,32 @@ def _export_portrait(body, rig, name: str) -> Path:
     bpy.data.objects.remove(rig, do_unlink=True)
     OUT.mkdir(parents=True, exist_ok=True)
     path = OUT / f"{name}_portrait.glb"
+    # Morph targets cost CPU every time one changes in the Compatibility renderer, so only the skin
+    # (face, neck, hands) keeps them; the hair, clothes and eyes become separate meshes with none.
     bpy.ops.object.select_all(action="DESELECT")
     body.select_set(True)
     bpy.context.view_layer.objects.active = body
+    bpy.ops.object.mode_set(mode="EDIT")
+    bpy.ops.mesh.select_all(action="SELECT")
+    bpy.ops.mesh.separate(type="MATERIAL")
+    bpy.ops.object.mode_set(mode="OBJECT")
+    parts = [o for o in bpy.context.scene.objects if o.type == "MESH"]
+    face = next(o for o in parts if o.data.materials and o.data.materials[0] and o.data.materials[0].name == "skin")
+    for o in parts:
+        if o is not face and o.data.shape_keys:
+            bpy.context.view_layer.objects.active = o
+            bpy.ops.object.shape_key_remove(all=True)
+    face = _decimate_face(face, FACE_TRIS)
+    parts = [o for o in bpy.context.scene.objects if o.type == "MESH"]
+    bpy.ops.object.select_all(action="DESELECT")
+    for o in parts:
+        o.select_set(True)
+    bpy.context.view_layer.objects.active = face
     bpy.ops.export_scene.gltf(filepath=str(path), export_format="GLB", use_selection=True, export_animations=False, export_yup=True,
                               export_skins=False, export_materials="EXPORT", export_morph=True, export_morph_normal=False)
-    tris = sum(len(p.vertices) - 2 for p in body.data.polygons)
-    print(f"wrote {path.relative_to(ROOT)} ({tris} triangles, {len(body.data.shape_keys.key_blocks) - 1 if body.data.shape_keys else 0} shape keys)")
+    tris = sum(len(p.vertices) - 2 for o in parts for p in o.data.polygons)
+    face_tris = sum(len(p.vertices) - 2 for p in face.data.polygons)
+    print(f"wrote {path.relative_to(ROOT)} ({tris} triangles, {face_tris} with {len(face.data.shape_keys.key_blocks) - 1 if face.data.shape_keys else 0} shape keys)")
     return path
 
 
@@ -273,6 +348,7 @@ def build(lod: int, name: str = "agnes", macros: dict = MACROS, skirt: bool = Tr
             ts.load_target(body, str(EXPR_DIR / f"{key}.target.gz"), weight=0.0, name=key)
         drop.extend(v.index for v in body.data.vertices if v.co.z < PORTRAIT_FROM and v.index not in set(drop))
         eyes = {side: _eyelid_centre(body, f"eye-{side}-closure") for side in ("left", "right")}
+        _make_composites(body)
     import bmesh
     bm = bmesh.new()
     bm.from_mesh(body.data)

@@ -467,3 +467,14 @@ The four 1k HDR skies make up 11 MB of the pack. Halving them is the first lever
 **Known issues**
 - CI hasn't run yet (no push to `main` or `beta` from this branch).
 - Performance numbers start in M1, when there's a 3D scene to measure.
+
+## Post-M9: animations, lamps, faces, phone scale
+
+- Quaternius Universal Animation Library (CC0) retargeted onto the MPFB rig; residents animate by what they do (walk, formal walk, sneak, sit, interact, dance, idle). Shared set in `assets/characters/animations.glb`.
+- Street lamps: Lights tool in the HUD (cost 15, refund 8), lights the grid, and the crime director subtracts 6 pressure per lamp within 12 m of a target's home (cap 24).
+- Interview portraits: real faces with five expression shapes (worried, stern, afraid, broken, smile) driven by composure and pressure.
+- Phone-size UI: automatic UI scale below 600 px tall, responsive settings, credits and case panels. Desktop `phone_demo` at 844x390 passes 8/8.
+- Tests: 278 pass.
+- First download about 39.1 MB gzipped of the 40 MB budget. Characters pack about 5.3 MB.
+- Known issue: the browser run of `phone_demo` at 844x390 dpr 2 stalls at the case-screen step under SwiftShader (reproduced twice, desktop is fine). Treat as a software-renderer limit until checked on a real device.
+- Still open: hair is a cap or bun with a rough edge; clothes are MPFB shells; no timed human playtest; only theft crimes; M10 needs Josh's decisions.

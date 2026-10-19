@@ -16,7 +16,7 @@ const MAROON := Color("#940E16")
 const GREEN := Color("#2F7D45")
 const PAPER := Color("#F4F1EA")
 const MONO := "res://assets/fonts/CourierPrime-Regular.ttf"
-const PANEL_W := 560.0
+const PANEL_W := 560.0   ## on a narrow screen the panel takes about 60% of it instead (see panel_width)
 
 var inv: Investigation
 var anchor := Vector3.ZERO          ## world position of the scene's origin tile
@@ -71,7 +71,8 @@ func _ready() -> void:
 	card.anchor_right = 1.0
 	card.anchor_top = 0.0
 	card.anchor_bottom = 1.0
-	card.offset_left = -PANEL_W - 16
+	var pw := panel_width()
+	card.offset_left = -pw - 16
 	card.offset_right = -16
 	card.offset_top = 16
 	card.offset_bottom = -16
@@ -93,7 +94,7 @@ func _ready() -> void:
 	cap.anchor_top = 1.0
 	cap.anchor_bottom = 1.0
 	cap.offset_left = 16
-	cap.offset_right = -PANEL_W - 32
+	cap.offset_right = -pw - 32
 	cap.anchor_right = 1.0
 	cap.offset_top = -86
 	cap.offset_bottom = -16
@@ -115,6 +116,11 @@ func _ready() -> void:
 	_overlay_body = VBoxContainer.new()
 	_overlay_body.add_theme_constant_override("separation", 10)
 	_overlay.add_child(_overlay_body)
+
+
+## 560 px, or about 60% of a narrow screen.
+func panel_width() -> float:
+	return minf(PANEL_W, get_viewport_rect().size.x * 0.6) if is_inside_tree() else PANEL_W
 
 
 func _fit() -> void:

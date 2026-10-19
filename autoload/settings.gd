@@ -33,12 +33,12 @@ func set_value(key: String, value: Variant) -> void:
 
 
 ## The game is laid out for 1280 x 720. On a short screen (a phone held sideways) that shrinks every
-## button below a fingertip, so the UI is scaled up until a 48 px button is at least about 40 px on
-## screen: 1 at 600 px tall or more, up to 1.6 on the smallest phones.
+## button below a fingertip, so the UI is scaled up until a 48 px button is about 44 px on
+## screen: 1 at 600 px tall or more, up to 1.8 on the smallest phones.
 static func auto_scale(window_height: float) -> float:
 	if window_height >= 600.0 or window_height <= 0.0:
 		return 1.0
-	return clampf(720.0 / (1.2 * window_height), 1.0, 1.6)
+	return clampf(720.0 / (1.1 * window_height), 1.0, 1.8)
 
 
 ## Puts the settings that act on the whole app into effect: text size (UI scale) and master volume.

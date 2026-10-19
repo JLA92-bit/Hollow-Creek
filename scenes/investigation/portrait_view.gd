@@ -15,6 +15,7 @@ var _head_height := 1.55
 var _composure := 100.0
 var _pressure := 0.0
 var _confessed := false
+var _face_t := 0.0
 var _face: MeshInstance3D
 var _shown: Dictionary = {}   ## blend shape name -> the weight now on the face
 var _t := 0.0
@@ -90,28 +91,26 @@ func set_mood(composure: float, pressure: float, confessed: bool = false) -> voi
 	_confessed = confessed
 
 
-## The face for a mood: weights for MPFB's face action units. Composure is how together they are,
-## pressure how hard they're being pushed, and a confession is the end of it.
+## The face for a mood: weights for the five expressions on the portrait model (worried, stern,
+## afraid, broken, smile; each a blend of MPFB's face action units, made by tools/characters/make_agnes.py).
+## Composure is how together they are, pressure how hard they're being pushed, and a confession is the
+## end of it.
 static func expression_weights(composure: float, pressure: float, confessed: bool = false) -> Dictionary:
 	var strain := 1.0 - clampf(composure / 100.0, 0.0, 1.0)
 	var fear := clampf(pressure / 100.0, 0.0, 1.0)
 	var calm := 1.0 - strain
 	var w := {
-		"eyebrows-left-inner-up": strain * 0.9, "eyebrows-right-inner-up": strain * 0.9,
-		"eyebrows-left-up": fear * 0.5, "eyebrows-right-up": fear * 0.5,
-		"eyebrows-left-down": calm * fear * 0.7, "eyebrows-right-down": calm * fear * 0.7,
-		"eye-left-opened-up": fear * 0.5 + strain * 0.2, "eye-right-opened-up": fear * 0.5 + strain * 0.2,
-		"eye-left-slit": calm * fear * 0.4, "eye-right-slit": calm * fear * 0.4,
-		"mouth-compression": calm * fear * 0.6, "mouth-depression": strain * 0.7, "mouth-open": fear * strain * 0.4,
-		"eye-left-closure": strain * 0.15, "eye-right-closure": strain * 0.15,
-		"mouth-corner-puller": calm * (1.0 - fear) * 0.15}
+		"worried": strain * 0.9,
+		"stern": calm * fear * 0.9,
+		"afraid": fear * (0.3 + 0.7 * strain),
+		"broken": maxf(0.0, strain - 0.7) / 0.3 * 0.6,
+		"smile": calm * (1.0 - fear) * 0.25}
 	if confessed:
-		w["mouth-depression"] = 0.9
-		w["eyebrows-left-inner-up"] = 1.0
-		w["eyebrows-right-inner-up"] = 1.0
-		w["eye-left-closure"] = 0.5
-		w["eye-right-closure"] = 0.5
-		w["mouth-open"] = 0.0
+		w["broken"] = 1.0
+		w["worried"] = 0.3
+		w["stern"] = 0.0
+		w["afraid"] = 0.0
+		w["smile"] = 0.0
 	return w
 
 
@@ -138,14 +137,21 @@ func _process(delta: float) -> void:
 	if _model == null:
 		return
 	_t += delta
-	if _face != null:
+	_face_t -= delta
+	if _face != null and _face_t <= 0.0:
+		var step := 0.1 - _face_t   # time since the last update (the face is only re-blended ten times a second)
+		_face_t = 0.1
 		var want := expression_weights(_composure, _pressure, _confessed)
-		var k := 1.0 - exp(-delta * 6.0)   # the face eases from one look to the next
+		var k := 1.0 - exp(-step * 6.0)   # the face eases from one look to the next
 		for i in _face.mesh.get_blend_shape_count():
 			var nm := str(_face.mesh.get_blend_shape_name(i))
-			var v := lerpf(float(_shown.get(nm, 0.0)), clampf(float(want.get(nm, 0.0)), 0.0, 1.0), k)
-			_shown[nm] = v
-			_face.set_blend_shape_value(i, v)
+			var old := float(_shown.get(nm, 0.0))
+			var v := lerpf(old, clampf(float(want.get(nm, 0.0)), 0.0, 1.0), k)
+			# Morph targets are blended on the CPU in the Compatibility renderer, so only touch a weight
+			# when it has really moved.
+			if absf(v - old) > 0.004 or (v == 0.0 and old != 0.0):
+				_shown[nm] = v
+				_face.set_blend_shape_value(i, v)
 	var calm := _composure / 100.0
 	# Composed people stand straight and face you; rattled ones lean back, droop and look away.
 	var lean := (1.0 - calm) * 9.0

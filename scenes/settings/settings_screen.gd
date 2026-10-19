@@ -42,7 +42,9 @@ func _ready() -> void:
 	sb.set_content_margin_all(18)
 	panel.add_theme_stylebox_override("panel", sb)
 	panel.set_anchors_preset(Control.PRESET_CENTER)
-	panel.custom_minimum_size = Vector2(640, 600)
+	var vp := get_viewport().get_visible_rect().size
+	var panel_h := minf(600.0, vp.y - 24.0)   # fits a phone held sideways
+	panel.custom_minimum_size = Vector2(minf(640.0, vp.x - 24.0), panel_h)
 	panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	panel.grow_vertical = Control.GROW_DIRECTION_BOTH
 	add_child(panel)
@@ -57,7 +59,7 @@ func _ready() -> void:
 	_scroll = ScrollContainer.new()
 	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_scroll.custom_minimum_size = Vector2(600, 470)
+	_scroll.custom_minimum_size = Vector2(0, maxf(120.0, panel_h - 130.0))
 	outer.add_child(_scroll)
 	var pad := MarginContainer.new()
 	pad.size_flags_horizontal = Control.SIZE_EXPAND_FILL

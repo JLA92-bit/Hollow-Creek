@@ -25,27 +25,31 @@ func test_every_resident_has_a_portrait_with_every_face_key() -> void:
 func test_a_composed_unpressed_person_is_nearly_neutral() -> void:
 	var w := PortraitView.expression_weights(100.0, 0.0)
 	for k: String in w:
-		assert_lt(float(w[k]), 0.2, k)
+		assert_lt(float(w[k]), 0.3, k)
+	assert_eq(float(w["worried"]), 0.0)
 
 
 func test_a_rattled_person_looks_worried() -> void:
 	var w := PortraitView.expression_weights(30.0, 20.0)
-	assert_gt(float(w["eyebrows-left-inner-up"]), 0.5)
-	assert_gt(float(w["mouth-depression"]), 0.4)
+	assert_gt(float(w["worried"]), 0.5)
+	assert_lt(float(w["stern"]), 0.2)
 
 
 func test_a_composed_person_under_pressure_looks_stern() -> void:
 	var w := PortraitView.expression_weights(95.0, 80.0)
-	assert_gt(float(w["eyebrows-left-down"]), 0.4)
-	assert_gt(float(w["mouth-compression"]), 0.3)
-	assert_lt(float(w["eyebrows-left-inner-up"]), 0.2)
+	assert_gt(float(w["stern"]), 0.5)
+	assert_lt(float(w["worried"]), 0.2)
+
+
+func test_a_person_at_the_end_of_their_tether_looks_afraid_then_broken() -> void:
+	assert_gt(float(PortraitView.expression_weights(20.0, 90.0)["afraid"]), 0.7)
+	assert_gt(float(PortraitView.expression_weights(5.0, 0.0)["broken"]), 0.4)
 
 
 func test_a_confession_is_the_broken_face() -> void:
 	var w := PortraitView.expression_weights(0.0, 0.0, true)
-	assert_eq(float(w["mouth-depression"]), 0.9)
-	assert_eq(float(w["eye-left-closure"]), 0.5)
-	assert_eq(float(w["mouth-open"]), 0.0)
+	assert_eq(float(w["broken"]), 1.0)
+	assert_eq(float(w["smile"]), 0.0)
 
 
 func test_the_face_moves_with_the_mood() -> void:
@@ -57,5 +61,5 @@ func test_the_face_moves_with_the_mood() -> void:
 	for i in 30:
 		await get_tree().process_frame
 	var face := PortraitView._find_face(v._model)
-	var idx := face.find_blend_shape_by_name("eyebrows-left-inner-up")
-	assert_gt(face.get_blend_shape_value(idx), 0.2, "the worried brows have come on")
+	var idx := face.find_blend_shape_by_name("worried")
+	assert_gt(face.get_blend_shape_value(idx), 0.2, "the worried face has come on")

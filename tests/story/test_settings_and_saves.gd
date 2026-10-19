@@ -15,10 +15,11 @@ func after_each() -> void:
 
 
 func test_text_size_scales_the_whole_ui() -> void:
+	var auto := Settings.auto_scale(get_tree().root.size.y)
 	Settings.set_value("text_scale", 1.25)
-	assert_almost_eq(get_tree().root.content_scale_factor, 1.25, 0.001)
+	assert_almost_eq(get_tree().root.content_scale_factor, 1.25 * auto, 0.001)
 	Settings.set_value("text_scale", 5.0)
-	assert_almost_eq(get_tree().root.content_scale_factor, 1.5, 0.001, "clamped")
+	assert_almost_eq(get_tree().root.content_scale_factor, 1.5 * auto, 0.001, "clamped")
 
 
 func test_volume_sets_the_master_bus() -> void:
@@ -98,6 +99,6 @@ func test_short_screens_get_a_bigger_ui() -> void:
 	assert_eq(Settings.auto_scale(1080.0), 1.0)
 	assert_eq(Settings.auto_scale(720.0), 1.0)
 	assert_eq(Settings.auto_scale(600.0), 1.0)
-	assert_almost_eq(Settings.auto_scale(390.0), 1.54, 0.01, "a phone held sideways")
-	assert_eq(Settings.auto_scale(300.0), 1.6, "capped")
+	assert_almost_eq(Settings.auto_scale(390.0), 1.68, 0.01, "a phone held sideways")
+	assert_eq(Settings.auto_scale(300.0), 1.8, "capped")
 	assert_eq(Settings.auto_scale(0.0), 1.0)
