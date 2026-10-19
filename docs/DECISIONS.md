@@ -11,7 +11,7 @@ Claude Code uses the default for anything not marked "needs Josh". For "needs Jo
 | 5 | Art sources | ambientCG and Poly Haven (CC0), procedural architecture, Blender-scripted 1950s props | Decided | - |
 | 6 | Network access to Poly Haven and ambientCG | Check in M0. If blocked, Josh downloads batches | **Needs Josh** if blocked | M0 |
 | 7 | Residents | MPFB characters (CC0) | Decided | - |
-| 8 | Animations | Mixamo plus Quaternius Universal Animation Library | **Needs Josh** to download Mixamo animations | M9 |
+| 8 | Animations | Quaternius Universal Animation Library (CC0, no login). **Chosen 19 Oct 2026** on Claude's recommendation; Mixamo only if a needed animation is missing | **Needs Josh** to download it into `assets/incoming/animations/` (the sandbox can't reach quaternius.com) | M9 |
 | 9 | Interview portraits | Live 3D close-ups. Gemini portraits optional | Default | - |
 | 10 | Approve the look | Screenshots from the M1 look test scene | **Needs Josh** | End of M1 |
 | 11 | Hosting | GitHub Pages on `play.<your site>` (`docs/DEPLOY.md`) | **Needs Josh** | M10 |

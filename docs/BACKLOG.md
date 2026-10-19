@@ -59,3 +59,11 @@ Work deliberately deferred to keep milestones tight. Each item notes where it ca
 - The director only runs once `SimHost.director_enabled` is on; M9 turns it on when the prologue case closes.
 - Weather is read from the world's rain; the director doesn't pick rainy nights on purpose (the plan search does find them, since prints make cases easier).
 - Pubs, church rosters and a busier main street don't yet make crimes harder; only latched windows do (for two weeks after a case).
+
+## M9 rows
+- Retarget the Quaternius animations onto the MPFB rig once Josh has downloaded them (docs/ASSET_REQUESTS.md); replaces the hand-keyed idle, walk and sit.
+- Facial blend shapes (MPFB face rig) for the interview portrait, proper hair and 1950s clothing assets.
+- A street-lamp tool and the Lights button, now that the prologue unlocks them.
+- A timed human playtest of the prologue, on a computer and on a phone; tune the 8-crew prologue gang and the waiting between steps.
+- Freesound CC0 recordings (creek, a dog, a screen door, a wireless set) if network access allows; a richer score.
+- Prologue: let the player skip ahead through the build wait ("the crews work through the night") at the end of each day.

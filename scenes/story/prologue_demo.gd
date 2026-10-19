@@ -181,6 +181,8 @@ func _run_prologue() -> void:
 	SimHost.refresh_story()
 	_check(_step_is("lesson"), "step 9: a lesson learned")
 	_check(not SimHost.prologue.is_locked("footpaths"), "footpaths and street lamps are unlocked")
+	screen.visible = false   # the player closes the case file
+	screen.closed.emit()
 	await _frames(3)
 	await look(Vector3(74.0, grid.height_at(74, 52), 52.0), 200.0, 52.0, 28.0)
 	hud_card.call("_refresh")

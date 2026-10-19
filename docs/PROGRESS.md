@@ -2,6 +2,35 @@
 
 Newest milestone first. Build sizes are raw bytes, with gzip -9 in brackets.
 
+## M9 - Prologue and The Cash Tin (done, with art still to come)
+
+**What works**
+- **The prologue (`scripts/story/prologue.gd`, `data/prologue.json`, `scenes/story/prologue_hud.gd`):** nine steps that finish in order from what the game reports: arrive, lay the main road, build the general store, build three houses, approve the families, live the first week, the alert, solve The Cash Tin, the lesson. An objective card (top left) shows the step, a checklist and a hint (Settings can turn hints off), with Continue on the steps that wait for you. A dotted ghost path shows where the road goes and a loop marks the store plot.
+- **Roads tool (`scenes/build_ui/road_mode.gd`, `scripts/build/road_ops.gd`):** tap points or follow the ghost path; dirt is free, gravel £2 a tile, footpaths £1 (locked until the case is solved). Roads live in the save (`GameState.roads`) and the terrain, vegetation and walk graph follow.
+- **Templates:** a general store, a two-bedroom cottage and a three-bedroom house ship in `data/houses/templates/` and appear first in the blueprint library.
+- **Store check (`story_checks.gd`):** a front door onto the road, a back window facing the creek, an exchange room. The Haywards move in when it passes.
+- **The scripted week (`cash_tin_night.gd`):** the dance falls on the first Saturday at least three days after the families are approved. Thursday's refusal of credit, the dance in the mill shed, Davey slipping out to the creek, Len walking to the back of the store and in through the unlatched window, Agnes seeing a man in a hat from her lit kitchen, the Haywards finding it at 22:35 and Agnes's trunk call at 22:40 all happen in the simulation. The authored case (`data/cases/case_00_cash_tin.json`) opens at the alert with its scene traces fitted to the store as built; the solver bot solves it and the solvability check passes it.
+- **After the case:** footpaths and street lamps unlock, the crime director switches on, and the Department's work gang (8 crews during the prologue, so it plays in under an hour) goes back to 2.
+- **Settings, saves, credits (`scenes/settings/`):** picture quality (applies live), text size, volume, reduce motion, hints, keep time running while building; three save slots plus the autosave, **save codes** (export and load), credits from `data/asset_credits.json`, and an Esc pause menu. The title menu's Settings button works and a new story game starts the prologue.
+- **Audio (`tools/audio/make_world_audio.py`, `scenes/world/audio_director.gd`):** synthesised birds by day and crickets by night (crossfaded over dawn and dusk), rain by intensity, a waltz from the mill shed during the dance that fades with distance, a title waltz, and cues for a search, a find, the alert, the telephone and a solved case. All ours, 456 KB.
+- **Residents:** all ten now have their own MPFB bodies (`tools/characters/make_residents.py`): age, sex, height and build from the data, dress or trousers, 9,000 triangles at LOD0 and 2,800 at LOD1.
+- **Background packs (`autoload/content_packs.gd`, `data/packs.json`, `tools/build_packs.sh`):** the music (0.18 MB) and the nine new residents (3.1 MB) are packs fetched after the game starts. Until the characters pack lands residents are drawn as mannequins and swap live. Verified in the browser: the music pack downloaded and mounted in 238 ms (`packs_demo`).
+
+**Acceptance**
+- **A new player finishes the prologue in 40 to 60 minutes:** the full playtest takes 19 in-game days (store built by day 7, houses by day 11, dance on day 19). At 4x that is about 28 minutes of waiting plus designing, reading and the case. This is an estimate from the clock, not a timed human playthrough.
+- **First download under 40 MB compressed:** 38.7 MB (`index.wasm` 10.1 MB, `index.pck` 28.6 MB). Packs: music 0.18 MB, characters 3.1 MB.
+
+**Tests and runs:** 261 GUT tests pass (new: prologue 6, Cash Tin night 9, roads and checks 6, settings and saves 8, audio 5). Prologue playtest (`scenes/story/prologue_demo.tscn`, presses the real buttons): 32 of 32 headless; 32 of 32 in the browser (`node tools/look_test.mjs --scene prologue_demo --out docs/screens/m9 --dpr 1.5`, about 60 minutes on SwiftShader), no console errors, nine screenshots in `docs/screens/m9/`. `m9_09_lesson_desktop.png` is the lesson step after the case file is closed (the browser run's version still has the case file open behind the card; the demo is fixed). Earlier demos still pass. Director soak sanity (6 seeds): 0 bad cases. Smoke test: no console errors (`docs/screens/smoke-2026-10-19T04-42-40-972Z.png`).
+
+**Known issues and what's blocked on Josh** (also in `docs/BACKLOG.md`)
+- **Animations (needs Josh):** residents still use the hand-keyed idle, walk and sit. Download the Quaternius Universal Animation Library into `assets/incoming/animations/` (list in `docs/ASSET_REQUESTS.md`; the sandbox can't reach quaternius.com).
+- **Faces and expressions:** the MPFB bodies have no face rig yet, so the interview portrait shows mood in posture only. Hair is a cap in the hair colour (a bun for Agnes), and clothes are the MPFB helper shells.
+- **Props:** the prologue uses the existing prop set; no new props were made.
+- **Music is synthesised and simple.** No Freesound recordings were used (no network).
+- **No timed human playtest yet,** and the guided build steps haven't been tried on a phone.
+- Footpaths and street lamps unlock but there is no street-lamp tool yet (the Lights button is still off).
+- The playtest places the templates at fixed spots; a player's own layout may need the ghost and plot guides explained better.
+
 ## M8 - The crime director (done)
 
 **What works** (`scripts/crime/`, design notes in `docs/CRIME_DIRECTOR.md` "Implementation notes")
