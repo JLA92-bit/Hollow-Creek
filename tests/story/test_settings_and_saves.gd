@@ -92,3 +92,12 @@ func test_credits_list_the_engine_and_the_assets() -> void:
 	assert_string_contains(t, "Godot")
 	assert_string_contains(t, "Fraunces")
 	assert_string_contains(t, "CC0")
+
+
+func test_short_screens_get_a_bigger_ui() -> void:
+	assert_eq(Settings.auto_scale(1080.0), 1.0)
+	assert_eq(Settings.auto_scale(720.0), 1.0)
+	assert_eq(Settings.auto_scale(600.0), 1.0)
+	assert_almost_eq(Settings.auto_scale(390.0), 1.54, 0.01, "a phone held sideways")
+	assert_eq(Settings.auto_scale(300.0), 1.6, "capped")
+	assert_eq(Settings.auto_scale(0.0), 1.0)

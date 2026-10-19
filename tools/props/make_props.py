@@ -336,6 +336,16 @@ def standard_lamp() -> Prop:
     return p
 
 
+def street_lamp() -> Prop:
+    """A timber pole with an iron arm and an enamel shade, as strung along a 1950s country street."""
+    p = Prop("street_lamp")
+    p.cyl("timber", (0, 0, 0), 4.2, 0.11, 0.075, 12)
+    p.rail("iron", (0, 0, 3.95), (0.55, 0, 4.1), 0.025)
+    p.cyl("enamel", (0.6, 0, 3.82), 0.26, 0.3, 0.05, 18, caps=False)
+    p.cyl("glass", (0.6, 0, 3.78), 0.12, 0.07, None, 10)
+    return p
+
+
 def candle() -> Prop:
     p = Prop("candle")
     p.cyl("enamel", (0, 0, 0), 0.02, 0.07, 0.06, 16)
@@ -347,7 +357,7 @@ def candle() -> Prop:
 
 PROPS = {f.__name__: f for f in [wood_stove, icebox, wireless_set, wall_telephone, laminex_table, kitchen_chair, iron_bed,
                                   wardrobe, chest_of_drawers, washstand, clawfoot_bath, settee, kitchen_sink, pendant_light,
-                                  standard_lamp, candle]}
+                                  standard_lamp, candle, street_lamp]}
 
 
 def main(names: list[str]) -> None:

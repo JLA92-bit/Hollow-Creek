@@ -14,6 +14,8 @@ var houses: Dictionary = {}
 var construction: Dictionary = {}
 ## Roads and paths the player has laid: "x,y" -> "dirt" | "gravel" | "footpath" (scripts/build/road_ops.gd).
 var roads: Dictionary = {}
+## Street lamps the player has put up: [[x, y], ...] (scripts/build/lamp_ops.gd).
+var lamps: Array = []
 ## Building crews in the town (docs/GAME_DESIGN.md: two to start).
 var crews: int = 2
 ## Each home's history card: house id -> [{day, text}] (HomeLife.record).
@@ -35,7 +37,7 @@ static func version() -> String:
 
 func to_dict() -> Dictionary:
 	return {"mode": mode, "money": money, "town_trust": town_trust, "seed": seed_value, "houses": houses.duplicate(true),
-		"construction": construction.duplicate(true), "crews": crews, "history": history.duplicate(true), "roads": roads.duplicate()}
+		"construction": construction.duplicate(true), "crews": crews, "history": history.duplicate(true), "roads": roads.duplicate(), "lamps": lamps.duplicate(true)}
 
 
 func from_dict(d: Dictionary) -> void:
@@ -48,6 +50,7 @@ func from_dict(d: Dictionary) -> void:
 	crews = int(d.get("crews", 2))
 	history = (d.get("history", {}) as Dictionary).duplicate(true)
 	roads = (d.get("roads", {}) as Dictionary).duplicate()
+	lamps = (d.get("lamps", []) as Array).duplicate(true)
 
 
 func reset() -> void:
@@ -58,4 +61,5 @@ func reset() -> void:
 	construction.clear()
 	history.clear()
 	roads.clear()
+	lamps.clear()
 	crews = 2

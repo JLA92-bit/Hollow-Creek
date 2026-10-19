@@ -43,6 +43,8 @@ var residents: ResidentViews
 var overlays: DebugOverlays
 var case_screen: InvestigationScreen
 var road: RoadMode
+var lamp_mode: LampMode
+var lamps_view: LampsView
 var pause_menu: PauseMenu
 var _walls_before := HouseView.WALLS_UP
 var _follow := ""
@@ -151,6 +153,14 @@ func _start_residents() -> void:
 	road = RoadMode.new()
 	road.world = self
 	add_child(road)
+	lamps_view = LampsView.new()
+	lamps_view.grid = slice.grid
+	lamps_view.world = self
+	add_child(lamps_view)
+	lamps_view.refresh()
+	lamp_mode = LampMode.new()
+	lamp_mode.world = self
+	add_child(lamp_mode)
 	var audio := AudioDirector.new()
 	audio.world = self
 	add_child(audio)
@@ -218,6 +228,57 @@ func _on_case_screen_closed() -> void:
 		case_screen = null
 	if hud:
 		hud.call("_refresh_toolbar")
+
+
+func open_lamps() -> void:
+	if lamp_mode == null or building:
+		return
+	if SimHost.prologue != null and SimHost.prologue.is_locked("street_lamps"):
+		if hud:
+			hud.show_toast("Street lamps come later. Sort out the town first.")
+		return
+	lamp_mode.open()
+
+
+## Can't put a lamp in the water or inside a house.
+func _lamp_blocked(p: Vector2) -> bool:
+	var g := slice.grid
+	var t := Vector2i(floori(p.x), floori(p.y))
+	if not g.in_bounds(t.x, t.y) or g.get_ground(t.x, t.y) == Ground.Type.WATER:
+		return true
+	var sight := SimHost.sim.town.sight if SimHost.sim.town != null else null
+	return sight != null and sight.room_at(t) != ""
+
+
+func put_up_lamp(p: Vector2) -> Dictionary:
+	if not GameState.is_sandbox() and GameState.money < LampOps.COST:
+		return {"ok": false, "msg": "A lamp is £%d and you have £%d." % [LampOps.COST, GameState.money], "cost": 0}
+	var r := LampOps.place(GameState.lamps, p, _lamp_blocked)
+	if bool(r["ok"]):
+		if not GameState.is_sandbox():
+			GameState.money -= int(r["cost"])
+		else:
+			r["cost"] = 0
+		_lamps_changed()
+	return r
+
+
+## Takes down the lamp near a point. Returns the refund, or -1 if there wasn't one.
+func take_down_lamp(p: Vector2) -> int:
+	var refund := LampOps.remove_at(GameState.lamps, p)
+	if refund >= 0:
+		if not GameState.is_sandbox():
+			GameState.money += refund
+		else:
+			refund = 0
+		_lamps_changed()
+	return refund
+
+
+func _lamps_changed() -> void:
+	lamps_view.refresh()
+	SimHost.rebuild_town()
+	request_autosave()
 
 
 func open_roads() -> void:
@@ -296,7 +357,7 @@ func follow_resident(rid: String) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if residents == null or building or photo_mode or (road != null and road.active):
+	if residents == null or building or photo_mode or (road != null and road.active) or (lamp_mode != null and lamp_mode.active):
 		return
 	var mb := event as InputEventMouseButton
 	if mb == null or mb.button_index != MOUSE_BUTTON_LEFT:
@@ -656,7 +717,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		return
 	match k.keycode:
 		KEY_ESCAPE:
-			if not building and (case_screen == null or not case_screen.visible) and (road == null or not road.active) and pause_menu == null:
+			if not building and (case_screen == null or not case_screen.visible) and (road == null or not road.active) and (lamp_mode == null or not lamp_mode.active) and pause_menu == null:
 				pause_menu = PauseMenu.new()
 				pause_menu.resumed.connect(func() -> void: pause_menu = null)
 				add_child(pause_menu)

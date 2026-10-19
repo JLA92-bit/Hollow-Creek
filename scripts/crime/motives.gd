@@ -50,6 +50,31 @@ static func cover_up(sim: Sim, rid: String) -> float:
 	return clampf(w * (1.3 if sim.has_trait(rid, "secretive") else 1.0), 0.0, 100.0)
 
 
+## How much a well-lit, watched street takes off the pressure to rob somebody (docs/GAME_DESIGN.md
+## "Prevention is part of play"): 6 for each lamp within 12 m of their home, up to 24.
+static func safety(sim: Sim, target: String) -> float:
+	var home := sim.home_of(target)
+	if home == "" or sim.town == null or sim.town.sight == null:
+		return 0.0
+	var lo := Vector2(1e9, 1e9)
+	var hi := Vector2(-1e9, -1e9)
+	for rid: String in sim.town.sight.rooms:
+		var room: Dictionary = sim.town.sight.rooms[rid]
+		if str(room["house"]) != home:
+			continue
+		for t: Vector2i in room["tiles"]:
+			lo = Vector2(minf(lo.x, t.x), minf(lo.y, t.y))
+			hi = Vector2(maxf(hi.x, t.x), maxf(hi.y, t.y))
+	if hi.x < lo.x:
+		return 0.0
+	var centre := (lo + hi) * 0.5
+	var n := 0
+	for l: Dictionary in sim.town.sight.outdoor_lamps:
+		if bool(l.get("street", false)) and (l["at"] as Vector2).distance_to(centre) <= 12.0:
+			n += 1
+	return minf(24.0, 6.0 * float(n))
+
+
 ## Everyone's candidates for a crime type, strongest first. `minor` or `major` picks the threshold.
 ## Honest residents only commit crimes at pressure 90 or more.
 static func candidates(sim: Sim, crime: String, severity: String = "minor") -> Array[Dictionary]:
@@ -83,6 +108,7 @@ static func candidates(sim: Sim, crime: String, severity: String = "minor") -> A
 				best_motive = "cover_up"
 				best = cover
 			var need := float(cfg["honest_veto"]) if sim.has_trait(rid, "honest") else threshold
+			best -= safety(sim, target)
 			if best >= need:
 				out.append({"culprit": rid, "target": target, "motive": best_motive, "crime": crime, "pressure": best})
 	out.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:

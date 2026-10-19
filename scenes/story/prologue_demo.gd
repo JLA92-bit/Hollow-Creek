@@ -190,6 +190,18 @@ func _run_prologue() -> void:
 	hud_card.continue_button.pressed.emit()
 	await _frames(3)
 	_check(SimHost.prologue == null and SimHost.director_enabled, "the prologue is over and the crime director is on")
+	# The lesson: a lamp behind the store.
+	var back: Vector2i = SimHost.sim.town.origins[store_id] + Vector2i(6, 11)
+	var money_before := GameState.money
+	world.call("open_lamps")
+	_check(world.get("lamp_mode").active, "the Lights tool opens now the lamps are unlocked")
+	world.get("lamp_mode").tap(Vector2(back.x, back.y))
+	_check(GameState.lamps.size() == 1 and GameState.money == money_before - LampOps.COST, "a street lamp goes up behind the store for £%d" % LampOps.COST)
+	world.get("lamp_mode").close()
+	world.call("set_walls_mode", HouseView.WALLS_UP)
+	await look(Vector3(back.x, grid.height_at(back.x, back.y) + 2.0, back.y), 20.0, 22.0, 12.0)
+	await _frames(6)
+	await shot("m9_10_lamp")
 	print("HC_DEMO prologue day=%d trust=%d money=%d" % [Clock.day, GameState.town_trust, GameState.money])
 	print("HC_DEMO_RESULT ", "PASS" if failures == 0 else "FAIL", " ", checks.size() - failures, "/", checks.size())
 	print("HC_DONE")

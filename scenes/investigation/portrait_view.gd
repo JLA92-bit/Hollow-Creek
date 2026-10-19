@@ -14,6 +14,9 @@ var _model: Node3D
 var _head_height := 1.55
 var _composure := 100.0
 var _pressure := 0.0
+var _confessed := false
+var _face: MeshInstance3D
+var _shown: Dictionary = {}   ## blend shape name -> the weight now on the face
 var _t := 0.0
 
 
@@ -65,23 +68,69 @@ func show_resident(p_rid: String, d: Dictionary) -> void:
 	if _model != null:
 		_model.queue_free()
 	var look := ResidentLook.for_resident(p_rid, d)
-	_model = (load("res://assets/characters/%s.glb" % look["model"]) as PackedScene).instantiate() as Node3D
+	# The head-and-shoulders model with a face if the characters pack has it; else the whole body.
+	var path := "res://assets/characters/%s_portrait.glb" % look["model"]
+	if not ResourceLoader.exists(path):
+		path = "res://assets/characters/%s.glb" % look["model"]
+	_model = (load(path) as PackedScene).instantiate() as Node3D
 	_vp.add_child(_model)
 	ResidentLook.apply(_model, look)
 	_head_height = float(look["height"]) * 0.88
-	var p := CharacterAnims.attach(_model)
-	if p.has_animation("idle"):
-		p.play("idle")
+	_face = _find_face(_model)
+	if _face == null:
+		var p := CharacterAnims.attach(_model)
+		if p.has_animation("idle"):
+			p.play("idle")
 	_frame()
 
 
-func set_mood(composure: float, pressure: float) -> void:
+func set_mood(composure: float, pressure: float, confessed: bool = false) -> void:
 	_composure = composure
 	_pressure = pressure
+	_confessed = confessed
+
+
+## The face for a mood: weights for MPFB's face action units. Composure is how together they are,
+## pressure how hard they're being pushed, and a confession is the end of it.
+static func expression_weights(composure: float, pressure: float, confessed: bool = false) -> Dictionary:
+	var strain := 1.0 - clampf(composure / 100.0, 0.0, 1.0)
+	var fear := clampf(pressure / 100.0, 0.0, 1.0)
+	var calm := 1.0 - strain
+	var w := {
+		"eyebrows-left-inner-up": strain * 0.9, "eyebrows-right-inner-up": strain * 0.9,
+		"eyebrows-left-up": fear * 0.5, "eyebrows-right-up": fear * 0.5,
+		"eyebrows-left-down": calm * fear * 0.7, "eyebrows-right-down": calm * fear * 0.7,
+		"eye-left-opened-up": fear * 0.5 + strain * 0.2, "eye-right-opened-up": fear * 0.5 + strain * 0.2,
+		"eye-left-slit": calm * fear * 0.4, "eye-right-slit": calm * fear * 0.4,
+		"mouth-compression": calm * fear * 0.6, "mouth-depression": strain * 0.7, "mouth-open": fear * strain * 0.4,
+		"eye-left-closure": strain * 0.15, "eye-right-closure": strain * 0.15,
+		"mouth-corner-puller": calm * (1.0 - fear) * 0.15}
+	if confessed:
+		w["mouth-depression"] = 0.9
+		w["eyebrows-left-inner-up"] = 1.0
+		w["eyebrows-right-inner-up"] = 1.0
+		w["eye-left-closure"] = 0.5
+		w["eye-right-closure"] = 0.5
+		w["mouth-open"] = 0.0
+	return w
+
+
+static func _find_face(root: Node) -> MeshInstance3D:
+	for c in root.find_children("*", "MeshInstance3D", true, false):
+		var mi := c as MeshInstance3D
+		if mi.mesh != null and mi.mesh.get_blend_shape_count() > 0:
+			return mi
+	return null
 
 
 func _frame() -> void:
 	var cam := _vp.get_node("Cam") as Camera3D
+	if _face != null:
+		# Close on the face: the cropped chest edge stays out of frame.
+		var focus := _head_height * 1.03
+		cam.fov = 26.0
+		cam.look_at_from_position(Vector3(0.0, focus + 0.02, _head_height * 0.78), Vector3(0.0, focus - 0.02, 0.0), Vector3.UP)
+		return
 	cam.look_at_from_position(Vector3(0.0, _head_height + 0.02, 2.4), Vector3(0.0, _head_height - 0.04, 0.0), Vector3.UP)
 
 
@@ -89,6 +138,14 @@ func _process(delta: float) -> void:
 	if _model == null:
 		return
 	_t += delta
+	if _face != null:
+		var want := expression_weights(_composure, _pressure, _confessed)
+		var k := 1.0 - exp(-delta * 6.0)   # the face eases from one look to the next
+		for i in _face.mesh.get_blend_shape_count():
+			var nm := str(_face.mesh.get_blend_shape_name(i))
+			var v := lerpf(float(_shown.get(nm, 0.0)), clampf(float(want.get(nm, 0.0)), 0.0, 1.0), k)
+			_shown[nm] = v
+			_face.set_blend_shape_value(i, v)
 	var calm := _composure / 100.0
 	# Composed people stand straight and face you; rattled ones lean back, droop and look away.
 	var lean := (1.0 - calm) * 9.0

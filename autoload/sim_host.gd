@@ -86,7 +86,7 @@ func _build_town() -> SimTown:
 		if h.origin != hv.data.origin:
 			h.origin = hv.data.origin
 		hs.append(h)
-	return SimTown.build(slice.grid, hs, slice.data["landmarks"], slice.creek_points)
+	return SimTown.build(slice.grid, hs, slice.data["landmarks"], slice.creek_points, GameState.lamps)
 
 
 func _on_time_changed(_day: int, _minute: int) -> void:

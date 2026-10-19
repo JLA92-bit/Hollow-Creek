@@ -31,7 +31,17 @@
       "res://assets/characters/halina.glb",
       "res://assets/characters/halina_lod1.glb",
       "res://assets/characters/piotr.glb",
-      "res://assets/characters/piotr_lod1.glb"
+      "res://assets/characters/piotr_lod1.glb",
+      "res://assets/characters/agnes_portrait.glb",
+      "res://assets/characters/frank_portrait.glb",
+      "res://assets/characters/edna_portrait.glb",
+      "res://assets/characters/june_portrait.glb",
+      "res://assets/characters/len_portrait.glb",
+      "res://assets/characters/marge_portrait.glb",
+      "res://assets/characters/davey_portrait.glb",
+      "res://assets/characters/tomasz_portrait.glb",
+      "res://assets/characters/halina_portrait.glb",
+      "res://assets/characters/piotr_portrait.glb"
     ]
   }
 }

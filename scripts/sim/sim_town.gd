@@ -22,11 +22,13 @@ var origins: Dictionary = {}       ## house id -> its origin tile (the corner th
 var sight: SightMap                 ## what blocks the eye, rooms, windows and lamps (memories, light)
 
 
-static func build(grid: WorldGrid, houses: Array, landmarks: Array = [], creek_points: PackedVector2Array = PackedVector2Array()) -> SimTown:
+static func build(grid: WorldGrid, houses: Array, landmarks: Array = [], creek_points: PackedVector2Array = PackedVector2Array(), lamps: Array = []) -> SimTown:
 	var t := SimTown.new()
 	t._build(grid, houses, landmarks, creek_points)
 	t.grid = grid
 	t.sight = SightMap.build(grid, houses)
+	for l: Variant in lamps:
+		t.sight.outdoor_lamps.append({"at": Vector2(float((l as Array)[0]), float((l as Array)[1])), "radius": LampOps.REACH, "street": true})
 	return t
 
 

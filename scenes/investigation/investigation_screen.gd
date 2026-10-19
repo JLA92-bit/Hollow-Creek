@@ -439,7 +439,7 @@ func _interview() -> void:
 	head.add_child(_portrait)
 	if SimHost.sim:
 		_portrait.show_resident(person, (SimHost.sim.data["residents"] as Dictionary).get(person, {}))
-	_portrait.set_mood(float(ps["composure"]), float(ps["pressure"]))
+	_portrait.set_mood(float(ps["composure"]), float(ps["pressure"]), bool(ps["confessed"]))
 	var col := VBoxContainer.new()
 	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	col.add_theme_constant_override("separation", 4)

@@ -18,6 +18,7 @@ from pathlib import Path
 import bpy  # noqa: I001
 import addon_utils
 from mathutils import Quaternion, Vector
+Vector = Vector  # noqa: PLW0127  (used in annotations below)
 
 ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "assets" / "characters"
@@ -29,12 +30,17 @@ MACROS = {"gender": 0.0, "age": 0.84, "muscle": 0.42, "weight": 0.45, "proportio
           "race": {"asian": 0.0, "caucasian": 1.0, "african": 0.0}}
 
 
+MPFB_MOD = ""
+
+
 def mpfb():
+    global MPFB_MOD
     mods = [m.__name__ for m in addon_utils.modules() if m.__name__.endswith(".mpfb")]
     if not mods:
         bpy.ops.extensions.package_install_files(repo="user_default", filepath=str(MPFB_ZIP), enable_on_install=True)
         mods = [m.__name__ for m in addon_utils.modules() if m.__name__.endswith(".mpfb")]
     addon_utils.enable(mods[0], default_set=True)
+    MPFB_MOD = mods[0]
     return importlib.import_module(mods[0] + ".services.humanservice").HumanService
 
 
@@ -118,7 +124,70 @@ def sit(f):
             "lowerarm_l": (-40,), "lowerarm_r": (-40,)}
 
 
-def build(lod: int, name: str = "agnes", macros: dict = MACROS, skirt: bool = True, bun: bool = True, animations: str = "own") -> Path:
+EXPR_DIR = ROOT / "tools" / "cache" / "mpfb2" / "src" / "mpfb" / "data" / "targets" / "expression" / "units" / "caucasian"
+EXPRESSION_KEYS = ["eyebrows-left-up", "eyebrows-right-up", "eyebrows-left-down", "eyebrows-right-down", "eyebrows-left-inner-up", "eyebrows-right-inner-up",
+                   "eyebrows-left-extern-up", "eyebrows-right-extern-up", "eye-left-opened-up", "eye-right-opened-up", "eye-left-closure", "eye-right-closure",
+                   "eye-left-slit", "eye-right-slit", "mouth-open", "mouth-compression", "mouth-corner-puller", "mouth-elevation", "mouth-depression",
+                   "mouth-depression-retraction", "mouth-pursing", "mouth-upward-retraction"]
+PORTRAIT_FROM = 1.30   # metres: the portrait keeps everything above the chest
+
+
+def _eyelid_centre(body, key: str) -> Vector:
+    """The middle of an eye: the centre of the vertices the eyelid-closing shape key moves."""
+    kb = body.data.shape_keys.key_blocks
+    ref = kb["Basis"] if "Basis" in kb else kb[0]
+    moved = [i for i, v in enumerate(kb[key].data) if (v.co - ref.data[i].co).length > 0.0008]
+    pts = [Vector(body.data.vertices[i].co) for i in moved]
+    return sum(pts, Vector()) / max(1, len(pts))
+
+
+def _eye_material(name: str, colour):
+    mat = bpy.data.materials.new(name)
+    mat.use_nodes = True
+    mat.node_tree.nodes["Principled BSDF"].inputs["Base Color"].default_value = colour
+    mat.node_tree.nodes["Principled BSDF"].inputs["Roughness"].default_value = 0.25
+    return mat
+
+
+def _add_eyes(body, eyes: dict) -> None:
+    """A white eyeball and a dark iris in each socket, joined to the head (they stay put when the lids move)."""
+    white = _eye_material("eye_white", (0.92, 0.91, 0.88, 1.0))
+    iris = _eye_material("iris", (0.16, 0.2, 0.24, 1.0))
+    objs = []
+    for c in eyes.values():
+        for radius, mat, dy in ((0.0115, white, 0.0), (0.0062, iris, -0.0098)):
+            bpy.ops.mesh.primitive_uv_sphere_add(segments=14, ring_count=8, radius=radius, location=(c.x, c.y + 0.0105 + dy, c.z))
+            o = bpy.context.active_object
+            o.data.materials.append(mat)
+            objs.append(o)
+    bpy.ops.object.select_all(action="DESELECT")
+    for o in objs:
+        o.select_set(True)
+    body.select_set(True)
+    bpy.context.view_layer.objects.active = body
+    bpy.ops.object.join()
+
+
+def _export_portrait(body, rig, name: str) -> Path:
+    """Exports the cropped head-and-shoulders mesh with its shape keys, no skeleton."""
+    for mod in list(body.modifiers):
+        if mod.type == "ARMATURE":
+            body.modifiers.remove(mod)
+    body.parent = None
+    bpy.data.objects.remove(rig, do_unlink=True)
+    OUT.mkdir(parents=True, exist_ok=True)
+    path = OUT / f"{name}_portrait.glb"
+    bpy.ops.object.select_all(action="DESELECT")
+    body.select_set(True)
+    bpy.context.view_layer.objects.active = body
+    bpy.ops.export_scene.gltf(filepath=str(path), export_format="GLB", use_selection=True, export_animations=False, export_yup=True,
+                              export_skins=False, export_materials="EXPORT", export_morph=True, export_morph_normal=False)
+    tris = sum(len(p.vertices) - 2 for p in body.data.polygons)
+    print(f"wrote {path.relative_to(ROOT)} ({tris} triangles, {len(body.data.shape_keys.key_blocks) - 1 if body.data.shape_keys else 0} shape keys)")
+    return path
+
+
+def build(lod: int, name: str = "agnes", macros: dict = MACROS, skirt: bool = True, bun: bool = True, animations: str = "own", portrait: bool = False) -> Path:
     """One resident as a GLB. `skirt` makes the dress (women); without it the tights helper is trousers. `bun` adds the hair bun."""
     bpy.ops.wm.read_factory_settings(use_empty=True)
     bpy.context.scene.render.fps = FPS
@@ -195,6 +264,15 @@ def build(lod: int, name: str = "agnes", macros: dict = MACROS, skirt: bool = Tr
     bpy.ops.object.modifier_move_to_index(modifier="soften", index=0)
     bpy.ops.object.modifier_apply(modifier="soften")
     body.vertex_groups.remove(body.vertex_groups["soften"])
+    if portrait:
+        # A head-and-shoulders model with the face's action units as shape keys (portrait_view.gd mixes
+        # them into expressions). The targets are offsets by vertex index, so they go on before any
+        # vertex is deleted.
+        ts = importlib.import_module(MPFB_MOD + ".services.targetservice").TargetService
+        for key in EXPRESSION_KEYS:
+            ts.load_target(body, str(EXPR_DIR / f"{key}.target.gz"), weight=0.0, name=key)
+        drop.extend(v.index for v in body.data.vertices if v.co.z < PORTRAIT_FROM and v.index not in set(drop))
+        eyes = {side: _eyelid_centre(body, f"eye-{side}-closure") for side in ("left", "right")}
     import bmesh
     bm = bmesh.new()
     bm.from_mesh(body.data)
@@ -213,6 +291,9 @@ def build(lod: int, name: str = "agnes", macros: dict = MACROS, skirt: bool = Tr
         body.select_set(True)
         bpy.context.view_layer.objects.active = body
         bpy.ops.object.join()
+    if portrait:
+        _add_eyes(body, eyes)
+        return _export_portrait(body, rig, name)
     # Down to the triangle budget: under 10,000 at LOD0 and 3,000 at LOD1.
     tris_now = sum(len(p.vertices) - 2 for p in body.data.polygons)
     target = 300 if name == "animations" else (9000 if lod == 0 else 2800)   # the animation carrier only needs a skinned body
