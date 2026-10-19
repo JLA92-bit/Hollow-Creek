@@ -65,6 +65,8 @@ jobs:
           mkdir -p build/web
           tools/bin/godot --headless --path . --export-release "Web" build/web/index.html
           test -f build/web/index.pck
+          bash tools/build_packs.sh
+          test -f build/web/packs/music.pck
 
       - uses: actions/setup-node@v4
         with:

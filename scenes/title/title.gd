@@ -6,6 +6,10 @@ extends Control
 
 
 func _ready() -> void:
+	_start_music()
+	if not ContentPacks.is_loaded("music"):
+		ContentPacks.pack_loaded.connect(func(n: String) -> void: _start_music() if n == "music" else null)
+		ContentPacks.request("music")
 	var new_game: Button = %NewGame
 	var sandbox: Button = %Sandbox
 	var settings: Button = %Settings
@@ -36,6 +40,24 @@ func _ready() -> void:
 		s.loaded.connect(func() -> void: get_tree().change_scene_to_file("res://scenes/world/world.tscn"))
 		add_child(s))
 	_status.text = "Press Build (or B) to build. Right-drag or two fingers to look around, R for rain, F2 for photos."
+
+
+var _music: AudioStreamPlayer
+
+
+## The title theme, from the music pack (it arrives a moment after the menu on the web).
+func _start_music() -> void:
+	if _music != null or not ContentPacks.is_loaded("music"):
+		return
+	var stream := load("res://assets/audio/music/music_title.ogg") as AudioStreamOggVorbis
+	if stream == null:
+		return
+	stream.loop = true
+	_music = AudioStreamPlayer.new()
+	_music.stream = stream
+	_music.volume_db = -8.0
+	add_child(_music)
+	_music.play()
 
 
 func _load(slot: String) -> void:

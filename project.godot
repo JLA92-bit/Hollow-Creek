@@ -22,6 +22,7 @@ GameState="*res://autoload/game_state.gd"
 Clock="*res://autoload/clock.gd"
 SaveSystem="*res://autoload/save_system.gd"
 SimHost="*res://autoload/sim_host.gd"
+ContentPacks="*res://autoload/content_packs.gd"
 
 [debug]
 

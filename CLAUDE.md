@@ -32,6 +32,7 @@ tools/bin/godot --headless --path . -s addons/gut/gut_cmdln.gd -gdir=res://tests
 tools/bin/godot --headless --path . -s tools/director_soak.gd -- --seeds 500     # M8 soak: 500 seeds x 28 days, solver bot on every case (about 40 min on 4 cores if split with --from)
 tools/bin/godot --headless --path . res://scenes/investigation/director_demo.tscn    # M8 demo: the director plans an incident, the bot solves it
 mkdir -p build/web && tools/bin/godot --headless --path . --export-release "Web" build/web/index.html
+bash tools/build_packs.sh                          # background content packs (data/packs.json) into build/web/packs/, after the web export
 node tools/web_smoke_test.mjs --viewport 1280x720  # load the build in headless Chromium, screenshot
 python3 -I tools/assets/fetch_polyhaven.py && python3 -I tools/assets/write_credits.py   # assets from data/asset_manifest.json
 python3 -I tools/textures/make_foliage.py          # regenerate leaf, grass, noise and water textures
@@ -56,9 +57,13 @@ xvfb-run -a tools/bin/godot --path . --rendering-driver opengl3 -s tools/preview
 python3 tools/textures/make_wallpapers.py; python3 tools/textures/make_lace.py; python3 tools/textures/make_garden.py   # wallpaper masks, lace and lattice, plant cards
 node tools/look_test.mjs --scene build_demo --out docs/screens/m2           # same demo in the browser, with screenshots
 python3 -I tools/audio/make_ui_sfx.py              # regenerate the build-mode UI sounds
+python3 -I tools/audio/make_world_audio.py         # regenerate ambience, rain, story cues and the music (needs numpy and ffmpeg)
+tools/bin/godot --headless --path . res://scenes/story/prologue_demo.tscn           # M9 playtest: the whole prologue, arrival to the lesson
+node tools/look_test.mjs --scene packs_demo --out docs/screens/m9               # the music pack downloads and mounts in the browser
+tools/bin/godot --headless --path . -s tools/make_templates.gd                       # rewrite the shipped house templates from the demo town
 ```
 
-URL hooks for previews and tests: `?scene=world` opens the valley directly, `?scene=look_test` runs the look test (options in `scenes/world/look_test.gd`), `?scene=build_demo` runs the M2 build demo, `?scene=sandbox_demo` the M3 sandbox demo, `?scene=construction_demo` the M4 story demo, `?scene=residents_demo` the M5 residents demo, `?scene=night_demo` the M6 night demo, `?scene=investigation_demo` the M7 Cash Tin demo, `?scene=director_demo` the M8 director demo.
+URL hooks for previews and tests: `?scene=world` opens the valley directly, `?scene=look_test` runs the look test (options in `scenes/world/look_test.gd`), `?scene=build_demo` runs the M2 build demo, `?scene=sandbox_demo` the M3 sandbox demo, `?scene=construction_demo` the M4 story demo, `?scene=residents_demo` the M5 residents demo, `?scene=night_demo` the M6 night demo, `?scene=investigation_demo` the M7 Cash Tin demo, `?scene=director_demo` the M8 director demo, `?scene=prologue_demo` the M9 prologue playtest, `?scene=packs_demo` the background pack check.
 
 `tools/bin/`, `tools/cache/` and `build/` are git-ignored. Run `--import` before tests or exports in a fresh checkout. The engine is about 9.6 MB gzipped on its own (`index.wasm`, 4.7.2).
 

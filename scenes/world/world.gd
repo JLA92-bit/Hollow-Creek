@@ -151,6 +151,9 @@ func _start_residents() -> void:
 	road = RoadMode.new()
 	road.world = self
 	add_child(road)
+	var audio := AudioDirector.new()
+	audio.world = self
+	add_child(audio)
 	if SimHost.prologue != null:
 		var guides := PrologueGuides.new()
 		guides.name = "PrologueGuides"

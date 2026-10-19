@@ -1,0 +1,9 @@
+{
+  "_comment": "Background content packs (docs/DEPLOY.md). Each is a .pck built by tools/build_packs.sh from an export preset of the same name, downloaded on the web after the game has started. `marker` is a resource that exists once the pack is loaded.",
+  "music": {
+    "preset": "Pack: music",
+    "file": "packs/music.pck",
+    "marker": "res://assets/audio/music/music_title.ogg",
+    "files": ["res://assets/audio/music/music_title.ogg", "res://assets/audio/music/music_dance.ogg"]
+  }
+}

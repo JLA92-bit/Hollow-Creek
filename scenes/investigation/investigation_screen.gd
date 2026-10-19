@@ -215,7 +215,10 @@ func tap_trace(id: String) -> void:
 	var r := inv.search(id)
 	if not r["ok"]:
 		return
+	if not bool(r.get("again", false)):
+		AudioDirector.play_cue("found")
 	_last_trace = id
+	AudioDirector.play_cue("search" if hotspots.has(id) else "knock")
 	if hotspots.has(id):
 		(hotspots[id] as Button).queue_free()
 		hotspots.erase(id)
