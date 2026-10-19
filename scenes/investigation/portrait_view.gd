@@ -69,12 +69,9 @@ func show_resident(p_rid: String, d: Dictionary) -> void:
 	_vp.add_child(_model)
 	ResidentLook.apply(_model, look)
 	_head_height = float(look["height"]) * 0.88
-	var aps := _model.find_children("*", "AnimationPlayer", true, false)
-	if not aps.is_empty():
-		var p := aps[0] as AnimationPlayer
-		if p.has_animation("idle"):
-			p.get_animation("idle").loop_mode = Animation.LOOP_LINEAR
-			p.play("idle")
+	var p := CharacterAnims.attach(_model)
+	if p.has_animation("idle"):
+		p.play("idle")
 	_frame()
 
 

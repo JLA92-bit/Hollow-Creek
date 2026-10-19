@@ -36,14 +36,17 @@ def macros_for(r: dict) -> dict:
 
 def main():
     data = json.loads(DATA.read_text())
-    ids = sys.argv[1:] or [k for k in data["residents"] if k != "r_agnes"]
+    ids = sys.argv[1:] or list(data["residents"])
     for rid in ids:
         r = data["residents"][rid]
         name = rid.replace("r_", "")
         macros = macros_for(r)
         print(rid, macros)
         for lod in (0, 1):
-            base.build(lod, name=name, macros=macros, skirt=r["sex"] == "f", bun="bun" in r.get("appearance", "") or "plait" in r.get("appearance", ""))
+            if rid == "r_agnes":
+                base.build(lod, name=name, animations="none")   # her own macros, skirt and bun
+            else:
+                base.build(lod, name=name, macros=macros, skirt=r["sex"] == "f", animations="none", bun="bun" in r.get("appearance", "") or "plait" in r.get("appearance", ""))
         r["model"] = name
     # Keep the file's own formatting where possible: only the "model" values change.
     text = DATA.read_text()

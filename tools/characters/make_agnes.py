@@ -118,7 +118,7 @@ def sit(f):
             "lowerarm_l": (-40,), "lowerarm_r": (-40,)}
 
 
-def build(lod: int, name: str = "agnes", macros: dict = MACROS, skirt: bool = True, bun: bool = True) -> Path:
+def build(lod: int, name: str = "agnes", macros: dict = MACROS, skirt: bool = True, bun: bool = True, animations: str = "own") -> Path:
     """One resident as a GLB. `skirt` makes the dress (women); without it the tights helper is trousers. `bun` adds the hair bun."""
     bpy.ops.wm.read_factory_settings(use_empty=True)
     bpy.context.scene.render.fps = FPS
@@ -215,20 +215,26 @@ def build(lod: int, name: str = "agnes", macros: dict = MACROS, skirt: bool = Tr
         bpy.ops.object.join()
     # Down to the triangle budget: under 10,000 at LOD0 and 3,000 at LOD1.
     tris_now = sum(len(p.vertices) - 2 for p in body.data.polygons)
-    target = 9000 if lod == 0 else 2800
+    target = 300 if name == "animations" else (9000 if lod == 0 else 2800)   # the animation carrier only needs a skinned body
     dec = body.modifiers.new("decimate", "DECIMATE")
     dec.ratio = min(1.0, target / tris_now)
     bpy.ops.object.modifier_move_to_index(modifier="decimate", index=0)
     bpy.ops.object.modifier_apply(modifier="decimate")
-    make_action(rig, "idle", list(range(1, 98, 8)), idle)
-    make_action(rig, "walk", list(range(1, 26, 2)), walk)
-    make_action(rig, "sit", [1, 10], sit)
+    # "own": the hand-keyed idle, walk and sit. "ual": the retargeted Quaternius library (animations.glb).
+    # "none": no animations; the game adds the shared set from animations.glb at run time.
+    if animations == "own":
+        make_action(rig, "idle", list(range(1, 98, 8)), idle)
+        make_action(rig, "walk", list(range(1, 26, 2)), walk)
+        make_action(rig, "sit", [1, 10], sit)
+    elif animations == "ual":
+        import retarget_ual
+        print("retargeted", retarget_ual.retarget(rig))
     OUT.mkdir(parents=True, exist_ok=True)
     path = OUT / (f"{name}.glb" if lod == 0 else f"{name}_lod1.glb")
     bpy.ops.object.select_all(action="DESELECT")
     body.select_set(True)
     rig.select_set(True)
-    bpy.ops.export_scene.gltf(filepath=str(path), export_format="GLB", use_selection=True, export_animations=True,
+    bpy.ops.export_scene.gltf(filepath=str(path), export_format="GLB", use_selection=True, export_animations=animations != "none",
                               export_animation_mode="NLA_TRACKS", export_yup=True, export_skins=True, export_materials="EXPORT",
                               export_morph=False)
     tris = sum(len(p.vertices) - 2 for p in body.data.polygons)
@@ -239,5 +245,5 @@ def build(lod: int, name: str = "agnes", macros: dict = MACROS, skirt: bool = Tr
 
 
 if __name__ == "__main__":
-    build(0)
-    build(1)
+    build(0, animations="none")
+    build(1, animations="none")

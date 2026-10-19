@@ -71,13 +71,7 @@ func _make(rid: String) -> Dictionary:
 	n.name = rid
 	add_child(n)
 	ResidentLook.apply(n, look)
-	var player: AnimationPlayer = null
-	var aps := n.find_children("*", "AnimationPlayer", true, false)
-	if not aps.is_empty():
-		player = aps[0] as AnimationPlayer
-		for a in ["idle", "walk"]:
-			if player.has_animation(a):
-				player.get_animation(a).loop_mode = Animation.LOOP_LINEAR
+	var player := CharacterAnims.attach(n)
 	var v := {"node": n, "player": player, "anim": "", "facing": 0.0}
 	_views[rid] = v
 	return v
@@ -128,7 +122,7 @@ func _process(_delta: float) -> void:
 			var dir := Vector2(float(ahead[1]) - float(pos[1]), float(ahead[2]) - float(pos[2]))
 			if dir.length() > 0.05:
 				v["facing"] = atan2(dir.x, dir.y)
-			_play(v, "walk", clampf(walk_speed / STRIDE_M_PER_S, 0.6, 3.5))
+			_play(v, CharacterAnims.pick(kind, true, "stand", int(r["age"])), clampf(walk_speed / STRIDE_M_PER_S, 0.6, 3.5))
 		var pose := "walk"
 		if route.is_empty():
 			# At the place: lying on the bed, sitting on the seat, or standing at the front of the thing.
@@ -139,13 +133,10 @@ func _process(_delta: float) -> void:
 				v["facing"] = float(pl["face"])
 			if kind != "sleep" and pose == "lie":
 				pose = "sit"
-			_play(v, "sit" if pose == "sit" else "idle", 0.0 if pose == "lie" else 1.0)
+			_play(v, CharacterAnims.pick(kind, false, pose, int(r["age"])), 0.0 if pose == "lie" else 1.0)
 		var y := height_at(pos)
 		n.position = Vector3(float(pos[1]), y, float(pos[2]))
 		n.rotation.y = float(v["facing"])
-		if pose == "sit":
-			# The sit animation only bends the legs, so lower the hips onto the seat.
-			n.position.y -= 0.92 * n.scale.y - 0.47
 		if pose == "lie":
 			n.position.y += 0.5
 			n.rotation.x = -PI * 0.5
