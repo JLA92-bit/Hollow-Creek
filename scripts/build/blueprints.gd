@@ -52,6 +52,29 @@ static func list() -> Array[Dictionary]:
 	return out
 
 
+const TEMPLATE_DIR := "res://data/houses/templates"
+
+
+## The shipped templates (a general store, cottages): [{file, name, rooms, code, template: true}].
+static func templates() -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	var d := DirAccess.open(TEMPLATE_DIR)
+	if d == null:
+		return out
+	var files := d.get_files()
+	files.sort()
+	for file in files:
+		if not file.ends_with(".json"):
+			continue
+		var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string("%s/%s" % [TEMPLATE_DIR, file]))
+		if parsed is Dictionary and (parsed as Dictionary).has("code"):
+			var e := (parsed as Dictionary).duplicate()
+			e["file"] = file
+			e["template"] = true
+			out.append(e)
+	return out
+
+
 static func load_design(file: String) -> HouseData:
 	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string("%s/%s" % [DIR, file]))
 	if not parsed is Dictionary:

@@ -218,7 +218,7 @@ func _toolbar(root: Control) -> void:
 	for t in ["Roads", "Build", "Furnish", "Lights", "Residents", "Case file", "Photo"]:
 		var b := Button.new()
 		b.text = t
-		b.disabled = t not in ["Build", "Photo", "Furnish", "Residents"]
+		b.disabled = t not in ["Build", "Photo", "Furnish", "Residents", "Roads"]
 		if t == "Residents":
 			b.disabled = not SimHost.active
 			b.tooltip_text = "Residents (P)"
@@ -228,6 +228,9 @@ func _toolbar(root: Control) -> void:
 			b.pressed.connect(func() -> void:
 				world.call("enter_build_mode")
 				(world.get("build") as BuildMode).set_tool("buy"))
+		if t == "Roads":
+			b.tooltip_text = "Roads and paths"
+			b.pressed.connect(func() -> void: world.call("open_roads"))
 		if t == "Case file":
 			b.disabled = SimHost.investigation == null
 			b.tooltip_text = "Case file"

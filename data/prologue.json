@@ -1,0 +1,42 @@
+{
+  "_comment": "The prologue (docs/CASE_00_CASH_TIN.md 'Tutorial building steps'). Each step has a check the Prologue class evaluates against the game; they complete in order.",
+  "road": {
+    "label": "The main road",
+    "points": [[12, 33], [26, 36], [40, 39], [52, 42], [64, 44], [74, 46]],
+    "width": 3,
+    "needed": 0.85
+  },
+  "store_plot": "plot_store",
+  "locked": ["footpaths", "street_lamps"],
+  "welcome_dance": {"day": 5, "from": 1170, "to": 1380},
+  "steps": [
+    {"id": "arrive", "check": "ack", "title": "Arrival",
+     "text": "A truck drops you at the siding. Agnes Doyle's cottage is the only building in the valley. You are the Administrator, and the Constable. Have a look round.",
+     "hint": "Drag to look around, scroll or pinch to zoom. Tap Continue when you're ready."},
+    {"id": "road", "check": "road", "title": "Lay the main road",
+     "text": "A town needs a road. Lay one from the siding east past Agnes's cottage, following the ghost path.",
+     "hint": "Open Roads and follow the dotted path. Dirt roads are free, but they turn to mud in the rain."},
+    {"id": "store", "check": "store", "title": "Build the general store",
+     "text": "The Haywards are coming to run the store, and the telephone exchange goes in the back room. Build it on the marked plot.",
+     "hint": "Use the store template or design your own. It needs a front door onto the road, a back window facing the creek for light in the storeroom, and an exchange room.",
+     "list": ["door", "window", "exchange"]},
+    {"id": "houses", "check": "houses", "title": "Build three houses",
+     "text": "Three more families are waiting at the siding. Build three houses north of the road and furnish them.",
+     "hint": "Start from the cottage template, then make each house a home: beds, a table, somewhere to cook."},
+    {"id": "families", "check": "families", "title": "Approve the families",
+     "text": "Choose which house each family gets. The Haywards are already set for the store.",
+     "hint": "Open Residents (P) and offer each family a house."},
+    {"id": "week", "check": "dance", "title": "The first week",
+     "text": "Let the week run. Watch what people do, who they visit and what they want. On Saturday the town holds its welcome dance in the mill shed.",
+     "hint": "Click a resident to see their card. Speed up time with the clock buttons."},
+    {"id": "alert", "check": "case_open", "title": "Something's wrong",
+     "text": "The Haywards have come home from the dance to find the back window open and the cash tin gone.",
+     "hint": "Search the scene, speak to everyone, and find out who did it."},
+    {"id": "solve", "check": "case_done", "title": "The Cash Tin",
+     "text": "Search the store, gather the records, interview the residents, and make your accusation.",
+     "hint": "Present evidence that contradicts what people say. Link your deductions. A wrong accusation costs Town Trust."},
+    {"id": "lesson", "check": "ack", "title": "A lesson learned",
+     "text": "Residents have started latching their windows. A lamp behind the store wouldn't hurt either. Footpaths and street lamps are now yours to build.",
+     "hint": "Prevention is part of play. The town is yours now."}
+  ]
+}

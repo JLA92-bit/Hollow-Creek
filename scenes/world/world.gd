@@ -42,6 +42,7 @@ var _work_cache: Dictionary = {}  ## house id -> Construction work list for its 
 var residents: ResidentViews
 var overlays: DebugOverlays
 var case_screen: InvestigationScreen
+var road: RoadMode
 var _walls_before := HouseView.WALLS_UP
 var _follow := ""
 var _press_at := Vector2(-1, -1)
@@ -197,6 +198,51 @@ func _on_case_screen_closed() -> void:
 		case_screen = null
 	if hud:
 		hud.call("_refresh_toolbar")
+	road = RoadMode.new()
+	road.world = self
+	add_child(road)
+	if SimHost.prologue != null:
+		var guides := PrologueGuides.new()
+		guides.name = "PrologueGuides"
+		guides.grid = slice.grid
+		add_child(guides)
+		add_child(PrologueHud.new())
+		SimHost.refresh_story()
+
+
+func open_roads() -> void:
+	if road != null and not building:
+		road.open()
+
+
+## Lays a road or path along waypoints [[x, y], ...]. Returns {ok, msg, cost}. Dirt is free; the rest
+## costs money in the story. Footpaths are locked until The Cash Tin is solved.
+func lay_road(points: Array, kind: String) -> Dictionary:
+	if not RoadOps.KINDS.has(kind):
+		return {"ok": false, "msg": "Unknown road.", "cost": 0}
+	if kind == "footpath" and SimHost.prologue != null and SimHost.prologue.is_locked("footpaths"):
+		return {"ok": false, "msg": "Footpaths come later. Sort out the town first.", "cost": 0}
+	var tiles := RoadOps.tiles_along(points, int((RoadOps.KINDS[kind] as Dictionary)["width"]))
+	var cost := RoadOps.cost(kind, GameState.roads, tiles)
+	if not GameState.is_sandbox() and cost > GameState.money:
+		return {"ok": false, "msg": "That's £%d and you have £%d." % [cost, GameState.money], "cost": cost}
+	var n := RoadOps.lay(GameState.roads, kind, tiles, Vector2i(slice.grid.width, slice.grid.height))
+	if n == 0:
+		return {"ok": false, "msg": "That's already laid.", "cost": 0}
+	if not GameState.is_sandbox():
+		GameState.money -= cost
+	apply_landscape()
+	_clear_for_roads(tiles)
+	SimHost.rebuild_town()
+	request_autosave()
+	return {"ok": true, "msg": "Laid %d tiles of %s%s." % [n, str((RoadOps.KINDS[kind] as Dictionary)["label"]).to_lower(), (" for £%d" % cost) if cost > 0 else ""], "cost": cost}
+
+
+func _clear_for_roads(tiles: Array[Vector2i]) -> void:
+	if vegetation == null:
+		return
+	for t in tiles:
+		vegetation.clear_rect(Rect2(Vector2(t), Vector2.ONE))
 
 
 ## Cycles the debug overlays: light, sightlines, routes, prints, off. Returns the new mode.
@@ -238,7 +284,7 @@ func follow_resident(rid: String) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if residents == null or building or photo_mode:
+	if residents == null or building or photo_mode or (road != null and road.active):
 		return
 	var mb := event as InputEventMouseButton
 	if mb == null or mb.button_index != MOUSE_BUTTON_LEFT:
@@ -360,7 +406,7 @@ func apply_landscape() -> void:
 	for hv in houses:
 		if not hv.data.locked and (not hv.shown.terrain.is_empty() or not hv.shown.ground.is_empty()):
 			parts.append([hv.data.id, hv.data.origin, hv.data.base_y, hv.shown.terrain, hv.shown.ground])
-	var sig := JSON.stringify(parts)
+	var sig := JSON.stringify(parts) + "|" + str(GameState.roads.size()) + "|" + str(hash(JSON.stringify(GameState.roads)))
 	if sig == _landscape_sig:
 		return
 	var terrain_before := _landscape_sig
@@ -368,6 +414,10 @@ func apply_landscape() -> void:
 	var grid := slice.grid
 	grid.heights = _orig_heights.duplicate()
 	grid.ground = _orig_ground.duplicate()
+	for rk: String in GameState.roads:
+		var rt := HouseData.parse_tile(rk)
+		if grid.in_bounds(rt.x, rt.y):
+			grid.set_ground(rt.x, rt.y, RoadOps.ground_of(str(GameState.roads[rk])))
 	for hv2 in houses:
 		var h := hv2.shown
 		if h.locked or is_nan(h.base_y):
@@ -382,7 +432,7 @@ func apply_landscape() -> void:
 				grid.set_ground(t.x, t.y, Ground.from_name(str(h.ground[tk])))
 	terrain.refresh_splat()
 	terrain.rebuild()
-	if terrain_before != "" or not parts.is_empty():
+	if terrain_before != "" or not parts.is_empty() or not GameState.roads.is_empty():
 		for hv3 in houses:
 			if not hv3.data.locked:
 				hv3.rebuild_all()

@@ -1163,19 +1163,21 @@ func _save_hollow(name: String, code: String) -> void:
 ## The blueprint library: saved designs to place, copy or delete, and importing a code or file.
 func open_library() -> void:
 	var box := _open_dialog("Blueprint library")
-	var entries := Blueprints.list()
+	var entries := Blueprints.templates()
+	entries.append_array(Blueprints.list())
 	if entries.is_empty():
 		box.add_child(_text("Nothing saved yet. Use Share on a house to save it here.", 14, SECONDARY))
 	else:
 		var scroll := ScrollContainer.new()
-		scroll.custom_minimum_size = Vector2(0, mini(entries.size(), 4) * 56)
+		scroll.custom_minimum_size = Vector2(0, mini(entries.size(), 5) * 56)
 		scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 		var list := VBoxContainer.new()
 		list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		scroll.add_child(list)
 		for e: Dictionary in entries:
 			var row := _row()
-			var l := _text("%s · %d rooms · %s" % [e["name"], int(e.get("rooms", 0)), e.get("saved", "")], 15)
+			var is_template := bool(e.get("template", false))
+			var l := _text("%s · %d rooms · %s" % [e["name"], int(e.get("rooms", 0)), "template" if is_template else e.get("saved", "")], 15)
 			l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			l.autowrap_mode = TextServer.AUTOWRAP_OFF
 			l.clip_text = true
@@ -1188,10 +1190,11 @@ func open_library() -> void:
 				if d != null:
 					_close_dialog()
 					build.start_placing(d, nm), 80, true))
-			row.add_child(_button("Copy", func() -> void: DisplayServer.clipboard_set(code), 70))
-			row.add_child(_button("Delete", func() -> void:
-				Blueprints.remove(file)
-				open_library(), 80))
+			if not is_template:
+				row.add_child(_button("Copy", func() -> void: DisplayServer.clipboard_set(code), 70))
+				row.add_child(_button("Delete", func() -> void:
+					Blueprints.remove(file)
+					open_library(), 80))
 			list.add_child(row)
 		box.add_child(scroll)
 	_caps_into(box, "Import a share code")

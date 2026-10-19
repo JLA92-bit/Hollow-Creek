@@ -7,6 +7,7 @@ signal town_changed  ## somebody moved in, or the town was rebuilt
 signal lights_changed(lit_rooms: Dictionary)  ## the rooms with lamps lit changed (room id -> true)
 signal case_opened(inv: Investigation)  ## an incident alert: a case is open
 signal case_closed(result: Dictionary)
+signal prologue_progressed(done: Array)  ## ids of the prologue steps just completed
 
 const COTTAGE_ID := "lm_agnes_cottage"
 
@@ -15,6 +16,9 @@ var active := false
 var tick_ms := 0.0  ## time the last batch of ticks took, for the debug panel
 var director: Director = Director.new(0)  ## plans incidents (scripts/crime/director.gd)
 var director_enabled := false             ## off until the prologue case is done (M9) or a test turns it on
+var prologue: Prologue = null            ## the guided opening, or null (sandbox, demos, after it's done)
+var night: Dictionary = {}               ## CashTinNight state: the scripted week of Case 0
+var story_ctx: Dictionary = {}           ## what the prologue last saw: road, store, houses, families
 var investigation: Investigation = null  ## the open case, if any
 var unlocked: Array[String] = []         ## things closed cases have unlocked (footpaths, street_lamps)
 var _world: Node3D = null
@@ -32,6 +36,9 @@ func reset() -> void:
 	director = Director.new(GameState.seed_value)
 	director.last_incident_day = 0   # no incident in the first week
 	director_enabled = false
+	prologue = null
+	night = {}
+	story_ctx = {}
 	active = false
 	_world = null
 	investigation = null
@@ -67,6 +74,7 @@ func rebuild_town() -> void:
 		return
 	sim.town = _build_town()
 	town_changed.emit()
+	refresh_story()
 
 
 func _build_town() -> SimTown:
@@ -92,6 +100,8 @@ func _on_time_changed(_day: int, _minute: int) -> void:
 	while sim.day * 1440 + sim.minute < target and n < 1440:
 		if director_enabled:
 			director.before_tick(sim)
+		if prologue != null and not night.is_empty() and investigation == null and CashTinNight.step(sim, night) == "discovery":
+			_open_cash_tin()
 		sim.tick()
 		n += 1
 	if director_enabled and investigation == null:
@@ -100,6 +110,8 @@ func _on_time_changed(_day: int, _minute: int) -> void:
 			open_case_data(alert)
 	if sim.day != day_before:
 		review_homes()
+	if prologue != null and (sim.minute % 15 == 0 or sim.day != day_before):
+		refresh_story()
 	_check_lights()
 	tick_ms = (Time.get_ticks_usec() - t0) / 1000.0
 
@@ -234,6 +246,10 @@ func snapshot() -> Dictionary:
 	var d := sim.snapshot()
 	d["director"] = director.snapshot()
 	d["director_enabled"] = director_enabled
+	d["prologue"] = prologue.snapshot() if prologue != null else {}
+	d["night"] = night.duplicate(true)
+	d["cases_done"] = _closed_cases.duplicate()
+	d["unlocked"] = unlocked.duplicate()
 	return d
 
 
@@ -245,6 +261,14 @@ func restore(data: Dictionary) -> void:
 	director = Director.new(int(data.get("seed", GameState.seed_value)))
 	director.restore(data.get("director", {}))
 	director_enabled = bool(data.get("director_enabled", false))
+	var ps: Dictionary = data.get("prologue", {})
+	prologue = null
+	if not ps.is_empty():
+		prologue = Prologue.new()
+		prologue.restore(ps)
+	night = (data.get("night", {}) as Dictionary).duplicate(true)
+	_closed_cases.assign(data.get("cases_done", []))
+	unlocked.assign(data.get("unlocked", []))
 
 
 # --- Cases -----------------------------------------------------------------------------------------
@@ -285,6 +309,7 @@ func bank_case() -> int:
 		if bool(closed_case.data.get("generated", false)):
 			director.apply_outcome(sim, closed_case.data, result)
 		case_closed.emit(result)
+		refresh_story()
 	return t
 
 
@@ -294,3 +319,70 @@ func is_unlocked(feature: String) -> bool:
 
 func case_done(id: String) -> bool:
 	return _closed_cases.has(id)
+
+
+# --- The prologue ---------------------------------------------------------------------------------
+
+## Starts the guided opening (a new story game). The director stays off until The Cash Tin is solved.
+func begin_prologue() -> void:
+	prologue = Prologue.new()
+	night = {}
+	director_enabled = false
+
+
+## What the player has built, as the prologue needs to know it, and the steps that follow from it.
+## Cheap enough to call when the town changes and every quarter hour.
+func refresh_story() -> void:
+	if prologue == null or _world == null:
+		return
+	var slice: MapSlice = _world.get("slice")
+	var cfg: Dictionary = prologue.data
+	var road: Dictionary = cfg["road"]
+	var plot := Rect2i()
+	for l: Dictionary in slice.data["landmarks"]:
+		if str(l["id"]) == str(cfg["store_plot"]):
+			var r: Array = l["rect"]
+			plot = Rect2i(int(r[0]), int(r[1]), int(r[2]), int(r[3]))
+	var store_id := ""
+	var store_check := {"door": false, "window": false, "exchange": false}
+	var finished_houses := 0
+	for hv: HouseView in _world.get("houses"):
+		var id := hv.data.id
+		if id == COTTAGE_ID or GameState.construction.has(id) or hv.shown.rooms(0).is_empty():
+			continue
+		if store_id == "" and StoryChecks.on_plot(hv.shown, plot):
+			store_id = id
+			store_check = StoryChecks.store(hv.shown, slice.grid, slice.creek_points)
+		elif StoryChecks.has_bed(hv.shown):
+			finished_houses += 1
+	var housed := 0
+	for hid: String in sim.households:
+		if hid != "h_doyle" and str(sim.households[hid].get("home", "")) != "":
+			housed += 1
+	story_ctx = {"road": StoryChecks.road_done(slice.grid, road["points"], int(road["width"])) >= float(road["needed"]), "store": store_check,
+		"houses": finished_houses, "families": housed, "day": sim.day, "minute": sim.minute, "case_open": investigation != null or case_done("case_00_cash_tin"),
+		"case_done": case_done("case_00_cash_tin")}
+	if store_id != "" and bool(store_check["door"]) and bool(store_check["window"]) and bool(store_check["exchange"]):
+		if night.is_empty():
+			night = CashTinNight.new_state(store_id)
+			# The Haywards come to run the store.
+			if str(sim.households["h_hayward"].get("home", "")) == "":
+				offer_home("h_hayward", store_id)
+		else:
+			night["store"] = store_id
+	var done := prologue.update(story_ctx)
+	if not done.is_empty():
+		prologue_progressed.emit(done)
+	if prologue.finished:
+		director_enabled = true
+		director.last_incident_day = sim.day
+		prologue = null
+
+
+func _open_cash_tin() -> void:
+	var c := CashTinNight.case_for(sim, night)
+	if c.is_empty():
+		return
+	Clock.set_speed(0)
+	open_case_data(c)
+	refresh_story()
