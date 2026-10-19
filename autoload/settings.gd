@@ -9,6 +9,7 @@ const DEFAULTS := {
 	"reduce_motion": false,
 	"hints": true,
 	"build_while_time_runs": false,
+	"update_dismissed": "",  # the newest Android update the player said "Later" to
 }
 
 var _values: Dictionary = DEFAULTS.duplicate()

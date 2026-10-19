@@ -24,6 +24,7 @@ SaveSystem="*res://autoload/save_system.gd"
 SimHost="*res://autoload/sim_host.gd"
 ContentPacks="*res://autoload/content_packs.gd"
 OrientationGate="*res://autoload/orientation_gate.gd"
+UpdateChecker="*res://autoload/update_checker.gd"
 
 [debug]
 

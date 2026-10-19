@@ -1,0 +1,4 @@
+{
+  "_comment": "Where the Android app looks for updates. version.json (made by tools/make_version_json.py) sits next to the APK on the test site; its apk field is relative to it.",
+  "version_url": "https://jla92-bit.github.io/hollow-creek-play/version.json"
+}
