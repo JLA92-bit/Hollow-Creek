@@ -11,7 +11,7 @@ func test_looks_from_data() -> void:
 	assert_eq(agnes["top"], ResidentLook.TOPS["cardigan"])
 	assert_true(agnes.has("legs"), "the MPFB models have a legs slot")
 	var len := ResidentLook.for_resident("r_len", data["r_len"])
-	assert_eq(len["model"], "mannequin_m")
+	assert_eq(len["model"], "len", "Len has his own MPFB model, from the characters pack")
 	assert_eq(ResidentLook.for_resident("r_len", data["r_len"]), len, "the same look every time")
 
 

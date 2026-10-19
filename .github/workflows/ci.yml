@@ -57,6 +57,9 @@ jobs:
       - name: Director demo (M8 a generated incident, solved by the bot)
         run: timeout 1200 tools/bin/godot --headless --path . res://scenes/investigation/director_demo.tscn
 
+      - name: Prologue playtest (M9 arrival to the lesson, through the real game)
+        run: timeout 1500 tools/bin/godot --headless --path . res://scenes/story/prologue_demo.tscn
+
       - name: Director soak (M8 fair cases only, solver bot, determinism)
         run: timeout 1500 tools/bin/godot --headless --path . -s tools/director_soak.gd -- --seeds 30 --days 28 --det-every 15
 
