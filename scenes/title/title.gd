@@ -1,6 +1,6 @@
 extends Control
 ## Title menu: continue the story autosave, start a new game, or open the Sandbox (its own save:
-## unlimited money and instant building). Settings arrive with a later milestone.
+## unlimited money and instant building), or open settings, saves and credits.
 
 @onready var _status: Label = %Status
 
@@ -30,7 +30,11 @@ func _ready() -> void:
 			_load("sandbox")
 		else:
 			_new_game(GameState.MODE_SANDBOX))
-	settings.disabled = true
+	settings.disabled = false
+	settings.pressed.connect(func() -> void:
+		var s := SettingsScreen.new()
+		s.loaded.connect(func() -> void: get_tree().change_scene_to_file("res://scenes/world/world.tscn"))
+		add_child(s))
 	_status.text = "Press Build (or B) to build. Right-drag or two fingers to look around, R for rain, F2 for photos."
 
 
@@ -43,5 +47,7 @@ func _new_game(mode: String) -> void:
 	GameState.reset()
 	SimHost.reset()
 	GameState.mode = mode
+	if mode == GameState.MODE_STORY:
+		SimHost.begin_prologue()
 	Clock.from_dict({"day": 0, "minute": 360})
 	get_tree().change_scene_to_file("res://scenes/world/world.tscn")

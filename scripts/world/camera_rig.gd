@@ -68,7 +68,7 @@ func forward_xz() -> Vector3:
 
 
 func _process(delta: float) -> void:
-	var k := 1.0 - exp(-delta * 10.0)
+	var k := 1.0 if bool(Settings.get_value("reduce_motion")) else 1.0 - exp(-delta * 10.0)  # no easing when motion is reduced
 	var move := Vector2(
 		Input.get_axis(&"ui_left", &"ui_right") + (1.0 if Input.is_key_pressed(KEY_D) else 0.0) - (1.0 if Input.is_key_pressed(KEY_A) else 0.0),
 		Input.get_axis(&"ui_up", &"ui_down") + (1.0 if Input.is_key_pressed(KEY_S) else 0.0) - (1.0 if Input.is_key_pressed(KEY_W) else 0.0))

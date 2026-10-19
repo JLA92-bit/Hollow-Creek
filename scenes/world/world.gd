@@ -43,6 +43,7 @@ var residents: ResidentViews
 var overlays: DebugOverlays
 var case_screen: InvestigationScreen
 var road: RoadMode
+var pause_menu: PauseMenu
 var _walls_before := HouseView.WALLS_UP
 var _follow := ""
 var _press_at := Vector2(-1, -1)
@@ -129,6 +130,7 @@ func _ready() -> void:
 
 ## The town's life: the sim gets its walk graph from this valley, and its people are drawn here.
 func _start_residents() -> void:
+	EventBus.settings_changed.connect(_on_setting_changed)
 	SimHost.lights_changed.connect(_on_lights_changed)
 	SimHost.case_opened.connect(_on_case_opened)
 	SimHost.case_closed.connect(_on_case_closed)
@@ -156,6 +158,11 @@ func _start_residents() -> void:
 		add_child(guides)
 		add_child(PrologueHud.new())
 		SimHost.refresh_story()
+
+
+func _on_setting_changed(key: String, value: Variant) -> void:
+	if key == "quality" and str(value) != "" and str(value) != quality:
+		set_quality(str(value))
 
 
 ## An incident alert opened a case: go to the scene.
@@ -252,6 +259,8 @@ func cycle_overlay() -> String:
 
 func _exit_tree() -> void:
 	SimHost.stop()
+	if EventBus.settings_changed.is_connected(_on_setting_changed):
+		EventBus.settings_changed.disconnect(_on_setting_changed)
 	if SimHost.lights_changed.is_connected(_on_lights_changed):
 		SimHost.lights_changed.disconnect(_on_lights_changed)
 	for sig: Signal in [SimHost.case_opened, SimHost.case_closed]:
@@ -643,6 +652,11 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 		return
 	match k.keycode:
+		KEY_ESCAPE:
+			if not building and (case_screen == null or not case_screen.visible) and (road == null or not road.active) and pause_menu == null:
+				pause_menu = PauseMenu.new()
+				pause_menu.resumed.connect(func() -> void: pause_menu = null)
+				add_child(pause_menu)
 		KEY_B:
 			if building:
 				exit_build_mode()
